@@ -314,3 +314,92 @@ def test_build_repository_section_matches_its_database(tmp_path):
     builder = packages.Builder(b, repo, tmp_path / "work", tmp_path / "work/pacman-build.conf", "", util.Runner(dry_run=True))
     assert local == [builder.db.name.removesuffix(".db.tar.gz")]
     assert conf.index(f"[{local[0]}]") < conf.index("[core]")  # searched first
+
+
+def _git(*args, cwd=None):
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.org",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.org", "GIT_CONFIG_GLOBAL": os.devnull}
+    return subprocess.run(["git", *args], cwd=cwd, env=env, check=True, capture_output=True, text=True).stdout.strip()
+
+
+@pytest.fixture
+def aur_git(tmp_path, monkeypatch):
+    """An AUR package ``demo`` with two commits, served as the AUR serves it
+    (one repository per package) and as its mirror does (one branch per
+    package, same commits)."""
+    work = tmp_path / "demo"
+    work.mkdir()
+    _git("init", "--quiet", cwd=work)
+    commits = []
+    for rel in ("1", "2"):
+        (work / "PKGBUILD").write_text(f"pkgname=demo\npkgver=1.0\npkgrel={rel}\n")
+        (work / ".SRCINFO").write_text(f"pkgbase = demo\n\tpkgver = 1.0\n\tpkgrel = {rel}\n\npkgname = demo\n")
+        _git("add", "-A", cwd=work)
+        _git("commit", "--quiet", "-m", rel, cwd=work)
+        commits.append(_git("rev-parse", "HEAD", cwd=work))
+    (tmp_path / "aur").mkdir()
+    _git("clone", "--quiet", "--bare", str(work), str(tmp_path / "aur" / "demo.git"))
+    _git("init", "--quiet", "--bare", str(tmp_path / "mirror.git"))
+    _git("push", "--quiet", str(tmp_path / "mirror.git"), "HEAD:refs/heads/demo", cwd=work)
+    monkeypatch.setattr(packages, "AUR", f"file://{tmp_path / 'aur'}")
+    monkeypatch.setattr(packages, "AUR_MIRROR", f"file://{tmp_path / 'mirror.git'}")
+    monkeypatch.setattr(packages, "RETRY_DELAY", 0)
+    monkeypatch.setattr(packages, "_failing_hosts", set())
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
+    return tmp_path, commits
+
+
+def test_aur_git_from_the_aur(aur_git):
+    tmp, (first, head) = aur_git
+    assert packages.aur_head("demo") == head
+    d = packages.clone_aur("demo", first, tmp / "work")
+    assert parse_srcinfo((d / ".SRCINFO").read_text()).version == "1.0-1"
+    (d / "stray").write_text("left over from a build")
+    d = packages.clone_aur("demo", head, tmp / "work")
+    assert parse_srcinfo((d / ".SRCINFO").read_text()).version == "1.0-2"
+    assert not (d / "stray").exists()
+
+
+def test_aur_git_falls_back_to_the_mirror(aur_git, monkeypatch):
+    """When the AUR's git service fails, the same commits come from the
+    mirror, and a commit already fetched needs no network at all."""
+    tmp, (first, head) = aur_git
+    monkeypatch.setattr(packages, "AUR", f"file://{tmp / 'down'}")
+    assert packages.aur_head("demo") == head
+    d = packages.clone_aur("demo", first, tmp / "work")
+    assert parse_srcinfo((d / ".SRCINFO").read_text()).version == "1.0-1"
+    monkeypatch.setattr(packages, "AUR_MIRROR", f"file://{tmp / 'down.git'}")
+    assert packages.clone_aur("demo", head, tmp / "work") == d
+    assert parse_srcinfo((d / ".SRCINFO").read_text()).version == "1.0-2"
+
+
+def test_aur_git_failures_explain_themselves(aur_git, monkeypatch):
+    tmp, _ = aur_git
+    with pytest.raises(packages.FetchError, match="--update-lock") as missing:
+        packages.clone_aur("demo", "0" * 40, tmp / "work")
+    assert "has no commit" in str(missing.value)
+    with pytest.raises(packages.FetchError, match="not on the AUR"):
+        packages.aur_head("absent")
+    monkeypatch.setattr(packages, "AUR", f"file://{tmp / 'down'}")
+    monkeypatch.setattr(packages, "AUR_MIRROR", f"file://{tmp / 'down.git'}")
+    with pytest.raises(packages.FetchError) as down:
+        packages.aur_head("demo")
+    message = str(down.value)
+    assert f"{tmp / 'down'}/demo.git" in message and "down.git (refs/heads/demo)" in message
+    assert "network" in message and "Traceback" not in message
+    monkeypatch.setattr(packages, "AUR_MIRROR", "")
+    assert packages.aur_git_sources("demo") == [(f"file://{tmp / 'down'}/demo.git", "HEAD")]
+
+
+def test_iso_build_reports_fetch_errors_without_a_traceback(monkeypatch, capsys):
+    from distrokit.build import iso
+
+    def fail(*a, **k):
+        raise packages.FetchError("could not fetch the AUR package demo")
+
+    monkeypatch.setattr(iso, "preflight", lambda opts: [])
+    monkeypatch.setattr(iso, "build", fail)
+    assert iso.main(["build"]) == 1
+    assert "error: could not fetch the AUR package demo" in capsys.readouterr().err
+    with pytest.raises(packages.FetchError):
+        iso.main(["build", "--debug"])

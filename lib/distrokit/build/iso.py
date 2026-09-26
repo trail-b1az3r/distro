@@ -548,7 +548,13 @@ def main(argv: list[str] | None = None) -> int:
         for problem in problems:
             print(util.style.fail(problem), file=sys.stderr)
         return 1
-    build(opts, util.Runner(log=print, dry_run=a.dry_run))
+    try:
+        build(opts, util.Runner(log=print, dry_run=a.dry_run))
+    except (pkgbuild.FetchError, util.CommandError) as e:
+        if opts.debug:
+            raise
+        print(util.style.fail(f"error: {e}"), file=sys.stderr)
+        return 1
     return 0
 
 

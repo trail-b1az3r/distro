@@ -69,13 +69,13 @@ if ((container)); then
     inner+=" ; status=\$?; chown -R ${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)} build dist checksums metadata 2>/dev/null; exit \$status"
     exec "$engine" run --rm --privileged \
         -v "$PWD:/src" -w /src \
-        -e SOURCE_DATE_EPOCH -e ARCHIVE_DATE -e GPGKEY -e ISO_PROFILE -e ISO_OFFLINE \
+        -e SOURCE_DATE_EPOCH -e ARCHIVE_DATE -e GPGKEY -e ISO_PROFILE -e ISO_OFFLINE -e AUR_GIT_MIRROR \
         "$BUILD_IMAGE" bash -c "$inner"
 fi
 
 [[ -e /etc/arch-release ]] || die "this host is not Arch-based: use ./build.sh --container"
 if ((EUID != 0)) && [[ " ${args[*]} " != *" --dry-run "* ]]; then
-    exec sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,ISO_PROFILE,ISO_OFFLINE "$0" "${args[@]}"
+    exec sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,ISO_PROFILE,ISO_OFFLINE,AUR_GIT_MIRROR "$0" "${args[@]}"
 fi
 export BUILD_USER="${BUILD_USER:-${SUDO_USER:-builder}}"
 id "$BUILD_USER" &>/dev/null || die "build user '$BUILD_USER' does not exist (makepkg does not run as root): run scripts/bootstrap.sh --builder"
