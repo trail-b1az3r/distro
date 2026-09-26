@@ -144,7 +144,8 @@ def launch(entry_id: str, action: str = "run") -> subprocess.Popen:
         raise KeyError(entry_id)
     env = os.environ.copy()
     env["PATH"] = f"{home / '.local' / 'bin'}:{env.get('PATH', '')}"
-    for line in (home / ".config" / branding.id / "ai.env").read_text().splitlines() if (home / ".config" / branding.id / "ai.env").exists() else []:
+    ai_env = home / ".config" / branding.id / "ai.env"
+    for line in ai_env.read_text().splitlines() if ai_env.exists() else []:
         if "=" in line and not line.startswith("#"):
             k, v = line.split("=", 1)
             env[k] = v.strip("'\"")

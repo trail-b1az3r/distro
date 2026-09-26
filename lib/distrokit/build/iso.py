@@ -201,7 +201,7 @@ def offline_sets(b: Branding, profile_id: str, multilib: bool = True) -> list[li
     common = drivers.get("common", {})
     base += common.get("packages", []) + (common.get("packages_32bit", []) if multilib else [])
     sets = [list(dict.fromkeys(base))]
-    for sid, stack in sorted(drivers.get("stack", {}).items()):
+    for _sid, stack in sorted(drivers.get("stack", {}).items()):
         pk = list(stack.get("packages", [])) + (list(stack.get("packages_32bit", [])) if multilib else [])
         if not pk:
             continue
@@ -325,9 +325,12 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
     systemd = air / "etc" / "systemd" / "system"
     units = "/usr/lib/systemd/system"
     _link(systemd / "display-manager.service", f"{units}/greetd.service")
-    for unit in ("NetworkManager.service", "bluetooth.service", f"{b.id}-live-setup.service"):
-        target = f"/etc/systemd/system/{unit}" if unit.endswith("-live-setup.service") else f"{units}/{unit}"
+    ours = (f"{b.id}-live-setup.service", f"{b.id}-autoinstall.service")
+    for unit in ("NetworkManager.service", "bluetooth.service", *ours):
+        target = f"/etc/systemd/system/{unit}" if unit in ours else f"{units}/{unit}"
         _link(systemd / "multi-user.target.wants" / unit, target)
+    _link(systemd / "network-online.target.wants" / "NetworkManager-wait-online.service",
+          f"{units}/NetworkManager-wait-online.service")
     _link(systemd / "dbus-org.freedesktop.NetworkManager.service", f"{units}/NetworkManager.service")
     _link(systemd / "dbus-org.freedesktop.nm-dispatcher.service", f"{units}/NetworkManager-dispatcher.service")
     _link(systemd / "dbus-org.bluez.service", f"{units}/bluetooth.service")

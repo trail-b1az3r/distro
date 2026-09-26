@@ -99,6 +99,8 @@ class Deployer:
         self._transforms: dict[str, Callable[[bytes], bytes]] = {
             ".config/quickshell/ii/services/FirstRunExperience.qml": self._greeting,
         }
+        # Files whose content comes from the distribution instead of upstream.
+        self._overrides: dict[str, Path] = {}
 
     # -- helpers --------------------------------------------------------------
     def _rel(self, target: Path) -> str:
@@ -117,6 +119,8 @@ class Deployer:
 
     def _install(self, src: Path, target: Path, *, content: bytes | None = None, overwrite: bool = True) -> None:
         rel = self._rel(target)
+        if content is None and rel in self._overrides:
+            src = self._overrides[rel]
         data = content if content is not None else src.read_bytes()
         if content is None and rel in self._transforms:
             data = self._transforms[rel](data)
@@ -189,6 +193,7 @@ class Deployer:
             raise FileNotFoundError(f"desktop configuration not found at {cfg_src} (is the dots submodule checked out?)")
         self._manifest = util.read_json(self.manifest_path, {}) or {}
         first = (not self.manifest_path.exists()) if first is None else first
+        self._plan_overrides()
 
         # Miscellaneous app configs (kitty, foot, fuzzel, Kvantum, matugen, ...)
         for item in sorted(cfg_src.iterdir()):
@@ -280,12 +285,19 @@ class Deployer:
 
     def _customise_shell(self) -> None:
         """The distribution's wallpaper becomes the shell's first-run default
-        (in the user's copy; upstream's file is untouched)."""
+        (in the user's copy; upstream's file is untouched). It is applied as
+        an override while syncing, so redeploying does not rewrite it."""
         qs = self.config / "quickshell" / "ii"
-        default_wp = sorted(self.wallpapers.glob("*-default.png")) if self.wallpapers.is_dir() else []
         target = qs / "assets" / "images" / "default_wallpaper.png"
-        if default_wp and target.parent.is_dir():
-            self._install(default_wp[0], target)
+        src = self._overrides.get(self._rel(target))
+        if src is not None and target.parent.is_dir() and self._rel(target) not in self._new_manifest:
+            self._install(src, target)  # upstream stopped shipping the file
+
+    def _plan_overrides(self) -> None:
+        default_wp = sorted(self.wallpapers.glob("*-default.png")) if self.wallpapers.is_dir() else []
+        if default_wp:
+            target = self.config / "quickshell" / "ii" / "assets" / "images" / "default_wallpaper.png"
+            self._overrides[self._rel(target)] = default_wp[0]
 
     def _greeting(self, data: bytes) -> bytes:
         text = data.decode("utf-8")

@@ -439,6 +439,8 @@ class Installation:
             resume = self._resume_params()
             if resume:
                 boot.set_fragment("40-resume", resume, self.target, b, "Hibernation")
+            if c.kernel_params:
+                boot.set_fragment("50-install", c.kernel_params, self.target, b, "Chosen at installation")
         # Login screen
         self.write(f"/etc/sddm.conf.d/10-{b.id}.conf",
                    f"[General]\nNumlock=on\n\n[Theme]\nCurrent={b.id}\nCursorTheme=Bibata-Modern-Classic\n")

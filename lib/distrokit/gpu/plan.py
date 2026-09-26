@@ -121,7 +121,8 @@ def recommend(gpu: Gpu) -> tuple[str, str]:
             return "nvidia-580xx", (
                 f"{gpu.architecture.capitalize()} GPU: current NVIDIA drivers dropped it; the 580 series is the last that supports it."
             )
-        return "nouveau", f"{gpu.architecture.capitalize()} GPU: no NVIDIA driver with Wayland support exists for it, so the open-source driver is used."
+        return "nouveau", (f"{gpu.architecture.capitalize()} GPU: no NVIDIA driver with Wayland support exists "
+                           "for it, so the open-source driver is used.")
     if gpu.vendor == "amd":
         if gpu.driver_branch == "radeon":
             return "radeon", "Pre-GCN Radeon: the radeon driver with Mesa OpenGL."

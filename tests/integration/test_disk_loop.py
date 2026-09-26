@@ -79,7 +79,7 @@ def test_erase_scripts_are_accepted_by_sfdisk(loopdisk, uefi, swap, home):
                    capture_output=True)
     parts = table(loopdisk)
     assert len(parts) == len(plan.volumes)
-    for v, p in zip(plan.volumes, parts):
+    for v, p in zip(plan.volumes, parts, strict=True):
         assert p["node"] == v.device
         assert p["type"].upper() == v.type_guid
         if v.size_bytes:

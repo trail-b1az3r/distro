@@ -227,7 +227,7 @@ def recommend(report: HardwareReport, backend: str, catalog: Catalog | None = No
     else:
         gpu_pool, total_pool = b.gpu_budget, b.gpu_budget + b.cpu_budget
     fully = [label for label, lo, _ in BRACKETS if gpu_pool and _q4_need(lo) <= gpu_pool]
-    for label, lo, hi in BRACKETS:
+    for label, lo, _hi in BRACKETS:
         if label in fully:
             if label == "1B–4B" and len(fully) > 1:
                 continue

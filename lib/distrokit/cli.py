@@ -378,7 +378,8 @@ def cmd_ai(a) -> int:
             print(S.fail(str(exc)))
             return 1
         _install_desktop_entry(a.tool)
-        print(S.ok(f"{spec.name} installed: run `{spec.commands[0]}`" + (" (first run starts its setup)" if spec.launch.get("setup") else "")))
+        note = " (first run starts its setup)" if spec.launch.get("setup") else ""
+        print(S.ok(f"{spec.name} installed: run `{spec.commands[0]}`{note}"))
     else:
         tools.remove_tool(spec, ctx)
         entry = Path.home() / ".local/share/applications" / f"{B.id}-{a.tool}.desktop"

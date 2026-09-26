@@ -131,7 +131,6 @@ class UpdaterBackend(QObject):
 
 
 def main(argv: list[str] | None = None) -> int:
-    b = load_branding()
     app = common.make_app("update", "System Update")
     backend = UpdaterBackend()
     engine, _w = common.load_qml(app, paths.qml_dir() / "updater" / "Main.qml",

@@ -179,7 +179,6 @@ def main(argv: list[str] | None = None) -> int:
     if a.launch:
         launcher.launch(a.launch)
         return 0
-    b = load_branding()
     app = common.make_app("ai", "AI Assistant")
     backend = AiBackend("models" if a.models else "launcher")
     engine, _w = common.load_qml(app, paths.qml_dir() / "ai" / "Main.qml",

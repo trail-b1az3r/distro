@@ -1,0 +1,22 @@
+{
+  "description": "UEFI, systemd-boot, encrypted Btrfs with zram, NVMe disk, standard profile",
+  "firmware": "uefi",
+  "disk_bus": "nvme",
+  "disk_gib": 48,
+  "memory_mib": 4096,
+  "expect": {"filesystem": "btrfs", "bootloader": "systemd-boot", "encrypted": true},
+  "config": {
+    "locale": "en_US.UTF-8",
+    "timezone": "Europe/Berlin",
+    "keyboard_layout": "us",
+    "hostname": "qemu-uefi",
+    "user": {"username": "tester", "fullname": "Test User", "password": "test-password",
+             "root_password": "root-password", "shell": "fish"},
+    "disk": {"mode": "erase", "disk": "/dev/nvme0n1", "filesystem": "btrfs", "encrypt": true,
+             "passphrase": "disk-passphrase", "swap": "zram"},
+    "bootloader": "systemd-boot",
+    "profile": "standard",
+    "kernel_params": ["console=tty0", "console=ttyS0,115200", "plymouth.enable=0"],
+    "ai": {"download": "first-boot"}
+  }
+}

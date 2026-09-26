@@ -141,7 +141,8 @@ def _data_volumes(cfg: InstallConfig, available: int, swap_bytes: int, start: in
         available -= swap_bytes
         cursor = cursor + swap_bytes if cursor else 0
     if available < MIN_ROOT:
-        raise DiskPlanError(f"Not enough space: {util.human_bytes(available)} left for the system, at least {util.human_bytes(MIN_ROOT)} needed.")
+        raise DiskPlanError(f"Not enough space: {util.human_bytes(available)} left for the system, "
+                            f"at least {util.human_bytes(MIN_ROOT)} needed.")
     if d.separate_home:
         home_bytes = d.home_size_gib * GiB if d.home_size_gib else 0
         if home_bytes:
@@ -207,7 +208,8 @@ def plan_disks(cfg: InstallConfig, disk: Disk | None, *, uefi: bool, ram_bytes: 
         if disk is None:
             raise DiskPlanError("No disk selected.")
         if disk.partition_table not in ("gpt", ""):
-            raise DiskPlanError(f"{disk.path} uses an {disk.partition_table.upper()} partition table; installing into free space needs GPT. Use manual partitioning.")
+            raise DiskPlanError(f"{disk.path} uses an {disk.partition_table.upper()} partition table; installing "
+                                "into free space needs GPT. Use manual partitioning.")
         regions = disk.free_regions()
         if not regions:
             raise DiskPlanError(f"{disk.path} has no unallocated space.")
@@ -291,7 +293,8 @@ def plan_disks(cfg: InstallConfig, disk: Disk | None, *, uefi: bool, ram_bytes: 
             plan.volumes.append(v)
             if m.format:
                 enc = " with LUKS2 encryption" if m.encrypt else ""
-                plan.summary.append(f"FORMAT {m.device} ({_describe_partition(part)}) as {fs}{enc} for {m.mountpoint}. All data on it will be lost.")
+                plan.summary.append(f"FORMAT {m.device} ({_describe_partition(part)}) as {fs}{enc} "
+                                    f"for {m.mountpoint}. All data on it will be lost.")
             else:
                 plan.summary.append(f"Use {m.device} ({part.fstype or 'unknown'}) as {m.mountpoint} without formatting.")
             if not m.format and m.mountpoint == "/":
@@ -310,7 +313,8 @@ def plan_disks(cfg: InstallConfig, disk: Disk | None, *, uefi: bool, ram_bytes: 
             if root.encrypt:
                 raise DiskPlanError("With the EFI partition at /efi and an encrypted root, add an unencrypted /boot partition.")
             if bootloader == "systemd-boot":
-                raise DiskPlanError("systemd-boot reads kernels from the EFI partition or a /boot partition: mount the EFI partition at /boot, or add a /boot partition.")
+                raise DiskPlanError("systemd-boot reads kernels from the EFI partition or a /boot partition: "
+                                    "mount the EFI partition at /boot, or add a /boot partition.")
         if cfg.disk.swap == "partition" and plan.volume("swap") is None:
             raise DiskPlanError("Swap is set to 'partition' but no partition is assigned to swap.")
     else:

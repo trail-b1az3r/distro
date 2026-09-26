@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Unattended installation from the live ISO. Runs only when the kernel
+# command line asks for it (it erases disks, so never add this to a boot
+# entry by accident):
+#
+#   @DISTRO_ID@.autoinstall=fw_cfg              configuration from QEMU's fw_cfg
+#                                          (-fw_cfg name=opt/@DISTRO_ID@/config,file=install.json)
+#   @DISTRO_ID@.autoinstall=label:LABEL:PATH    configuration file PATH on the file system
+#                                          labelled LABEL (for example a USB stick)
+#   @DISTRO_ID@.autoinstall.poweroff=1          power off when done (automated tests)
+#
+# The configuration is the installer's JSON (docs/installation.md#unattended).
+# Progress goes to the console; the last line is "AUTOINSTALL: RESULT <code>".
+set -uo pipefail
+
+src="" poweroff=0
+read -r -a words </proc/cmdline
+for word in "${words[@]}"; do
+    case "$word" in
+        @DISTRO_ID@.autoinstall=*) src="${word#*=}" ;;
+        @DISTRO_ID@.autoinstall.poweroff=*) poweroff="${word#*=}" ;;
+    esac
+done
+
+finish() {
+    echo "AUTOINSTALL: RESULT $1"
+    if [[ "$poweroff" == 1 ]]; then
+        sync
+        systemctl poweroff
+    fi
+    exit "$1"
+}
+
+cfg="$(mktemp /run/@DISTRO_ID@-autoinstall.XXXXXX.json)"
+case "$src" in
+    fw_cfg)
+        modprobe qemu_fw_cfg 2>/dev/null || true
+        raw=/sys/firmware/qemu_fw_cfg/by_name/opt/@DISTRO_ID@/config/raw
+        for _ in $(seq 30); do [[ -r "$raw" ]] && break; sleep 1; done
+        cat "$raw" >"$cfg" 2>/dev/null || { echo "AUTOINSTALL: no configuration in fw_cfg" >&2; finish 2; }
+        ;;
+    label:*)
+        rest="${src#label:}"
+        label="${rest%%:*}" path="${rest#*:}"
+        mnt="$(mktemp -d)"
+        for _ in $(seq 30); do [[ -e "/dev/disk/by-label/$label" ]] && break; sleep 1; done
+        mount -o ro "/dev/disk/by-label/$label" "$mnt" || { echo "AUTOINSTALL: no file system labelled $label" >&2; finish 2; }
+        cp "$mnt/$path" "$cfg" || { umount "$mnt"; echo "AUTOINSTALL: $path not found on $label" >&2; finish 2; }
+        umount "$mnt"
+        ;;
+    *)
+        echo "AUTOINSTALL: unknown source '$src'" >&2
+        finish 2
+        ;;
+esac
+chmod 600 "$cfg"
+
+echo "AUTOINSTALL: START"
+@DISTRO_ID@-installer --config "$cfg" --yes-i-understand --verbose
+rc=$?
+if [[ -r /var/log/@DISTRO_ID@/installer.log && $rc -ne 0 ]]; then
+    echo "AUTOINSTALL: last lines of the installer log:"
+    tail -n 60 /var/log/@DISTRO_ID@/installer.log
+fi
+shred -u "$cfg" 2>/dev/null || rm -f "$cfg"
+finish "$rc"

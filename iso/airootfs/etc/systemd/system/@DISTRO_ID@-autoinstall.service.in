@@ -1,0 +1,16 @@
+[Unit]
+Description=@DISTRO_NAME@ unattended installation (requested on the kernel command line)
+Documentation=@DISTRO_DOC_URL@
+ConditionKernelCommandLine=@DISTRO_ID@.autoinstall
+After=network-online.target pacman-init.service @DISTRO_ID@-live-setup.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/@DISTRO_ID@/bin/@DISTRO_ID@-autoinstall
+StandardOutput=journal+console
+StandardError=journal+console
+TimeoutStartSec=infinity
+
+[Install]
+WantedBy=multi-user.target

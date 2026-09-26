@@ -39,7 +39,7 @@ PAGES = ["welcome", "language", "keyboard", "network", "hardware", "disk", "prof
 FIELD_PAGE = {
     "locale": "language", "timezone": "language", "keyboard_layout": "keyboard", "keyboard_variant": "keyboard",
     "disk": "disk", "bootloader": "disk", "secure_boot": "disk", "profile": "profile", "features": "profile",
-    "kernels": "kernel", "user": "user", "hostname": "user", "ai": "model",
+    "kernels": "kernel", "kernel_params": "kernel", "user": "user", "hostname": "user", "ai": "model",
 }
 
 LANGUAGES = {

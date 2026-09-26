@@ -27,5 +27,6 @@ file_permissions=(
   ["/etc/sudoers.d/10-@DISTRO_ID@-live"]="0:0:440"
   ["/usr/lib/@DISTRO_ID@/bin/@DISTRO_ID@-live-session"]="0:0:755"
   ["/usr/lib/@DISTRO_ID@/bin/@DISTRO_ID@-live-setup"]="0:0:755"
+  ["/usr/lib/@DISTRO_ID@/bin/@DISTRO_ID@-autoinstall"]="0:0:755"
   ["/usr/local/bin/choose-mirror"]="0:0:755"
 )

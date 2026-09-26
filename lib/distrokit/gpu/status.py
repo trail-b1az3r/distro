@@ -137,7 +137,10 @@ def gather(report: HardwareReport, root: Path | str = "/", branding: Branding | 
                 hit = any(gpu.model.split()[-1] in d for d in vk_devices) or any(gpu.vendor in d.lower() for d in vk_devices)
                 vulkan = "Available" if hit else "Not detected by vulkaninfo"
             else:
-                vulkan = "Available" if _icd_present(root, driver) else ("Not available" if not s.get("vulkan", "").startswith("yes") else "Driver not loaded")
+                if _icd_present(root, driver):
+                    vulkan = "Available"
+                else:
+                    vulkan = "Driver not loaded" if s.get("vulkan", "").startswith("yes") else "Not available"
         else:
             vulkan = "Software / virtual"
         vram = ""

@@ -86,6 +86,7 @@ class InstallConfig:
     multilib: bool = True
     ai: AiConfig = field(default_factory=AiConfig)
     extra_packages: list[str] = field(default_factory=list)
+    kernel_params: list[str] = field(default_factory=list)  # extra kernel parameters, e.g. console=ttyS0,115200
     rank_mirrors: bool = True
     offline: bool = False  # never touch the network (offline repository only)
 
@@ -210,7 +211,7 @@ def validate(cfg: InstallConfig, *, uefi: bool, profiles: set[str], features: di
 
     if cfg.profile not in profiles:
         err("profile", f"Unknown profile '{cfg.profile}'.")
-    for fid, value in cfg.features.items():
+    for fid in cfg.features:
         if features is not None and fid not in features:
             err(f"features.{fid}", "Unknown feature.")
 
@@ -221,6 +222,9 @@ def validate(cfg: InstallConfig, *, uefi: bool, profiles: set[str], features: di
         err("secure_boot", "Secure Boot is a UEFI feature.")
     elif cfg.secure_boot == "sbctl" and bl != "systemd-boot":
         err("secure_boot", "Secure Boot signing is set up for systemd-boot; choose systemd-boot or turn Secure Boot off.")
+    for param in cfg.kernel_params:
+        if not re.match(r"^[A-Za-z0-9_.,:/=+-]+$", param) or param.split("=")[0] in ("root", "rootflags", "rw", "ro"):
+            err("kernel_params", f"Unsupported kernel parameter {param!r} (the installer sets the root file system).")
     if not cfg.kernels or any(not re.match(r"^linux(-[a-z0-9]+)?$", k) for k in cfg.kernels):
         err("kernels", "Choose at least one kernel (linux, linux-lts, linux-zen...).")
 

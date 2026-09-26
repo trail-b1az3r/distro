@@ -9,7 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QEventLoop, QTimer  # noqa: E402
 
-from distrokit import hardware, paths  # noqa: E402
+from distrokit import paths  # noqa: E402
 from distrokit.gui import common  # noqa: E402
 
 
