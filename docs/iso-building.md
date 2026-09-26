@@ -112,6 +112,8 @@ qemu-system-x86_64 -enable-kvm -m 4G -smp 2 -cdrom dist/*.iso \
 | Problem | Fix |
 |---|---|
 | `the host is not Arch-based` | use `--container` |
+| `permission denied while trying to connect to the docker API` | `build.sh` runs Docker through `sudo` when your user cannot reach its socket; to avoid the password prompt, join the `docker` group (`sudo usermod -aG docker $USER`, then log in again) or use rootless Podman. On Arch or EndeavourOS you do not need `--container` at all |
+| Docker: `failed to set up container networking … operation not supported` | the kernel was updated and the running kernel's modules are gone: reboot. Container builds use the host's network, so this only affects older checkouts |
 | `Not found anywhere: X` | a package in `packages/lists` does not exist (renamed or removed upstream): fix the list |
 | an AUR package fails to build | pin an older commit in `aur.lock.json` or remove it from the lists; see `build/packages/src/<pkg>` |
 | `could not fetch the AUR package X` | both the AUR and its mirror failed; the message shows git's error for each. Check the network and [status.archlinux.org](https://status.archlinux.org), then build again. "Commit … is gone": run `scripts/build-packages.sh --update-lock` |
