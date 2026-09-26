@@ -284,6 +284,10 @@ class CustomModel:
     name: str = ""
     context: int = 8192
     size_bytes: int = 0
+    # For "path": copy the file into the model directory instead of using it
+    # where it is (the installer sets this: a file on the live system or a USB
+    # stick is gone after the reboot).
+    copy: bool = False
 
     def validate(self) -> list[str]:
         errors = []
@@ -495,6 +499,25 @@ def install_catalog_model(model: Model, registry: Registry, progress: ProgressFn
     return target
 
 
+def copy_file(src: Path, dest: Path, progress: ProgressFn | None = None, chunk: int = 16 * 2**20) -> Path:
+    """Copy through a .part file, reporting progress."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    part = dest.with_name(dest.name + ".part")
+    total = src.stat().st_size
+    done = 0
+    with src.open("rb") as fin, part.open("wb") as fout:
+        while True:
+            buf = fin.read(chunk)
+            if not buf:
+                break
+            fout.write(buf)
+            done += len(buf)
+            if progress:
+                progress(done, total)
+    part.replace(dest)
+    return dest
+
+
 def install_custom_model(custom: CustomModel, registry: Registry, progress: ProgressFn | None = None,
                          make_default: bool = False) -> Path | None:
     errors = custom.validate()
@@ -518,8 +541,15 @@ def install_custom_model(custom: CustomModel, registry: Registry, progress: Prog
         entry["source"] = custom.url
     elif custom.source == "path":
         src = Path(os.path.expanduser(custom.path)).resolve()
-        # Use the file where it is; nothing is copied.
-        target = src
+        if custom.copy:
+            size = src.stat().st_size
+            ok, free = check_space(registry.host(registry.models_dir), size)
+            if not ok:
+                raise IOError(f"needs {util.human_bytes(size)}; only {util.human_bytes(free)} free")
+            target = registry.models_dir / mid / src.name
+            copy_file(src, registry.host(target), progress)
+        else:
+            target = src  # used where it is
         entry["source"] = f"file:{src}"
     elif custom.source == "hypernix":
         entry["source"] = f"hypernix:{custom.hypernix_id}"

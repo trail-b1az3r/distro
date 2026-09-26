@@ -193,7 +193,9 @@ def queue_for_install(queue: TaskQueue, *, assistant: str, hypernix: bool, claud
                  size_bytes=m.download_bytes))
     if custom_model:
         c = models.CustomModel(**custom_model)
-        errors = c.validate() if c.source != "path" else []
+        if c.source == "path":
+            c.copy = True  # the file is on the live system; copy it into the new home
+        errors = c.validate()
         if errors:
             raise ValueError("; ".join(errors))
         add(Task(f"model:{c.id}", "custom_model", f"Model: {c.name or c.id}", {"custom": c.to_dict(), "default": True},

@@ -219,6 +219,8 @@ def validate(cfg: InstallConfig, *, uefi: bool, profiles: set[str], features: di
         err("bootloader", "systemd-boot needs UEFI firmware; use GRUB on BIOS systems.")
     if cfg.secure_boot == "sbctl" and not uefi:
         err("secure_boot", "Secure Boot is a UEFI feature.")
+    elif cfg.secure_boot == "sbctl" and bl != "systemd-boot":
+        err("secure_boot", "Secure Boot signing is set up for systemd-boot; choose systemd-boot or turn Secure Boot off.")
     if not cfg.kernels or any(not re.match(r"^linux(-[a-z0-9]+)?$", k) for k in cfg.kernels):
         err("kernels", "Choose at least one kernel (linux, linux-lts, linux-zen...).")
 

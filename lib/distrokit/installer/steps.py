@@ -605,6 +605,8 @@ class Installation:
         units += virt_units.get(self.hw.virt.kind, [])
         if self.bootloader == "grub" and self.cfg.disk.filesystem == "btrfs" and self.features.get("snapshots"):
             units.append("grub-btrfsd.service")
+        if self.bootloader == "systemd-boot":
+            units.append("systemd-boot-update.service")  # updates the boot manager after systemd upgrades
         for unit in units:
             self.chroot(["systemctl", "enable", unit], check=False)
         # Per-user units every account gets (the dots use ydotool for the OSK).
@@ -653,9 +655,12 @@ class Installation:
         )
         if not tasks:
             return
+        # A local model file lives on the installation medium: copy it now.
+        local = [t.id for t in tasks if t.kind == "custom_model" and t.params["custom"].get("source") == "path"]
         if not self.online or self.cfg.ai.download == "first-boot":
-            # Tools are small and quick; models wait for first boot when asked.
+            # Tools are small and quick; downloads wait for first boot when asked.
             only = [t.id for t in tasks if not t.id.startswith("model:")] if self.online else []
+            only += local
             if not only:
                 self.log("AI tools and models will be installed after the first login.")
                 return

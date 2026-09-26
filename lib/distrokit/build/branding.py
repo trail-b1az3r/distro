@@ -138,9 +138,20 @@ def aurora(b: Branding, width: int, height: int, *, light: bool = False, seed: i
             img = img + colour * ring[..., None] * 0.8
         glow = np.exp(-((r / 0.5) ** 2))[..., None]
         img = img + (c1 * 0.5 + c2 * 0.5) * glow * (0.10 if light else 0.22)
-    # Fine grain keeps gradients from banding on 8-bit displays.
-    img += rng.normal(0, 0.006, img.shape).astype(np.float32)
-    return Image.fromarray((img.clip(0, 1) * 255).astype(np.uint8), "RGB")
+    # Ordered (Bayer) dithering keeps the gradients from banding on 8-bit
+    # displays; unlike random grain it repeats, so the PNGs stay small.
+    threshold = np.tile(_bayer(8), (height // 8 + 1, width // 8 + 1))[:height, :width, None]
+    out = np.floor(img.clip(0, 1) * 255 + 0.5 + threshold).clip(0, 255)
+    return Image.fromarray(out.astype(np.uint8), "RGB")
+
+
+def _bayer(n: int):
+    """n x n ordered-dither thresholds in (-0.5, 0.5)."""
+    np = _np()
+    m = np.array([[0, 2], [3, 1]], np.float32)
+    while m.shape[0] < n:
+        m = np.block([[4 * m, 4 * m + 2], [4 * m + 3, 4 * m + 1]])
+    return (m + 0.5) / m.size - 0.5
 
 
 def plymouth_assets(b: Branding, out: Path, logo_png: Path) -> None:
@@ -200,6 +211,50 @@ def grub_slices(b: Branding, out: Path) -> None:
     nine("terminal_box", surface + (235,), None, 8)
 
 
+def ansi_logo(png: Path, cols: int = 24) -> str:
+    """The logo as truecolour half blocks, for fastfetch's ``file-raw`` logo
+    (fastfetch otherwise falls back to the ID_LIKE distribution's logo)."""
+    from PIL import Image
+
+    rows = cols // 2
+    img = Image.open(png).convert("RGBA").resize((cols, rows * 2), Image.Resampling.LANCZOS)
+    px = img.load()
+    lines = []
+    for r in range(rows):
+        out = []
+        for c in range(cols):
+            top, bot = px[c, 2 * r], px[c, 2 * r + 1]
+            t_on, b_on = top[3] >= 90, bot[3] >= 90
+            if t_on and b_on:
+                out.append(f"\x1b[38;2;{top[0]};{top[1]};{top[2]};48;2;{bot[0]};{bot[1]};{bot[2]}m\u2580\x1b[0m")
+            elif t_on:
+                out.append(f"\x1b[38;2;{top[0]};{top[1]};{top[2]}m\u2580\x1b[0m")
+            elif b_on:
+                out.append(f"\x1b[38;2;{bot[0]};{bot[1]};{bot[2]}m\u2584\x1b[0m")
+            else:
+                out.append(" ")
+        lines.append("".join(out).rstrip())
+    return "\n".join(lines) + "\n"
+
+
+def grub_fonts(out: Path) -> list[Path]:
+    """PF2 fonts named in theme.txt (needs grub-mkfont and DejaVu fonts;
+    GRUB falls back to its built-in font without them)."""
+    exe = shutil.which("grub-mkfont")
+    fonts_dir = next((d for d in (Path("/usr/share/fonts/TTF"), Path("/usr/share/fonts/truetype/dejavu"))
+                      if (d / "DejaVuSans.ttf").is_file()), None)
+    if not exe or fonts_dir is None:
+        return []
+    wanted = [("DejaVuSansMono.ttf", 16), ("DejaVuSans.ttf", 14), ("DejaVuSans.ttf", 18),
+              ("DejaVuSans-Bold.ttf", 18), ("DejaVuSans-Bold.ttf", 24)]
+    made = []
+    for ttf, size in wanted:
+        target = out / f"{Path(ttf).stem.lower()}-{size}.pf2"
+        subprocess.run([exe, "-s", str(size), "-o", str(target), str(fonts_dir / ttf)], check=True)
+        made.append(target)
+    return made
+
+
 def generate(quick: bool = False, b: Branding | None = None, log=print) -> None:
     b = b or load_branding()
     root = paths.data("branding")
@@ -246,6 +301,10 @@ def generate(quick: bool = False, b: Branding | None = None, log=print) -> None:
     rasterise(logo_mark, sddm_dir / "logo.png", 192)
     rasterise(logo_mark, grub_dir / "logo.png", 128)
     grub_slices(b, grub_dir)
+    if not grub_fonts(grub_dir):
+        log("grub-mkfont or DejaVu fonts missing: the GRUB theme will use GRUB's built-in font")
+    (gen / "fastfetch").mkdir(parents=True, exist_ok=True)
+    (gen / "fastfetch" / "logo.ansi").write_text(ansi_logo(logo256))
     splash = ImageEnhance.Brightness(aurora(b, 640, 480, seed=3)).enhance(0.55)
     syslinux = gen / "syslinux"
     syslinux.mkdir(parents=True, exist_ok=True)

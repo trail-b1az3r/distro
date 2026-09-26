@@ -91,7 +91,9 @@ class EngineThread(threading.Thread):
         exe = f"/usr/bin/{b.id}-installer"
         cmd = [exe, "--engine"] if os.path.exists(exe) else [sys.executable, "-m", "distrokit.installer.main", "--engine"]
         if os.geteuid() != 0:
-            cmd = (["sudo", "-n"] if util.which("sudo") else ["pkexec"]) + cmd
+            # The live session has password-less sudo; elsewhere polkit asks.
+            nopasswd = util.which("sudo") and util.run_quiet(["sudo", "-n", "true"])[0] == 0
+            cmd = (["sudo", "-n"] if nopasswd else ["pkexec"]) + cmd
         env = os.environ.copy()
         env["PYTHONPATH"] = str(paths.CODE_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
         try:

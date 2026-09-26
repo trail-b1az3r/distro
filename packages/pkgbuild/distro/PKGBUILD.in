@@ -1,0 +1,127 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+#
+# The distribution's own packages, all built from one source tarball of the
+# distribution repository. Generated from packages/pkgbuild/distro/PKGBUILD.in
+# by `python3 -m distrokit.build.packages render`; edit the template, not this file.
+# The file layout of every package is defined in lib/distrokit/build/stage.py.
+
+pkgbase=@DISTRO_ID@
+pkgname=(
+  @DISTRO_ID@-core
+  @DISTRO_ID@-branding
+  @DISTRO_ID@-desktop
+  @DISTRO_ID@-welcome
+  @DISTRO_ID@-installer
+  @DISTRO_ID@-ai
+)
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc="@DISTRO_PRETTY_NAME@"
+arch=(any)
+url="@DISTRO_HOME_URL@"
+license=(GPL-3.0-or-later)
+makedepends=(python python-pillow python-numpy librsvg grub ttf-dejavu git)
+checkdepends=(python-pytest)
+source=("@DISTRO_ID@-$pkgver.tar.gz")
+sha256sums=('@SOURCE_SHA256@')
+
+_src() {
+  cd "$srcdir/@DISTRO_ID@-$pkgver"
+}
+
+_stage() {
+  _src
+  PYTHONPATH=lib python -m distrokit.build.stage "$1" "$pkgdir"
+}
+
+build() {
+  _src
+  # Logos, icons, wallpapers, boot splash, GRUB/SDDM themes, all generated
+  # from distro.conf.
+  PYTHONPATH=lib python -m distrokit.build.branding
+}
+
+check() {
+  _src
+  # Hardware detection, GPU plans, boot configuration, installer logic,
+  # model catalogue and packaging, against fixture machines.
+  PYTHONPATH=lib python -m pytest -q -p no:cacheprovider tests/unit
+}
+
+package_@DISTRO_ID@-core() {
+  pkgdesc="@DISTRO_PRETTY_NAME@ system tools: @DISTRO_CLI@ CLI, hardware detection, GPU manager, doctor and repair"
+  depends=(
+    python pacman pacman-contrib sudo polkit systemd util-linux kmod
+    pciutils usbutils hwdata curl git
+  )
+  optdepends=(
+    'vulkan-tools: Vulkan checks in the doctor'
+    'mesa-utils: OpenGL renderer checks in the doctor'
+    'sbctl: Secure Boot key management'
+    'snapper: Btrfs snapshots'
+    'reflector: mirror ranking'
+    'yay: AUR packages'
+    'flatpak: Flatpak updates'
+  )
+  backup=()
+  _stage core
+  python -m compileall -q -s "$pkgdir" -p / "$pkgdir/usr/lib/@DISTRO_ID@/distrokit"
+}
+
+package_@DISTRO_ID@-branding() {
+  pkgdesc="@DISTRO_PRETTY_NAME@ artwork: logo, icons, wallpapers, boot splash, GRUB and login themes"
+  depends=()
+  optdepends=(
+    'plymouth: boot splash'
+    'sddm: login screen theme (Qt 6 greeter)'
+    'grub: boot menu theme'
+    'fastfetch: system information with the logo'
+  )
+  backup=(etc/xdg/fastfetch/config.jsonc)
+  _stage branding
+}
+
+package_@DISTRO_ID@-desktop() {
+  pkgdesc="@DISTRO_PRETTY_NAME@ desktop: Hyprland with the illogical-impulse shell (pinned) and the distribution layer"
+  depends=(
+    @DISTRO_ID@-core @DISTRO_ID@-branding @DISTRO_ID@-fonts-google-sans-flex
+    illogical-impulse-audio illogical-impulse-backlight illogical-impulse-basic
+    illogical-impulse-bibata-modern-classic-bin illogical-impulse-fonts-themes
+    illogical-impulse-hyprland illogical-impulse-kde illogical-impulse-microtex-git
+    illogical-impulse-portal illogical-impulse-python illogical-impulse-quickshell-git
+    illogical-impulse-screencapture illogical-impulse-toolkit illogical-impulse-widgets
+    fish konsole dolphin sddm uv
+  )
+  backup=(etc/xdg/mimeapps.list etc/xdg/xdg-terminals.list)
+  _stage desktop
+}
+
+package_@DISTRO_ID@-welcome() {
+  pkgdesc="@DISTRO_PRETTY_NAME@ Welcome wizard and graphical updater"
+  depends=(@DISTRO_ID@-core pyside6 qt6-declarative qt6-svg polkit)
+  optdepends=('flatpak: Flatpak updates' 'snapper: snapshot settings')
+  _stage welcome
+}
+
+package_@DISTRO_ID@-installer() {
+  pkgdesc="@DISTRO_PRETTY_NAME@ installer (graphical and unattended)"
+  depends=(
+    @DISTRO_ID@-core pyside6 qt6-declarative qt6-svg polkit
+    arch-install-scripts util-linux parted dosfstools e2fsprogs btrfs-progs
+    cryptsetup lvm2 efibootmgr
+  )
+  optdepends=('reflector: choose fast mirrors' 'grub: BIOS installations')
+  _stage installer
+}
+
+package_@DISTRO_ID@-ai() {
+  pkgdesc="@DISTRO_PRETTY_NAME@ AI launcher and model manager (HyperNix, assistants, Claude Code, local models)"
+  depends=(@DISTRO_ID@-core pyside6 qt6-declarative qt6-svg uv nodejs npm git)
+  optdepends=(
+    'llama.cpp-vulkan: local model server (any GPU)'
+    'llama.cpp: local model server (CPU only)'
+    'llama.cpp-cuda: local model server (NVIDIA, CUDA)'
+    'llama.cpp-hip: local model server (AMD, ROCm)'
+  )
+  _stage ai
+}

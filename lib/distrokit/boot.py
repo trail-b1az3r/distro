@@ -21,6 +21,7 @@ kernel, including linux-surface or linux-lts, always has a boot entry.
 from __future__ import annotations
 
 import re
+import shutil
 import shlex
 from dataclasses import dataclass
 from pathlib import Path
@@ -300,11 +301,25 @@ def grub_custom_cfg(branding: Branding, kernels: list[Kernel], params: list[str]
     return "\n".join(blocks)
 
 
+def _sync_grub_theme(root: Path, branding: Branding, cfg: BootConfig) -> str:
+    """Copy the theme next to grub.cfg: GRUB reads it before the root file
+    system is unlocked, and /boot is readable in every layout the installer
+    creates. Returns the GRUB_THEME value ("" without a theme)."""
+    src = root / "usr" / "share" / "grub" / "themes" / branding.id
+    if not (src / "theme.txt").is_file():
+        return ""
+    rel = f"{cfg.boot_dir.rstrip('/')}/grub/themes/{branding.id}"
+    dest = root / rel.lstrip("/")
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(src, dest)
+    return f"{rel}/theme.txt"
+
+
 def write_grub(root: Path, branding: Branding, cfg: BootConfig, runner: util.Runner, preferred_kernel: str = "") -> None:
     defaults = root / "etc" / "default" / "grub"
     params = read_cmdline(root, branding)
-    theme = f"/usr/share/grub/themes/{branding.id}/theme.txt"
-    theme_arg = theme if (root / theme.lstrip("/")).is_file() else ""
+    theme_arg = _sync_grub_theme(root, branding, cfg)
     text = defaults.read_text() if defaults.is_file() else ""
     text = grub_defaults(text, branding, params, theme_arg)
     # GRUB sorts kernels by version; pin the preferred one with its menu id.

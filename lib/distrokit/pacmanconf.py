@@ -54,7 +54,10 @@ def render(kind: str, branding: Branding | None = None, *, offline_repo: str = "
         out.append(f"[{local_name}]\nSigLevel = Optional TrustAll\nServer = file://{offline_repo}\n\n")
     if kind == "offline":
         return "".join(out)
-    out.append(distro_repo_block(branding))
+    if kind != "build":
+        # The build host makes these packages; it never pulls them from the
+        # published repository.
+        out.append(distro_repo_block(branding))
     out.append("[endeavouros]\nSigLevel = PackageRequired\nInclude = /etc/pacman.d/endeavouros-mirrorlist\n\n")
     repos = ["core", "extra"] + (["multilib"] if multilib else [])
     for repo in repos:
