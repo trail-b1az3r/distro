@@ -585,7 +585,7 @@ class Installation:
         share = self.t(f"/usr/share/{self.branding.id}")
         dep = desktop_deploy.Deployer(
             self.t(self.home), self.branding, dots=share / "desktop" / "dots", overlay=share / "desktop" / "overlay",
-            wallpapers=share / "branding" / "wallpapers" / "generated", log=self.log, visible_home=Path(self.home),
+            wallpapers=share / "branding" / "generated" / "wallpapers", log=self.log, visible_home=Path(self.home),
         )
         report = dep.deploy(settings, first=True)
         self.log(f"Desktop: {len(report.written)} files")

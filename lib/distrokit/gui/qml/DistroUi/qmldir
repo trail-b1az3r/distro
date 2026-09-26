@@ -1,0 +1,18 @@
+module DistroUi
+singleton Theme 1.0 Theme.qml
+Card 1.0 Card.qml
+AppButton 1.0 AppButton.qml
+OptionCard 1.0 OptionCard.qml
+ToggleRow 1.0 ToggleRow.qml
+SectionTitle 1.0 SectionTitle.qml
+PageHeader 1.0 PageHeader.qml
+Badge 1.0 Badge.qml
+Icon 1.0 Icon.qml
+TextInput2 1.0 TextInput2.qml
+SearchList 1.0 SearchList.qml
+LogView 1.0 LogView.qml
+InfoRow 1.0 InfoRow.qml
+Notice 1.0 Notice.qml
+StepList 1.0 StepList.qml
+ThemeSwitch 1.0 ThemeSwitch.qml
+AppCombo 1.0 AppCombo.qml

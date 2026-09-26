@@ -44,7 +44,7 @@ def overlay_dir() -> Path:
 
 
 def branding_wallpapers_dir() -> Path:
-    return paths.data("branding", "wallpapers", "generated")
+    return paths.data("branding", "generated", "wallpapers")
 
 
 def _sha(path: Path) -> str:

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- @DISTRO_NAME@ logo mark: an "N" drawn as one continuous stroke inside an
+     open orbit, with a node where the orbit breaks. Colours come from
+     distro.conf (BRAND_ACCENT, BRAND_ACCENT_2). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="g" x1="36" y1="220" x2="220" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="@BRAND_ACCENT@"/>
+      <stop offset="1" stop-color="@BRAND_ACCENT_2@"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="20" y1="236" x2="236" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="@BRAND_ACCENT@" stop-opacity="0.95"/>
+      <stop offset="0.6" stop-color="@BRAND_ACCENT_2@" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="@BRAND_ACCENT_2@" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+  <!-- Orbit: 300° of a circle, open at the top right. -->
+  <path d="M 190.2 48.9 A 104 104 0 1 0 207.1 66.8" fill="none" stroke="url(#ring)" stroke-width="12" stroke-linecap="round"/>
+  <!-- The N -->
+  <path d="M 84 178 L 84 82 L 172 174 L 172 78" fill="none" stroke="url(#g)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Node -->
+  <circle cx="200" cy="56" r="13" fill="@BRAND_ACCENT_2@"/>
+</svg>
