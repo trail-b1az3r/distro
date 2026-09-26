@@ -96,9 +96,11 @@ def stop(branding: Branding | None = None) -> util.Result:
 
 
 def installed_package(root: str | Path = "/") -> str:
-    """Which llama.cpp build is installed, if any."""
+    """Which llama.cpp build is installed, if any: the installed package's
+    name, which may be a variant providing the configured one (for example
+    llama.cpp-vulkan-git for llama.cpp-vulkan)."""
     from .. import pkg
 
-    have = pkg.installed_packages(root)
+    have = pkg.installed_provides(root)
     builds = [v for k, v in config()["packages"].items() if k != "default_gpu"]
-    return next((p for p in dict.fromkeys(builds) if p in have), "")
+    return next((have[p] for p in dict.fromkeys(builds) if p in have), "")

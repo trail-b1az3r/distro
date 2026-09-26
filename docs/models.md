@@ -96,7 +96,9 @@ The server listens on `http://127.0.0.1:8081` (OpenAI-compatible API under
 `/v1`), uses the GPU when the llama.cpp build supports it, and is not started
 at boot unless you enable it: `systemctl --user enable --now nexora-llm`.
 
-llama.cpp builds: `llama.cpp-vulkan` (any GPU, prebuilt in the distribution
-repository) is the default; `llama.cpp-cuda` and `llama.cpp-hip` are faster on
-NVIDIA/AMD but are long builds: `nexora ai runtime --backend cuda`.
+llama.cpp builds: `llama.cpp-vulkan` (any GPU) is the default and `llama.cpp`
+the CPU-only build. The AUR carries them as `llama.cpp-vulkan-git` and
+`llama.cpp-git`, which the distribution repository prebuilds; they provide the
+plain names, so either is recognised. `llama.cpp-cuda` and `llama.cpp-hip` are
+faster on NVIDIA/AMD but are long builds: `nexora ai runtime --backend cuda`.
 Settings (port, context) are in [`ai/runtime/llama-server.toml`](../ai/runtime/llama-server.toml).

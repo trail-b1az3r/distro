@@ -116,7 +116,7 @@ class WelcomeBackend(QObject):
 
     @Property("QVariant", notify=changed)
     def apps(self) -> list:
-        installed = pkg.installed_packages()
+        installed = pkg.installed_provides()
         return [{"id": a, "name": n, "packages": p, "category": c, "description": d,
                  "installed": all(x in installed for x in p)} for a, n, p, c, d in APPS]
 
