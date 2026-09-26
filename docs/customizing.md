@@ -49,6 +49,11 @@ comments, `@DISTRO_ID@` placeholders. Any package from Arch, EndeavourOS or
 the AUR works; AUR packages are built into the distribution repository
 automatically on the next build (and pinned in `aur.lock.json`).
 
+After changing lists or profiles, run `python3 -m distrokit.build.manifests`:
+it rewrites [`packages/manifests/`](../packages/manifests), which shows
+exactly what each profile, the live ISO and each kind of hardware install, so
+the change is visible in review (the tests fail while the manifests are stale).
+
 ## Drivers, models, assistants
 
 Data files, not code:

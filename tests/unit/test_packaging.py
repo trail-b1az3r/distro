@@ -248,3 +248,14 @@ def test_lock_pins_only_aur_packages(tmp_path):
     import json
 
     assert json.loads((tmp_path / "aur.lock.json").read_text()) == lock
+
+
+def test_committed_manifests_are_current():
+    from distrokit.build import manifests
+
+    out = paths.DATA_ROOT / "packages" / "manifests"
+    for name, text in manifests.manifests().items():
+        assert (out / name).read_text() == text, \
+            f"packages/manifests/{name} is stale: python3 -m distrokit.build.manifests"
+    assert "uv" in (out / "ai.txt").read_text().split()  # AI tools are installed with uv
+    assert "illogical-impulse-hyprland" in (out / "minimal.txt").read_text()

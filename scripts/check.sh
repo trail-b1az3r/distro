@@ -51,6 +51,9 @@ sys.stdout.write(load().render(Path("desktop/overlay/fish/vendor.fish.in").read_
         fail "vendor.fish"
 fi
 
+step "package manifests"
+python3 -m distrokit.build.manifests --check || fail "manifests (python3 -m distrokit.build.manifests)"
+
 step "distro.conf and templates"
 python3 -m distrokit.build.branding --quick >/dev/null || fail "branding templates"
 

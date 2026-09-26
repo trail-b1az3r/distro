@@ -76,7 +76,7 @@ installer/         installer configuration schema and unattended-install example
 cli/               the `nexora` command reference (code: lib/distrokit/cli.py)
 lib/distrokit/     the Python code: installer, hardware, gpu, ai, desktop, system, gui, build
 iso/               archiso overlay: boot menus, live session, autoinstall, pinned build inputs
-packages/          package lists, PKGBUILD templates, repository manifest, AUR lock
+packages/          package lists, generated per-profile manifests, PKGBUILD templates, AUR lock
 hardware/          detection tables (GPU families, VRAM), GPU driver stacks, Surface data
 desktop/           dots submodule (upstream desktop) + overlay (distribution layer)
 ai/                HyperNix, Hermis, OpenClaw, Claude Code specs; model catalogue; model server
