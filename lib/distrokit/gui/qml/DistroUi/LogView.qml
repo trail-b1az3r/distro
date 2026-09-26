@@ -10,7 +10,7 @@ Rectangle {
     radius: Theme.radiusSmall
     border.color: Theme.border
     function append(line) {
-        model.append({ text: line })
+        model.append({ line: line })
         if (model.count > maxLines) model.remove(0, model.count - maxLines)
         if (follow) list.positionViewAtEnd()
     }
@@ -28,10 +28,10 @@ Rectangle {
         Accessible.role: Accessible.StaticText
         Accessible.name: qsTr("Installation log")
         delegate: Text {
-            required property string text
+            required property string line
             width: ListView.view.width
-            text: text
-            color: text.startsWith("$ ") ? "#8FD3FF" : (text.startsWith("✗") || text.indexOf("error") === 0 ? "#FF8FA3" : "#C9D1E8")
+            text: line
+            color: line.startsWith("$ ") ? "#8FD3FF" : (line.startsWith("✗") || line.indexOf("error") === 0 ? "#FF8FA3" : "#C9D1E8")
             font.family: Theme.mono
             font.pixelSize: 12
             wrapMode: Text.WrapAnywhere

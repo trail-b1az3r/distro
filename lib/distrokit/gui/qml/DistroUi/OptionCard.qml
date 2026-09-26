@@ -12,6 +12,8 @@ Rectangle {
     property color badgeColor: Theme.accent2
     property bool selected: false
     property bool radio: true
+    // "select": radio/check mark; "navigate": an arrow (the card opens something)
+    property string indicator: "select"
     signal clicked()
 
     activeFocusOnTab: true
@@ -68,7 +70,15 @@ Rectangle {
                 Layout.fillWidth: true
             }
         }
+        Icon {
+            visible: root.indicator === "navigate"
+            Layout.alignment: Qt.AlignVCenter
+            name: "arrow-right"
+            size: 20
+            color: Theme.muted
+        }
         Rectangle {
+            visible: root.indicator === "select"
             Layout.alignment: Qt.AlignTop
             width: 22; height: 22
             radius: root.radio ? 11 : 6
