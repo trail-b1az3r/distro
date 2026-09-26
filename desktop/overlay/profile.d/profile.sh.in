@@ -6,6 +6,7 @@ case ":${PATH}:" in
 esac
 if [ -r "${HOME}/.config/@DISTRO_ID@/ai.env" ]; then
     set -a
+    # shellcheck source=/dev/null
     . "${HOME}/.config/@DISTRO_ID@/ai.env"
     set +a
 fi

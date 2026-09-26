@@ -1,0 +1,72 @@
+# Tag vYYYY.MM[.N] -> build and test the ISO, publish it as a GitHub release,
+# and update the package repository installed systems use (release "repo").
+# See docs/release-process.md.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  iso:
+    uses: ./.github/workflows/iso.yml
+    with:
+      profile: standard
+      offline: minimal
+      qemu: true
+    secrets: inherit
+
+  publish:
+    needs: iso
+    runs-on: ubuntu-24.04
+    container: archlinux:base
+    steps:
+      - name: Tools
+        run: pacman -Syu --noconfirm --needed git github-cli pacman-contrib
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: iso
+      - uses: actions/download-artifact@v4
+        with:
+          name: repo
+          path: build/repo
+      - name: Release notes
+        run: |
+          meta="$(ls metadata/*.json | grep -v aur.lock | head -1)"
+          python - "$meta" > release-notes.md <<'PY'
+          import json, sys
+          m = json.load(open(sys.argv[1]))
+          print(f"## {m['name']} {m['version']}\n")
+          print(f"* ISO: `{m['iso']}` ({m['size_bytes'] / 2**30:.2f} GiB), SHA-256 `{m['sha256']}`")
+          print(f"* Built from `{m['source_commit'][:12]}`, desktop `{m['desktop'][:12]}`, "
+                f"{m.get('live_packages', '?')} live packages, offline repository: {m['offline']}")
+          print("\nFiles larger than 2 GiB are split: `cat NAME.iso.part-* > NAME.iso`, then check the SHA-256.")
+          print("See docs/installation.md for writing the ISO to a USB stick.")
+          PY
+      - name: Publish the ISO
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          mkdir -p upload
+          for iso in dist/*.iso; do
+            if [ "$(stat -c %s "$iso")" -gt 2000000000 ]; then
+              split -b 1900M -d -a 2 "$iso" "upload/$(basename "$iso").part-"
+            else
+              cp "$iso" upload/
+            fi
+          done
+          cp checksums/* metadata/* upload/
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md upload/*
+      - name: Publish the package repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          scripts/publish-repo.sh build/repo repo-assets
+          gh release view repo >/dev/null 2>&1 || \
+            gh release create repo --title "Package repository" --notes "pacman repository used by installed systems (see distro.conf)." --latest=false
+          gh release upload repo repo-assets/* --clobber

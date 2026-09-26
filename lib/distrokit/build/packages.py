@@ -563,6 +563,22 @@ class Builder:
 # ---------------------------------------------------------------------------
 
 
+def write_lock(plan: Plan, path: Path, head: Callable[[str], str] | None = None) -> dict:
+    """Pin every AUR package of ``plan`` to its current AUR git commit."""
+    head = head or aur_head
+    lock: dict = {"generated_by": f"distrokit {__version__}", "packages": {}}
+    for base in plan.order:
+        node = plan.nodes[base]
+        if node.origin != "aur":
+            continue
+        wanted_for = sorted(n for n in node.names() if n not in node.info.pkgnames)
+        lock["packages"][base] = {"version": node.info.version, "commit": head(base),
+                                  **({"for": wanted_for} if wanted_for else {})}
+    path.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n")
+    print(f"wrote {path.name} ({len(lock['packages'])} AUR packages)")
+    return lock
+
+
 def _load_lock(src: Path) -> dict:
     path = src / LOCK_FILE
     return json.loads(path.read_text()) if path.is_file() else {"packages": {}}
@@ -601,20 +617,15 @@ def main(argv: list[str] | None = None) -> int:
         subprocess.run(["repo-add", str(repo / f"{b.repo_name}.db.tar.gz")], check=True)
     subprocess.run(["pacman", "--config", str(conf), "-Sy"], check=False)
 
-    if a.action == "lock":
+    if a.action == "lock" or not (src / LOCK_FILE).is_file():
+        if a.action != "lock":
+            print(f"No {LOCK_FILE} yet: resolving the AUR packages and pinning them to their current commits. "
+                  "Commit the new file so later builds use exactly these versions.")
         plan = resolve(wanted_packages(b, src), local, in_repos, aur_rpc_lookup, exclude=exclude)
         print(plan.describe())
-        lock = {"generated_by": f"distrokit {__version__}", "packages": {}}
-        for base in plan.order:
-            node = plan.nodes[base]
-            if node.origin != "aur":
-                continue
-            wanted_for = sorted(n for n in node.names() if n not in node.info.pkgnames)
-            lock["packages"][base] = {"version": node.info.version, "commit": aur_head(base),
-                                      **({"for": wanted_for} if wanted_for else {})}
-        (src / LOCK_FILE).write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n")
-        print(f"wrote {LOCK_FILE} ({len(lock['packages'])} AUR packages)")
-        return 1 if plan.unresolved else 0
+        write_lock(plan, src / LOCK_FILE)
+        if a.action == "lock" or plan.unresolved:
+            return 1 if plan.unresolved else 0
 
     lookup = locked_lookup(_load_lock(src), work)
     plan = resolve(wanted_packages(b, src), local, in_repos, lookup, exclude=exclude)

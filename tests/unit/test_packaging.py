@@ -233,3 +233,18 @@ def test_os_release_hook(tmp_path):
 def test_update_boot_hook_without_config(tmp_path, capsys):
     assert hooks.update_boot_main([str(tmp_path)]) == 0
     assert "nothing to do" in capsys.readouterr().out
+
+
+def test_lock_pins_only_aur_packages(tmp_path):
+    local = [_node("nexora", "local", depends=["songrec"], names=["nexora-core"])]
+    world = FakeWorld(repo={"rust"}, aur=[_node("songrec", makedepends=["rust", "libfoo"]),
+                                          _node("libfoo-git", provides=["libfoo"])])
+    plan = resolve(["nexora-core"], local, world.in_repos, world.lookup)
+    lock = packages.write_lock(plan, tmp_path / "aur.lock.json", head=lambda base: f"c0ffee-{base}")
+    assert lock["packages"] == {
+        "libfoo-git": {"version": "1.0-1", "commit": "c0ffee-libfoo-git", "for": ["libfoo"]},
+        "songrec": {"version": "1.0-1", "commit": "c0ffee-songrec"},
+    }
+    import json
+
+    assert json.loads((tmp_path / "aur.lock.json").read_text()) == lock

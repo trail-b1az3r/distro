@@ -1,0 +1,103 @@
+# Lint, unit/GUI/integration tests, and the distribution's packages built and
+# tested on Arch Linux. The full ISO build is in iso.yml.
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q shellcheck fish
+          pip install ruff==0.15.8
+      - name: Static checks
+        run: scripts/check.sh
+
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dependencies (Qt offscreen, rsvg for artwork)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 \
+            libglib2.0-0 fonts-dejavu-core librsvg2-bin
+          pip install pytest pyside6 pillow numpy
+      - name: Unit and GUI tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest tests/unit tests/gui
+      - name: Partitioning on loop devices (root)
+        run: sudo -E env "PATH=$PATH" python -m pytest tests/integration
+      - name: Artwork generation
+        run: PYTHONPATH=lib python -m distrokit.build.branding
+
+  arch:
+    name: Arch Linux packages
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - name: Git for the checkout
+        run: pacman -Syu --noconfirm --needed git
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build host
+        run: scripts/bootstrap.sh --container
+      - name: Unit tests on Arch
+        run: python -m pytest tests/unit
+      - name: Build the distribution's packages (runs their check())
+        run: |
+          PYTHONPATH=lib python -m distrokit.build.packages render --out build/pkgbuild
+          chown -R builder build
+          for dir in build/pkgbuild/*/; do
+            (cd "$dir" && runuser -u builder -- makepkg --syncdeps --noconfirm --cleanbuild)
+          done
+          pacman -S --noconfirm --needed namcap
+          namcap build/pkgbuild/*/*.pkg.tar.zst || true
+      - name: Install them
+        run: pacman -U --noconfirm build/pkgbuild/distro/*-core-*.pkg.tar.zst build/pkgbuild/distro/*-branding-*.pkg.tar.zst
+      - name: Installed CLI works
+        run: |
+          id="$(. ./distro.conf && echo "$DISTRO_ID")"
+          cli="$(. ./distro.conf && echo "$DISTRO_CLI")"
+          "$cli" --version
+          "$cli" hardware
+          "$id-gpu" detect
+          distro-gpu status || true
+          grep "ID=\"$id\"" /usr/lib/os-release
+      - name: Dependency plan (AUR resolution)
+        run: BUILD_USER=builder scripts/build-packages.sh --plan
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: packages
+          path: |
+            build/pkgbuild/*/*.pkg.tar.zst
+            packages/aur.lock.json
+          if-no-files-found: ignore

@@ -1,6 +1,6 @@
 """pacman.conf generation for the build host, the live ISO and installed systems.
 
-Repository order: the ISO's offline repository (live only) and the
+Repository order: the ISO's offline repository (live only) or the
 distribution's own repository first, then EndeavourOS, then Arch. Package
 names do not overlap between them, so the order only matters for speed.
 """
@@ -54,9 +54,11 @@ def render(kind: str, branding: Branding | None = None, *, offline_repo: str = "
         out.append(f"[{local_name}]\nSigLevel = Optional TrustAll\nServer = file://{offline_repo}\n\n")
     if kind == "offline":
         return "".join(out)
-    if kind != "build":
-        # The build host makes these packages; it never pulls them from the
-        # published repository.
+    if kind == "target" or (kind == "live" and not offline_repo):
+        # The build host makes these packages and the live ISO carries them in
+        # its offline repository, so only installed systems use the published
+        # repository (pacman stops when any configured repository is
+        # unreachable, which must never block an installation).
         out.append(distro_repo_block(branding))
     out.append("[endeavouros]\nSigLevel = PackageRequired\nInclude = /etc/pacman.d/endeavouros-mirrorlist\n\n")
     repos = ["core", "extra"] + (["multilib"] if multilib else [])

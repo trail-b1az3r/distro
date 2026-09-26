@@ -148,7 +148,8 @@ def test_pacman_configs(kind):
                        b.repo_name: False, f"{b.repo_name}-offline": True}
     else:
         assert has["core"] and has["extra"] and has["multilib"] and has["endeavouros"]
-        assert has[b.repo_name] == (kind in ("target", "live"))  # never pulled into the build
+        # Only installed systems use the published repository; the ISO carries its packages.
+        assert has[b.repo_name] == (kind == "target")
         assert has[f"{b.repo_name}-offline"] == (kind in ("live", "build"))
     if kind == "build":
         assert "archive.archlinux.org/repos/2026/09/01/$repo/os/$arch" in text
