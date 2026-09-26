@@ -1,0 +1,28 @@
+LABEL live
+TEXT HELP
+Start @DISTRO_NAME@ from this medium to try it or install it.
+ENDTEXT
+MENU LABEL @DISTRO_PRETTY_NAME@ live (BIOS)
+LINUX /%INSTALL_DIR%/boot/%ARCH%/vmlinuz-linux
+INITRD /%INSTALL_DIR%/boot/%ARCH%/initramfs-linux.img
+APPEND archisobasedir=%INSTALL_DIR% archisosearchuuid=%ARCHISO_UUID% quiet loglevel=3 rd.udev.log_level=3 cow_spacesize=4G
+
+LABEL safe
+TEXT HELP
+Use the firmware's basic display driver. Choose this if the screen stays
+black or the graphical session does not start.
+ENDTEXT
+MENU LABEL @DISTRO_PRETTY_NAME@ live, ^safe graphics (BIOS)
+LINUX /%INSTALL_DIR%/boot/%ARCH%/vmlinuz-linux
+INITRD /%INSTALL_DIR%/boot/%ARCH%/initramfs-linux.img
+APPEND archisobasedir=%INSTALL_DIR% archisosearchuuid=%ARCHISO_UUID% nomodeset @DISTRO_ID@.safe_graphics=1 cow_spacesize=4G
+
+LABEL copytoram
+TEXT HELP
+Load the whole live system into memory (needs 8 GB of RAM or more); the
+USB stick can be removed once it has started.
+ENDTEXT
+MENU LABEL @DISTRO_PRETTY_NAME@ live, copied to ^RAM (BIOS)
+LINUX /%INSTALL_DIR%/boot/%ARCH%/vmlinuz-linux
+INITRD /%INSTALL_DIR%/boot/%ARCH%/initramfs-linux.img
+APPEND archisobasedir=%INSTALL_DIR% archisosearchuuid=%ARCHISO_UUID% quiet loglevel=3 copytoram=y cow_spacesize=4G

@@ -547,7 +547,7 @@ class Builder:
         self.runner.run(cmd, cwd=str(work))
         pkgs = sorted(p for p in out.glob("*.pkg.tar.*") if not p.name.endswith(".sig"))
         if not pkgs and not self.runner.dry_run:
-            raise util.CommandError(f"{node.pkgbase}: makepkg produced no packages")
+            raise util.CommandError(cmd, 0, f"{node.pkgbase}: makepkg produced no packages")
         for p in out.iterdir():
             shutil.copyfile(p, self.repo / p.name)
         add = ["repo-add", "--new", "--remove", "--prevent-downgrade"]

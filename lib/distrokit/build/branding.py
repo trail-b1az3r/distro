@@ -44,6 +44,7 @@ def colour_tokens(b: Branding) -> dict[str, str]:
             for suffix, comp in (("R", r), ("G", g), ("B", bl)):
                 extra[f"{key}_{suffix}"] = f"{comp / 255:.3f}"
                 extra[f"{key}_{suffix}8"] = str(comp)
+            extra[f"{key}_HEX"] = value.lstrip("#").upper()
     return extra
 
 

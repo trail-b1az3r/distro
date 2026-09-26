@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Live ISO graphical session, started by greetd.
+#
+# Normally the full desktop (Hyprland), which opens the installer. When
+# Hyprland cannot start (an unsupported GPU, or the "safe graphics" boot
+# entry), the installer runs on its own in cage with software rendering, which
+# works on any display the firmware can drive.
+export XDG_SESSION_TYPE=wayland
+log="${XDG_RUNTIME_DIR:-/tmp}/@DISTRO_ID@-live-session.log"
+
+safe_graphics() { grep -qw '@DISTRO_ID@.safe_graphics=1' /proc/cmdline; }
+
+if ! safe_graphics; then
+    compositor=""
+    if command -v start-hyprland >/dev/null; then
+        compositor=start-hyprland
+    elif command -v Hyprland >/dev/null; then
+        compositor=Hyprland
+    fi
+    if [[ -n "$compositor" ]]; then
+        started=$(date +%s)
+        if "$compositor" >"$log" 2>&1; then
+            exit 0 # logged out
+        fi
+        # A crash long after starting is not a start-up problem.
+        if (($(date +%s) - started > 30)); then
+            exit 1
+        fi
+        echo "The desktop could not start; using the basic installer session (log: $log)." >&2
+    fi
+fi
+
+export WLR_RENDERER=pixman WLR_NO_HARDWARE_CURSORS=1 QT_QPA_PLATFORM=wayland XDG_CURRENT_DESKTOP=cage
+exec cage -s -d -- /usr/bin/@DISTRO_ID@-installer

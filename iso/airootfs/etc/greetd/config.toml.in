@@ -1,0 +1,13 @@
+# Live ISO: the live user is logged straight into the desktop. After logging
+# out, a text login starts it again (user "@LIVE_USER@", no password).
+
+[terminal]
+vt = 1
+
+[default_session]
+command = "agreety --cmd /usr/lib/@DISTRO_ID@/bin/@DISTRO_ID@-live-session"
+user = "greeter"
+
+[initial_session]
+command = "/usr/lib/@DISTRO_ID@/bin/@DISTRO_ID@-live-session"
+user = "@LIVE_USER@"

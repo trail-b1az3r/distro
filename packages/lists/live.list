@@ -23,3 +23,7 @@ open-vm-tools
 virtualbox-guest-utils
 hyperv
 pyside6
+cage
+mkinitcpio-nfs-utils
+nbd
+terminus-font

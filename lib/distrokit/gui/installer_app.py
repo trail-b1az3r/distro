@@ -17,6 +17,7 @@ import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
@@ -151,6 +152,9 @@ class InstallerBackend(QObject):
         self._feature_defs = load_features()
         self._catalog = models.load_catalog()
         self._online = False if demo else is_online()
+        # What the ISO carries (written by the ISO build): its default profile
+        # and whether its offline repository is complete.
+        self.iso_info = util.read_json(Path(f"/etc/{self.branding.id}/iso-build.json"), {}) or {}
         self._busy = False
         self._summary: dict[str, Any] = {}
         self._commands: list[str] = []
@@ -167,7 +171,8 @@ class InstallerBackend(QObject):
         lang = os.environ.get("LANG", "en_US.UTF-8")
         cfg.locale = lang if lang.endswith(".UTF-8") else "en_US.UTF-8"
         cfg.timezone = _current_timezone()
-        cfg.profile = default_profile(self._profiles).id
+        iso_profile = self.iso_info.get("profile")
+        cfg.profile = iso_profile if iso_profile in self._profiles else default_profile(self._profiles).id
         cfg.surface_kernel = self._surface.recommended
         vendor = re.sub(r"[^a-z0-9]", "", (self.report.chassis.sys_vendor or "").lower())[:10]
         cfg.hostname = f"{self.branding.id}-{vendor}" if vendor else self.branding.id
@@ -198,6 +203,12 @@ class InstallerBackend(QObject):
     @Property(bool, notify=onlineChanged)
     def online(self) -> bool:
         return self._online
+
+    @Property(bool, constant=True)
+    def offlineCapable(self) -> bool:  # noqa: N802
+        """Can this medium install with no network? (Development runs and
+        demo mode behave like a complete medium.)"""
+        return self.demo or self.iso_info.get("offline", "full") == "full"
 
     @Property(bool, notify=busyChanged)
     def busy(self) -> bool:
@@ -449,6 +460,9 @@ class InstallerBackend(QObject):
             top = i.field.split(".")[0]
             if page == "all" or FIELD_PAGE.get(top) == page:
                 out.append({"field": i.field, "message": i.message, "severity": i.severity})
+        if page in ("network", "all") and not self.offlineCapable and (cfg.offline or not self._online):
+            out.append({"field": "offline", "severity": "error",
+                        "message": "This medium installs from the internet: connect to a network to continue."})
         if page in ("disk", "all"):
             try:
                 diskmod.plan_disks(cfg, next((d for d in self.report.disks if d.path == cfg.disk.disk), None),

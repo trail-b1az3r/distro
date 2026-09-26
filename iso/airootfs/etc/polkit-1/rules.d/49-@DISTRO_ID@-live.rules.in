@@ -1,0 +1,7 @@
+// Live ISO only: the live user may do everything without a password
+// (partitioning, network settings, the installer).
+polkit.addRule(function(action, subject) {
+    if (subject.user == "@LIVE_USER@") {
+        return polkit.Result.YES;
+    }
+});

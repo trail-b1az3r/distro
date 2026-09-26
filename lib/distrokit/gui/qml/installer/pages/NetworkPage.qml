@@ -27,7 +27,9 @@ ColumnLayout {
                     color: Theme.muted
                     text: installer.online
                         ? qsTr("Packages come from the newest mirrors, and online-only extras (AI tools, Claude Code, the Surface kernel) can be installed now.")
-                        : qsTr("The base system installs from this medium. AI tools, models, the Surface kernel and some drivers will be installed after the first login, once you are online.")
+                        : installer.offlineCapable
+                            ? qsTr("The base system installs from this medium. AI tools, models, the Surface kernel and some drivers will be installed after the first login, once you are online.")
+                            : qsTr("This medium downloads most packages during installation. Connect to a wired or wireless network to continue.")
                 }
             }
         }
@@ -39,6 +41,7 @@ ColumnLayout {
     }
     ToggleRow {
         Layout.fillWidth: true
+        visible: installer.offlineCapable
         title: qsTr("Install without the internet")
         description: qsTr("Use only the packages on this medium, even if a connection is available.")
         checked: installer.config.offline
