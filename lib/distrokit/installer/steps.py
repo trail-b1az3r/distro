@@ -95,6 +95,7 @@ class Installation:
                                           all_disks=report.disks, required_bytes=int(self.profile.approx_size_gb * 2**30))
         self.state: dict[str, Any] = {"created_partitions": [], "opened": [], "mounted": False, "swap_on": []}
         self.missing_packages: list[str] = []
+        self._temp_files: list[Path] = []
         self.warnings: list[str] = list(self.disk_plan.warnings)
 
     # -- helpers --------------------------------------------------------------
@@ -136,12 +137,13 @@ class Installation:
         """The live ISO ships /etc/<id>/pacman-<kind>.conf; elsewhere (tests,
         installing from an installed system) one is generated."""
         shipped = Path(f"/etc/{self.branding.id}/pacman-{kind}.conf")
-        if shipped.is_file():
-            return shipped
+        if shipped.is_file() or self.runner.dry_run:
+            return shipped  # a dry run only names it
         fd, name = tempfile.mkstemp(prefix=f"{self.branding.id}-pacman-{kind}-", suffix=".conf")
         with os.fdopen(fd, "w") as fh:
             fh.write(pacmanconf.render(kind, self.branding, multilib=self.cfg.multilib,
                                        offline_repo=f"/var/cache/{self.branding.id}/repo"))
+        self._temp_files.append(Path(name))
         return Path(name)
 
     # -- package set ----------------------------------------------------------
@@ -640,13 +642,20 @@ class Installation:
         pkg.aur_install(self.missing_packages, self.runner, self.target, self.user)
 
     def user_setup(self) -> None:
+        if self.runner.dry_run:
+            # The queue lives in a scratch directory, so a dry run records the
+            # commands without touching the target.
+            with tempfile.TemporaryDirectory(prefix=f"{self.branding.id}-dry-run-") as scratch:
+                queue = TaskQueue(self.branding, Path(self.home), "/")
+                queue.path = Path(scratch) / "tasks.json"
+                self._user_setup(queue)
+            return
+        self._user_setup(TaskQueue(self.branding, Path(self.home), self.target))
+
+    def _user_setup(self, queue: TaskQueue) -> None:
         feats = self.features
-        queue = TaskQueue(self.branding, Path(self.home), self.target)
         dots_req = f"/usr/share/{self.branding.id}/desktop/dots/sdata/uv/requirements.txt"
         env = dict(self.backend.env)
-        if self.runner.dry_run:
-            queue.path = Path(tempfile.mkdtemp()) / "tasks.json"
-            queue.root = Path("/")
         tasks = queue_for_install(
             queue,
             assistant=str(feats.get("assistant", "none")),
@@ -736,6 +745,9 @@ class Installation:
             self.run(["sfdisk", "--delete", self.disk_plan.disk, *nums], check=False)
             self.run(["partprobe", self.disk_plan.disk], check=False)
         self.run(["sync"], check=False)
+        for tmp in self._temp_files:
+            tmp.unlink(missing_ok=True)
+        self._temp_files.clear()
 
     def install_log_copy(self, log_file: Path) -> None:
         if self.runner.dry_run or not log_file.exists():

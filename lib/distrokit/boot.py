@@ -401,4 +401,7 @@ def install(root: Path, cfg: BootConfig, runner: util.Runner, branding: Branding
             in_root(runner, root, ["grub-install", "--target=i386-pc", "--recheck", cfg.bios_disk])
     else:
         raise ValueError(f"unknown bootloader {cfg.bootloader!r}")
-    save_config(cfg, root, branding)
+    if runner.dry_run:
+        runner._emit(f"write {_sysconf(Path(root), branding) / 'boot.conf'}")
+    else:
+        save_config(cfg, root, branding)

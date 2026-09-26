@@ -17,7 +17,9 @@ if [[ ! -e "$state/session-initialised" ]]; then
         kwriteconfig6 --file kdeglobals --group General --key TerminalApplication konsole || true
         kwriteconfig6 --file kdeglobals --group General --key TerminalService org.kde.konsole.desktop || true
     fi
-    command -v xdg-user-dirs-update >/dev/null && xdg-user-dirs-update || true
+    if command -v xdg-user-dirs-update >/dev/null; then
+        xdg-user-dirs-update || true
+    fi
     touch "$state/session-initialised"
 fi
 

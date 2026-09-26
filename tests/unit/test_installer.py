@@ -251,3 +251,25 @@ def test_dkms_packages_bring_headers_for_every_kernel(machine):
     inst = Installation(cfg, report, runner=util.Runner(dry_run=True), online=True)
     pk = inst.packages()
     assert "linux-headers" in pk and "linux-lts-headers" in pk
+
+
+@pytest.mark.parametrize("name, over", [
+    ("hybrid_gtx1080_laptop", {"profile": "ai", "disk": {"encrypt": True, "passphrase": "disk-secret-123"}}),
+    ("surface_pro7", {"disk": {"mode": "free-space"}, "surface_kernel": True, "secure_boot": "sbctl"}),
+    ("qemu_vm", {"disk": {"disk": "/dev/vda", "filesystem": "ext4"}, "bootloader": "grub"}),
+])
+def test_dry_run_writes_nothing(machine, tmp_path, monkeypatch, name, over):
+    """The installer's summary page and --dry-run must never touch the disk:
+    not the target, not /tmp (they run as an unprivileged user, too)."""
+    import tempfile
+
+    scratch = tmp_path / "tmp"
+    scratch.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+    _root, report = machine(name)
+    target = tmp_path / "target"
+    inst = Installation(make_cfg(**over), report, runner=util.Runner(dry_run=True), target=target, online=True)
+    cmds = dry_run_commands(inst)
+    assert cmds
+    assert not target.exists(), sorted(str(p) for p in target.rglob("*"))
+    assert list(scratch.iterdir()) == []
