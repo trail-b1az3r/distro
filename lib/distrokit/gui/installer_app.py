@@ -17,7 +17,6 @@ import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
