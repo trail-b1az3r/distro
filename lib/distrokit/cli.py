@@ -278,10 +278,12 @@ def cmd_install(a) -> int:
     feats = load_features()
     names = a.names
     to_pacman: list[str] = []
+    ai_tools: list[str] = []
     for name in names:
         key = name.lower()
         if key in AI_TOOLS:
-            return cmd_ai(argparse.Namespace(action="install", tool=AI_TOOLS[key], backend="", yes=a.yes))
+            ai_tools.append(AI_TOOLS[key])
+            continue
         alias = FEATURE_ALIASES.get(key)
         if alias:
             fid, value = alias if isinstance(alias, tuple) else (alias, True)
@@ -293,13 +295,20 @@ def cmd_install(a) -> int:
                 to_pacman.append(load_editors()[B.get("CODE_EDITOR", "code")].package)
         else:
             to_pacman.append(name)
+    rc = 0
     to_pacman = list(dict.fromkeys(to_pacman))
-    print(S.info("Installing with yay (repositories first, then the AUR): " + " ".join(to_pacman)))
-    if os.geteuid() == 0:
-        return subprocess.call(["pacman", "-S", "--needed", *to_pacman])
-    if util.which("yay"):
-        return subprocess.call(["yay", "-S", "--needed", *to_pacman])
-    return subprocess.call(["sudo", "pacman", "-S", "--needed", *to_pacman])
+    if to_pacman:
+        print(S.info("Installing with yay (repositories first, then the AUR): " + " ".join(to_pacman)))
+        if os.geteuid() == 0:
+            rc = subprocess.call(["pacman", "-S", "--needed", *to_pacman])
+        elif util.which("yay"):
+            rc = subprocess.call(["yay", "-S", "--needed", *to_pacman])
+        else:
+            rc = subprocess.call(["sudo", "pacman", "-S", "--needed", *to_pacman])
+    # Per-user AI tools install as the user, after any system packages they need.
+    for tool in dict.fromkeys(ai_tools):
+        rc = cmd_ai(argparse.Namespace(action="install", tool=tool, backend="", yes=a.yes)) or rc
+    return rc
 
 
 # ---------------------------------------------------------------------------
@@ -433,9 +442,9 @@ def cmd_model(a) -> int:
             return 0
         print(S.header("AI Hardware Recommendations"))
         print(rec.headline)
-        print("Suggested models:")
+        print("Recommended local models:")
         for line in rec.lines:
-            print(f"  • {line}")
+            print(f"- {line}")
         if a.action == "recommend":
             print(S.dim("Recommendations are advice; any model can be installed."))
             return 0
@@ -648,6 +657,13 @@ def cmd_rescue(a) -> int:
     runner = util.Runner(log=print)
     target = Path(f"/mnt/{B.id}-rescue")
     repair.mount_installed(repair.sanitize_device(choice["device"]), target, runner, passphrase)
+    if a.shell:
+        print(S.info(f"The installed system is mounted at {target}. Leave the shell with `exit` to unmount it."))
+        try:
+            subprocess.call(["arch-chroot", str(target)])
+        finally:
+            repair.unmount_installed(target, runner)
+        return 0
     try:
         plans = [repair.packages_plan(target, runner, refresh=False), repair.boot_plan(target, runner, B)]
         _confirm_or_exit("\n\n".join(p.describe() for p in plans), a.yes, "Repair the installed system?")
@@ -840,6 +856,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("rescue", help="live ISO: mount an installed system and repair it")
     s.add_argument("index", nargs="?")
+    s.add_argument("--shell", action="store_true", help="open a shell inside it instead of repairing")
     s.add_argument("-y", "--yes", action="store_true")
     s.set_defaults(func=cmd_rescue)
 

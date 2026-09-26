@@ -44,7 +44,7 @@ ColumnLayout {
             ColumnLayout {
                 Layout.fillWidth: true
                 Text { text: page.ai.headline; color: Theme.fg; font.pixelSize: Theme.textLarge; font.weight: Font.DemiBold; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                Text { text: qsTr("Suggested models:"); color: Theme.muted; font.pixelSize: Theme.text }
+                Text { text: qsTr("Recommended local models:"); color: Theme.muted; font.pixelSize: Theme.text }
                 Repeater {
                     model: page.ai.lines
                     Text { required property string modelData; text: "•  " + modelData; color: Theme.fg; font.pixelSize: Theme.text }

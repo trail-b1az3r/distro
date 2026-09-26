@@ -181,6 +181,9 @@ class Installation:
         if self.features.get("containers") == "docker":
             pass  # docker group handled in users()
         pk += self.cfg.extra_packages
+        if any(p.endswith("-dkms") for p in pk):
+            # DKMS modules (NVIDIA, Broadcom Wi-Fi...) build against every kernel's headers.
+            pk += [f"{k}-headers" for k in self.cfg.kernels]
         return list(dict.fromkeys(pk))
 
     # -- steps ----------------------------------------------------------------

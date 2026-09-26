@@ -156,6 +156,12 @@ class Stage:
         for alias in (f"{b.id}-gpu", "distro-gpu"):
             self.link(f"/usr/share/bash-completion/completions/{alias}", b.cli)
         self.text(f"/usr/share/fish/vendor_completions.d/{b.cli}.fish", completions.fish(b, parser))
+        from . import manpage
+
+        epoch = int(os.environ.get("SOURCE_DATE_EPOCH", "0")) or None
+        date = __import__("time").strftime("%Y-%m", __import__("time").gmtime(epoch))
+        self.text(f"/usr/share/man/man1/{b.cli}.1", manpage.render(b, parser, date))
+        self.link(f"/usr/share/man/man1/{b.id}-gpu.1", f"{b.cli}.1")
         for d in ("/etc", "/var/lib", "/var/log"):
             self.p(f"{d}/{b.id}").mkdir(parents=True, exist_ok=True)
         self.license(f"{b.id}-core")

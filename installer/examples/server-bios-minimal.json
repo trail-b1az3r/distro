@@ -1,0 +1,13 @@
+{
+  "locale": "en_US.UTF-8",
+  "timezone": "UTC",
+  "keyboard_layout": "us",
+  "hostname": "homelab",
+  "user": {"username": "admin", "password": "", "root_password": "", "shell": "bash"},
+  "disk": {"mode": "erase", "disk": "/dev/sda", "filesystem": "ext4", "swap": "partition"},
+  "bootloader": "grub",
+  "profile": "minimal",
+  "features": {"browser": false, "firewall": true},
+  "kernel_params": ["console=tty0", "console=ttyS0,115200"],
+  "rank_mirrors": true
+}

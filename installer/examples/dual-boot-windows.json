@@ -1,0 +1,20 @@
+{
+  "locale": "de_DE.UTF-8",
+  "timezone": "Europe/Berlin",
+  "keyboard_layout": "de",
+  "keyboard_variant": "nodeadkeys",
+  "hostname": "laptop",
+  "user": {"username": "alex", "password": "", "shell": "fish"},
+  "disk": {
+    "mode": "free-space",
+    "disk": "/dev/nvme0n1",
+    "filesystem": "btrfs",
+    "encrypt": true,
+    "passphrase": "",
+    "swap": "file",
+    "hibernation": true
+  },
+  "bootloader": "systemd-boot",
+  "profile": "standard",
+  "surface_kernel": false
+}

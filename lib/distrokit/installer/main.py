@@ -52,6 +52,7 @@ def run_unattended(args) -> int:
     cfg = cfgmod.InstallConfig.load(Path(args.config))
     # Secrets can come from the environment instead of the file.
     cfg.user.password = os.environ.get("INSTALL_USER_PASSWORD", cfg.user.password)
+    cfg.user.root_password = os.environ.get("INSTALL_ROOT_PASSWORD", cfg.user.root_password)
     cfg.disk.passphrase = os.environ.get("INSTALL_DISK_PASSPHRASE", cfg.disk.passphrase)
     report = _hardware(args.hardware_root)
     runner = util.Runner(dry_run=args.dry_run)

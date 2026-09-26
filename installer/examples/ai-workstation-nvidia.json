@@ -1,0 +1,22 @@
+{
+  "locale": "en_US.UTF-8",
+  "timezone": "America/New_York",
+  "keyboard_layout": "us",
+  "hostname": "ai-box",
+  "user": {"username": "dev", "fullname": "Developer", "password": "", "shell": "fish"},
+  "disk": {
+    "mode": "erase",
+    "disk": "/dev/nvme0n1",
+    "filesystem": "btrfs",
+    "swap": "zram",
+    "separate_home": true,
+    "home_size_gib": 0
+  },
+  "bootloader": "systemd-boot",
+  "secure_boot": "off",
+  "kernels": ["linux", "linux-lts"],
+  "profile": "ai",
+  "features": {"assistant": "both", "containers": "docker"},
+  "ai": {"model": "qwen3-coder-30b-a3b", "download": "first-boot"},
+  "extra_packages": ["nvtop"]
+}

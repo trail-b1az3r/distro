@@ -210,3 +210,44 @@ def test_dry_run_commands_are_valid_shell(machine):
         shlex.split(c)
     assert find(cmds, "sfdisk --append")  # Windows is kept
     assert not find(cmds, "wipefs")
+
+
+EXAMPLES = sorted((Path(__file__).resolve().parents[2] / "installer/examples").glob("*.json"))
+
+
+@pytest.mark.parametrize("path", EXAMPLES, ids=lambda p: p.stem)
+def test_example_configs_are_valid(path, monkeypatch):
+    import json
+
+    data = json.loads(path.read_text())
+    cfg = cfgmod.InstallConfig.from_dict(data)
+    # Secrets are left empty in the examples and given through the environment.
+    assert not cfg.user.password and not cfg.disk.passphrase
+    cfg.user.password = "a-good-password"
+    cfg.disk.passphrase = "a-good-passphrase"
+    found = cfgmod.validate(cfg, uefi=cfg.bootloader != "grub", profiles=set(load_profiles()),
+                            features=load_features(), disks={cfg.disk.disk: 512 * GiB}, check_system=False)
+    assert not cfgmod.errors(found), found
+    if cfg.ai.model:
+        from distrokit.ai import models
+
+        assert models.load_catalog().get(cfg.ai.model) is not None
+
+
+def test_committed_schema_is_current():
+    import json
+
+    from distrokit.installer import schema
+
+    committed = json.loads((Path(__file__).resolve().parents[2] / "installer/schema.json").read_text())
+    assert committed == json.loads(json.dumps(schema.schema())), \
+        "installer/schema.json is stale: python3 -m distrokit.installer.schema > installer/schema.json"
+    assert set(committed["properties"]) == {f for f in cfgmod.InstallConfig.__dataclass_fields__}
+
+
+def test_dkms_packages_bring_headers_for_every_kernel(machine):
+    cfg = make_cfg(kernels=["linux", "linux-lts"], extra_packages=["broadcom-wl-dkms"])
+    _root, report = machine("rtx4080_desktop")
+    inst = Installation(cfg, report, runner=util.Runner(dry_run=True), online=True)
+    pk = inst.packages()
+    assert "linux-headers" in pk and "linux-lts-headers" in pk
