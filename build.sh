@@ -65,11 +65,27 @@ if ((container)); then
     [[ -n "$engine" ]] || die "--container needs podman or docker"
     # shellcheck source=SCRIPTDIR/iso/sources.conf
     source iso/sources.conf
+    run=("$engine")
+    # The Docker daemon's socket belongs to root (and the docker group).
+    if [[ ${engine##*/} == docker && -z ${DOCKER_HOST:-} && -S /var/run/docker.sock && ! -w /var/run/docker.sock ]]; then
+        echo "build.sh: $(id -un) cannot use the Docker daemon: running docker with sudo (or join the docker group)" >&2
+        run=(sudo "$engine")
+    fi
+    if [[ -d /usr/lib/modules && ! -d /usr/lib/modules/$(uname -r) ]]; then
+        echo "build.sh: warning: the running kernel's modules ($(uname -r)) are gone, usually after a kernel update:" \
+            "reboot if the container fails to start" >&2
+    fi
+    envs=()
+    for v in SOURCE_DATE_EPOCH ARCHIVE_DATE GPGKEY ISO_PROFILE ISO_OFFLINE AUR_GIT_MIRROR; do
+        if [[ -v $v ]]; then envs+=(-e "$v=${!v}"); fi
+    done
+    owner="${HOST_UID:-${SUDO_UID:-$(id -u)}}:${HOST_GID:-${SUDO_GID:-$(id -g)}}"
     inner="scripts/bootstrap.sh --container && BUILD_USER=builder ./build.sh ${args[*]@Q}"
-    inner+=" ; status=\$?; chown -R ${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)} build dist checksums metadata 2>/dev/null; exit \$status"
-    exec "$engine" run --rm --privileged \
-        -v "$PWD:/src" -w /src \
-        -e SOURCE_DATE_EPOCH -e ARCHIVE_DATE -e GPGKEY -e ISO_PROFILE -e ISO_OFFLINE -e AUR_GIT_MIRROR \
+    inner+=" ; status=\$?; chown -R $owner build dist checksums metadata 2>/dev/null; exit \$status"
+    # Host networking: the build only makes outgoing connections, and a bridge
+    # needs veth interfaces, which fail on hosts that cannot load the module.
+    exec "${run[@]}" run --rm --privileged --network host \
+        -v "$PWD:/src" -w /src "${envs[@]}" \
         "$BUILD_IMAGE" bash -c "$inner"
 fi
 
