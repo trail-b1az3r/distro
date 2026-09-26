@@ -5,6 +5,7 @@ import hashlib
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -403,3 +404,93 @@ def test_iso_build_reports_fetch_errors_without_a_traceback(monkeypatch, capsys)
     assert "error: could not fetch the AUR package demo" in capsys.readouterr().err
     with pytest.raises(packages.FetchError):
         iso.main(["build", "--debug"])
+
+
+def _builder(tmp_path, runner, sign=""):
+    b = load_branding()
+    conf = packages.build_conf(b, tmp_path / "repo", tmp_path / "work")
+    return packages.Builder(b, tmp_path / "repo", tmp_path / "work", conf, "", runner, sign)
+
+
+def test_builder_pacman_wrapper_uses_an_absolute_config(tmp_path, monkeypatch):
+    """makepkg calls $PACMAN from the package's own directory."""
+    monkeypatch.chdir(tmp_path)
+    b = load_branding()
+    conf = packages.build_conf(b, Path("build/repo"), Path("build/packages"))
+    assert conf.is_absolute() and conf.is_file()
+    builder = packages.Builder(b, Path("build/repo"), Path("build/packages"), Path("build/packages/pacman-build.conf"), "",
+                               util.Runner(dry_run=True))
+    builder.prepare()
+    wrapper = builder.pacman_wrapper.read_text()
+    assert f'--config "{tmp_path}/build/packages/pacman-build.conf"' in wrapper
+    assert ["pacman", "--config", str(conf), "-Sy"] in builder.runner.recorded
+
+
+def test_builder_installs_dependencies_itself_and_checks_signatures(tmp_path):
+    """Build dependencies are installed by the (root) build, so makepkg never
+    needs sudo; source signatures are checked with the build's own keyring."""
+    runner = util.Runner(dry_run=True)
+    builder = _builder(tmp_path, runner)
+    pkgdir = tmp_path / "aur" / "wlogout"
+    pkgdir.mkdir(parents=True)
+    (pkgdir / "PKGBUILD").write_text("pkgname=wlogout\n")
+    info = SrcInfo("wlogout", ["wlogout"], "1.2.2", "0", depends=["gtk3", "gtk-layer-shell"],
+                   makedepends=["meson", "scdoc"], checkdepends=["xorg-server-xvfb"],
+                   validpgpkeys=["F4FDB18A9937358364B276E9E25D679AF73C6D2F"])
+    builder.build(Node("wlogout", "aur", info, path=str(pkgdir)))
+    cmds = runner.recorded
+    install = next(c for c in cmds if "-S" in c and "--asdeps" in c)
+    assert install[:3] == ["pacman", "--config", str(builder.conf)]
+    assert install[-4:] == ["gtk3", "gtk-layer-shell", "meson", "scdoc"]  # no checkdepends: AUR checks are skipped
+    recv = next(c for c in cmds if "--recv-keys" in c)
+    assert recv[:2] == ["env", f"GNUPGHOME={tmp_path / 'work' / 'gnupg'}"] and recv[-1] == info.validpgpkeys[0]
+    makepkg = next(c for c in cmds if "makepkg" in c)
+    assert f"GNUPGHOME={tmp_path / 'work' / 'gnupg'}" in makepkg and "--nocheck" in makepkg
+    assert cmds.index(install) < cmds.index(recv) < cmds.index(makepkg)
+    assert not any(c[0] == "sudo" for c in cmds)
+
+    local = SrcInfo("demo", ["demo"], depends=["python"], checkdepends=["python-pytest"])
+    (tmp_path / "demo").mkdir()
+    runner.recorded.clear()
+    builder.build(Node("demo", "local", local, path=str(tmp_path / "demo")))
+    install = next(c for c in runner.recorded if "--asdeps" in c)
+    assert install[-2:] == ["python", "python-pytest"]
+    assert not any("--recv-keys" in c for c in runner.recorded)
+
+    signing = _builder(tmp_path, util.Runner(dry_run=True), sign="ABCDEF")
+    assert signing.gnupg is None  # signing uses the user's keyring
+
+
+def test_builder_removes_the_dependencies_it_installed(tmp_path, monkeypatch):
+    runner = util.Runner(dry_run=True)
+    builder = _builder(tmp_path, runner)
+    states = iter([{"base", "git"}, {"base", "git", "meson", "scdoc"}])
+    monkeypatch.setattr(packages, "installed_packages", lambda: next(states))
+    builder.installed_before = packages.installed_packages()
+    builder.cleanup()
+    assert runner.recorded[-1] == ["pacman", "-R", "--noconfirm", "meson", "scdoc"]
+    builder.cleanup()  # once only
+    assert len(runner.recorded) == 1
+
+
+def test_native_builds_refuse_partial_upgrades(tmp_path, monkeypatch):
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    (fake / "checkupdates").write_text("#!/bin/sh\nprintf 'linux 6.1 -> 6.2\\nmesa 1 -> 2\\n'\n")
+    (fake / "checkupdates").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake}:{os.environ['PATH']}")
+    monkeypatch.setenv("ARCHIVE_DATE", "2026/09/01")
+    monkeypatch.setattr(packages, "in_container", lambda: False)
+    packages.host_problems.cache_clear()
+    problems = packages.host_problems()
+    assert len(problems) == 2
+    assert "downgrade" in problems[0] and "2 pending updates" in problems[1]
+    (fake / "checkupdates").write_text("#!/bin/sh\nexit 2\n")
+    monkeypatch.delenv("ARCHIVE_DATE")
+    packages.host_problems.cache_clear()
+    assert packages.host_problems() == ()
+    monkeypatch.setattr(packages, "in_container", lambda: True)
+    monkeypatch.setenv("ARCHIVE_DATE", "2026/09/01")
+    packages.host_problems.cache_clear()
+    assert packages.host_problems() == ()
+    packages.host_problems.cache_clear()

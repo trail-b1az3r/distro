@@ -445,6 +445,8 @@ def preflight(opts: Options) -> list[str]:
         problems.append(f"archiso's releng profile is missing ({opts.releng}).")
     if opts.profile not in load_profiles():
         problems.append(f"unknown profile {opts.profile!r}; choose from {', '.join(load_profiles())}.")
+    if not opts.skip_packages:
+        problems += pkgbuild.host_problems()
     free = shutil.disk_usage(opts.build if opts.build.exists() else Path.cwd()).free
     want = (60 if opts.offline == "full" else 30) * 2**30
     if free < want:
