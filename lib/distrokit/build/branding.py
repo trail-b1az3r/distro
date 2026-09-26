@@ -34,8 +34,22 @@ def hex_rgb(value: str) -> tuple[int, int, int]:
     return int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16)
 
 
+def colour_tokens(b: Branding) -> dict[str, str]:
+    """Extra template tokens: each BRAND_* colour as 0-1 floats (Plymouth
+    scripts) and as 0-255 integers, e.g. @BRAND_BG_R@."""
+    extra = {}
+    for key, value in b.values.items():
+        if key.startswith("BRAND_"):
+            r, g, bl = hex_rgb(value)
+            for suffix, comp in (("R", r), ("G", g), ("B", bl)):
+                extra[f"{key}_{suffix}"] = f"{comp / 255:.3f}"
+                extra[f"{key}_{suffix}8"] = str(comp)
+    return extra
+
+
 def render_templates(root: Path, out_dir: Path, b: Branding) -> list[Path]:
     """Render branding/**/X.in to branding/generated/**/X."""
+    extra = colour_tokens(b)
     out = []
     for tmpl in sorted(root.rglob("*.in")):
         rel = tmpl.relative_to(root)
@@ -43,7 +57,7 @@ def render_templates(root: Path, out_dir: Path, b: Branding) -> list[Path]:
             continue
         target = out_dir / rel.with_suffix("")
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(b.render(tmpl.read_text()))
+        target.write_text(b.render(tmpl.read_text(), extra))
         out.append(target)
     return out
 
@@ -161,12 +175,38 @@ def plymouth_assets(b: Branding, out: Path, logo_png: Path) -> None:
     lock.save(out / "lock.png")
 
 
+def grub_slices(b: Branding, out: Path) -> None:
+    """Nine-slice pixmaps for the GRUB menu highlight and terminal box."""
+    from PIL import Image, ImageDraw
+
+    def nine(prefix: str, fill: tuple, outline: tuple | None, radius: int) -> None:
+        size = radius * 2 + 1
+        tile = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        ImageDraw.Draw(tile).rounded_rectangle((0, 0, size - 1, size - 1), radius, fill=fill, outline=outline,
+                                               width=1 if outline else 0)
+        r = radius
+        boxes = {
+            "nw": (0, 0, r, r), "n": (r, 0, r + 1, r), "ne": (r + 1, 0, size, r),
+            "w": (0, r, r, r + 1), "c": (r, r, r + 1, r + 1), "e": (r + 1, r, size, r + 1),
+            "sw": (0, r + 1, r, size), "s": (r, r + 1, r + 1, size), "se": (r + 1, r + 1, size, size),
+        }
+        for name, box in boxes.items():
+            tile.crop(box).save(out / f"{prefix}_{name}.png")
+
+    out.mkdir(parents=True, exist_ok=True)
+    accent = hex_rgb(b["BRAND_ACCENT"])
+    surface = hex_rgb(b["BRAND_SURFACE"])
+    nine("select", accent + (150,), accent + (255,), 10)
+    nine("terminal_box", surface + (235,), None, 8)
+
+
 def generate(quick: bool = False, b: Branding | None = None, log=print) -> None:
     b = b or load_branding()
     root = paths.data("branding")
     gen = root / "generated"
     rendered = render_templates(root, gen, b)
     log(f"rendered {len(rendered)} templates")
+    shutil.copyfile(root / "sddm" / "Main.qml", gen / "sddm" / "Main.qml")
     if quick:
         return
     logo_mark = gen / "logo" / "logo-mark.svg"
@@ -205,6 +245,7 @@ def generate(quick: bool = False, b: Branding | None = None, log=print) -> None:
     bg.save(sddm_dir / "background.png")
     rasterise(logo_mark, sddm_dir / "logo.png", 192)
     rasterise(logo_mark, grub_dir / "logo.png", 128)
+    grub_slices(b, grub_dir)
     splash = ImageEnhance.Brightness(aurora(b, 640, 480, seed=3)).enhance(0.55)
     syslinux = gen / "syslinux"
     syslinux.mkdir(parents=True, exist_ok=True)

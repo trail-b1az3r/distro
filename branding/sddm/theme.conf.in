@@ -1,0 +1,9 @@
+[General]
+background=background.png
+accent=@BRAND_ACCENT@
+accent2=@BRAND_ACCENT_2@
+surface=@BRAND_SURFACE@
+fg=@BRAND_FG@
+muted=@BRAND_MUTED@
+danger=@BRAND_DANGER@
+distroName=@DISTRO_PRETTY_NAME@

@@ -1,0 +1,65 @@
+# @DISTRO_PRETTY_NAME@ GRUB theme. Fonts are generated at package build time
+# (grub-mkfont); GRUB falls back to its built-in font if they are missing.
+title-text: ""
+desktop-image: "background.png"
+desktop-color: "@BRAND_BG@"
+terminal-font: "DejaVu Sans Mono Regular 16"
+terminal-box: "terminal_box_*.png"
+
++ image {
+    top = 10%
+    left = 50%-56
+    width = 112
+    height = 112
+    file = "logo.png"
+}
+
++ label {
+    top = 10%+124
+    left = 0
+    width = 100%
+    align = "center"
+    text = "@DISTRO_PRETTY_NAME@"
+    color = "@BRAND_FG@"
+    font = "DejaVu Sans Bold 24"
+}
+
++ boot_menu {
+    left = 25%
+    top = 38%
+    width = 50%
+    height = 40%
+    item_font = "DejaVu Sans Regular 18"
+    item_color = "@BRAND_MUTED@"
+    selected_item_font = "DejaVu Sans Bold 18"
+    selected_item_color = "@BRAND_FG@"
+    selected_item_pixmap_style = "select_*.png"
+    item_height = 40
+    item_padding = 14
+    item_spacing = 6
+    icon_width = 0
+    icon_height = 0
+    scrollbar = false
+}
+
++ progress_bar {
+    id = "__timeout__"
+    left = 35%
+    top = 84%
+    width = 30%
+    height = 4
+    fg_color = "@BRAND_ACCENT@"
+    bg_color = "@BRAND_SURFACE@"
+    border_color = "@BRAND_SURFACE@"
+    show_text = false
+}
+
++ label {
+    top = 88%
+    left = 0
+    width = 100%
+    align = "center"
+    color = "@BRAND_MUTED@"
+    font = "DejaVu Sans Regular 14"
+    text = "Enter: boot   E: edit   C: command line"
+}
