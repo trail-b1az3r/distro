@@ -1,0 +1,21 @@
+{
+  "description": "BIOS, GRUB, ext4 with a swap partition and separate /home, virtio disk, minimal profile",
+  "firmware": "bios",
+  "disk_bus": "virtio",
+  "disk_gib": 64,
+  "memory_mib": 3072,
+  "expect": {"filesystem": "ext4", "bootloader": "grub", "encrypted": false},
+  "config": {
+    "locale": "de_DE.UTF-8",
+    "timezone": "UTC",
+    "keyboard_layout": "de",
+    "hostname": "qemu-bios",
+    "user": {"username": "tester", "password": "test-password", "root_password": "root-password",
+             "shell": "bash"},
+    "disk": {"mode": "erase", "disk": "/dev/vda", "filesystem": "ext4", "swap": "partition",
+             "separate_home": true},
+    "bootloader": "grub",
+    "profile": "minimal",
+    "kernel_params": ["console=tty0", "console=ttyS0,115200"]
+  }
+}

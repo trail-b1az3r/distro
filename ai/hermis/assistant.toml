@@ -1,0 +1,32 @@
+# Hermis: Hermes Agent by Nous Research (MIT).
+# https://github.com/NousResearch/hermes-agent
+#
+# Installed per user with uv from PyPI (package "hermes-agent"), which gives a
+# pinned, reproducible environment instead of the upstream curl | bash script.
+
+[assistant]
+id = "hermis"
+name = "Hermis"
+upstream = "Hermes Agent (Nous Research)"
+homepage = "https://hermes-agent.nousresearch.com/"
+source = "https://github.com/NousResearch/hermes-agent"
+license = "MIT"
+description = "A self-improving agent that learns skills from experience. Works with local models or cloud providers."
+icon = "hermis"
+
+[install]
+method = "uv-tool"
+package = "hermes-agent"
+version = ""
+# hermes-agent supports Python >=3.11,<3.14.
+python = "3.13"
+commands = ["hermes"]
+
+[launch]
+# First launch runs setup (model/provider selection); afterwards the agent.
+setup = ["hermes", "setup"]
+run = ["hermes"]
+doctor = ["hermes", "doctor"]
+# Marker written by `hermes setup` once it completes.
+configured_marker = "~/.hermes/config.yaml"
+terminal = true

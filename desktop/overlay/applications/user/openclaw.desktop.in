@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=OpenClaw
+Comment=Personal AI assistant with a local gateway
+Exec=@DISTRO_ID@-ai --launch openclaw
+Icon=@DISTRO_ID@-openclaw
+Terminal=false
+Categories=Utility;Development;
+StartupNotify=false

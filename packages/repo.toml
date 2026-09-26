@@ -1,0 +1,31 @@
+# The distribution repository: every package that is in neither Arch Linux
+# nor EndeavourOS, built by scripts/build-packages.sh (distrokit.build.packages).
+#
+# The same packages go into the ISO's offline repository, so the desktop can
+# be installed without the AUR. `build.sh --offline full` adds every other
+# package an installation needs, for installs with no network at all.
+#
+# Order of preference when a dependency could come from several places:
+# a local PKGBUILD, then the Arch/EndeavourOS repositories, then the AUR.
+
+[local]
+# Rendered from packages/pkgbuild/<dir>/PKGBUILD.in with distro.conf values.
+templates = ["distro", "fonts-google-sans-flex"]
+# PKGBUILD directories used as they are (globs, relative to the repository).
+dirs = ["desktop/dots/sdata/dist-arch/illogical-impulse-*"]
+
+[aur]
+# Every AUR package named in these package lists is built with its AUR
+# dependencies ("*" = all lists under packages/lists).
+lists = ["*"]
+# AUR driver stacks from hardware/gpu/drivers.toml (source = "aur").
+gpu_stacks = true
+# llama.cpp builds from ai/runtime/llama-server.toml. The CUDA and HIP builds
+# take hours and need their toolkits; machines that want them build them with
+# `<cli> ai runtime --backend cuda|rocm`.
+llama_backends = ["vulkan", "cpu"]
+# Extra AUR packages to carry (none by default).
+extra = []
+# Never copied into the repository: the licence does not allow
+# redistribution. The installer installs them online with yay.
+exclude = ["visual-studio-code-bin"]

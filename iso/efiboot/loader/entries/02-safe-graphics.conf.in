@@ -1,0 +1,5 @@
+title    @DISTRO_PRETTY_NAME@ live, safe graphics (UEFI)
+sort-key 02
+linux    /%INSTALL_DIR%/boot/%ARCH%/vmlinuz-linux
+initrd   /%INSTALL_DIR%/boot/%ARCH%/initramfs-linux.img
+options  archisobasedir=%INSTALL_DIR% archisosearchuuid=%ARCHISO_UUID% nomodeset @DISTRO_ID@.safe_graphics=1 cow_spacesize=4G

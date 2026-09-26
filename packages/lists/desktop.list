@@ -1,0 +1,51 @@
+# The desktop: Hyprland with the Halcyon / illogical-impulse shell from
+# desktop/dots. The illogical-impulse-* packages are built from the dots'
+# own PKGBUILDs (desktop/dots/sdata/dist-arch), so their dependency lists
+# track upstream exactly.
+illogical-impulse-audio
+illogical-impulse-backlight
+illogical-impulse-basic
+illogical-impulse-bibata-modern-classic-bin
+illogical-impulse-fonts-themes
+illogical-impulse-hyprland
+illogical-impulse-kde
+illogical-impulse-microtex-git
+illogical-impulse-portal
+illogical-impulse-python
+illogical-impulse-quickshell-git
+illogical-impulse-screencapture
+illogical-impulse-toolkit
+illogical-impulse-widgets
+
+# Login screen and X11 support (XWayland for X11 apps, Xorg for the greeter
+# and for X11 sessions such as the optional Plasma fallback).
+sddm
+xorg-server
+xorg-xwayland
+qt6-wayland
+qt5-wayland
+
+# Default terminal and file manager, with thumbnails and remote folders
+konsole
+dolphin
+kio-extras
+ffmpegthumbs
+kdegraphics-thumbnailers
+kate
+
+# Fonts
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+ttf-dejavu
+ttf-liberation
+@DISTRO_ID@-fonts-google-sans-flex
+
+xdg-user-dirs
+xdg-utils
+gnome-keyring
+polkit-kde-agent
+nm-connection-editor
+
+@DISTRO_ID@-desktop
+@DISTRO_ID@-welcome

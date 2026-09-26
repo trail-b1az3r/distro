@@ -1,0 +1,16 @@
+# Optional KDE Plasma session: a conventional fallback desktop that runs on
+# both Wayland and X11.
+plasma-desktop
+plasma-workspace
+plasma-x11-session
+kwin
+kscreen
+plasma-pa
+plasma-nm
+powerdevil
+bluedevil
+breeze-gtk
+kde-gtk-config
+kinfocenter
+systemsettings
+xdg-desktop-portal-kde

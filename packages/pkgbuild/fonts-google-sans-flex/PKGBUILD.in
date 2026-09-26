@@ -1,0 +1,31 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+#
+# Google Sans Flex, the interface font of the illogical-impulse shell. Its
+# installer fetches the font into each user's home; packaging it makes the
+# desktop work offline and on first login. The source is pinned by commit and
+# checksum. Generated from packages/pkgbuild/fonts-google-sans-flex/PKGBUILD.in.
+
+pkgname=@DISTRO_ID@-fonts-google-sans-flex
+_commit=251aa5abd30496368f634e54ce2a508fe5a2fdfa
+_file='GoogleSansFlex-VariableFont_GRAD,ROND,opsz,slnt,wdth,wght.ttf'
+pkgver=r1.251aa5a
+pkgrel=1
+pkgdesc="Google Sans Flex variable font"
+arch=(any)
+url="https://github.com/end-4/google-sans-flex"
+license=(OFL-1.1)
+depends=(fontconfig)
+provides=(ttf-google-sans-flex)
+source=(
+  "GoogleSansFlex-${_commit}.ttf::https://raw.githubusercontent.com/end-4/google-sans-flex/${_commit}/GoogleSansFlex-VariableFont_GRAD%2CROND%2Copsz%2Cslnt%2Cwdth%2Cwght.ttf"
+  "LICENSE-${_commit}::https://raw.githubusercontent.com/end-4/google-sans-flex/${_commit}/LICENSE"
+)
+sha256sums=(
+  '2510a8b7a24beb1fe8163e9a49813ccfe96b5453444b9443d42665ca4fa320c9'
+  '1d361a8f8e8ce6e68457dcd93fb56e162e6baa3bbb7e7573a290d44399f6b57e'
+)
+
+package() {
+  install -Dm644 "GoogleSansFlex-${_commit}.ttf" "$pkgdir/usr/share/fonts/TTF/${_file}"
+  install -Dm644 "LICENSE-${_commit}" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

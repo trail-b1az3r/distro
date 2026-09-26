@@ -1,0 +1,22 @@
+{
+  "locale": "en_US.UTF-8",
+  "timezone": "Europe/London",
+  "keyboard_layout": "gb",
+  "hostname": "workstation",
+  "user": {
+    "username": "sam",
+    "fullname": "Sam Example",
+    "password": "",
+    "shell": "fish"
+  },
+  "disk": {
+    "mode": "erase",
+    "disk": "/dev/nvme0n1",
+    "filesystem": "btrfs",
+    "encrypt": true,
+    "passphrase": "",
+    "swap": "zram"
+  },
+  "bootloader": "auto",
+  "profile": "standard"
+}

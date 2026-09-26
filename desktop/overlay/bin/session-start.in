@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Runs once per Hyprland login (from ~/.config/hypr/@DISTRO_ID@/init.lua).
+#  - first login: the settings end-4's installer applies with gsettings/kwriteconfig
+#  - resumes setup tasks that need the network (AI tools, models), if any
+#  - opens the welcome wizard until it has been completed
+set -u
+state="${XDG_STATE_HOME:-$HOME/.local/state}/@DISTRO_ID@"
+mkdir -p "$state"
+
+if [[ ! -e "$state/session-initialised" ]]; then
+    if command -v gsettings >/dev/null; then
+        gsettings set org.gnome.desktop.interface font-name 'Google Sans Flex Medium 11 @opsz=11,wght=500' || true
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' || true
+    fi
+    if command -v kwriteconfig6 >/dev/null; then
+        kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle Darkly || true
+        kwriteconfig6 --file kdeglobals --group General --key TerminalApplication konsole || true
+        kwriteconfig6 --file kdeglobals --group General --key TerminalService org.kde.konsole.desktop || true
+    fi
+    if command -v xdg-user-dirs-update >/dev/null; then
+        xdg-user-dirs-update || true
+    fi
+    touch "$state/session-initialised"
+fi
+
+# Live ISO: the installer instead of setup tasks and the welcome wizard.
+if [[ -e /etc/@DISTRO_ID@/live ]]; then
+    systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE 2>/dev/null || true
+    sleep 2
+    command -v @DISTRO_ID@-installer >/dev/null && exec @DISTRO_ID@-installer
+    exit 0
+fi
+
+# Make the session's PATH (with ~/.local/bin) visible to user services.
+systemctl --user import-environment PATH WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE 2>/dev/null || true
+
+# Setup tasks left over from an offline installation (no-op when none).
+@DISTRO_CLI@ setup resume --background >/dev/null 2>&1 &
+
+if [[ ! -e "$state/firstboot-done" ]] && command -v @DISTRO_ID@-welcome >/dev/null; then
+    sleep 4
+    exec @DISTRO_ID@-welcome --first-boot
+fi

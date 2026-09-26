@@ -1,0 +1,2 @@
+# The browser. Change BROWSER in distro.conf to swap it.
+@BROWSER@

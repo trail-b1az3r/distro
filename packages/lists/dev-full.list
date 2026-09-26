@@ -1,0 +1,23 @@
+# Toolchains and debugging tools (Developer profile and up).
+gcc
+clang
+llvm
+lld
+lldb
+gdb
+valgrind
+strace
+ltrace
+perf
+make
+cmake
+meson
+ninja
+autoconf
+automake
+pkgconf
+python-pipx
+python-virtualenv
+rust
+shellcheck
+linux-headers

@@ -1,0 +1,67 @@
+# @DISTRO_PRETTY_NAME@ defaults for Fish, loaded before ~/.config/fish/config.fish
+# (so your own settings always win). Syntax highlighting, autosuggestions and
+# completions are built into Fish; the prompt (with Git status) is Starship.
+
+# Per-user tools: Claude Code, HyperNix, AI assistants.
+if not contains -- $HOME/.local/bin $PATH
+    set -gx PATH $HOME/.local/bin $PATH
+end
+
+# Local AI environment (acceleration backend settings).
+if test -r $HOME/.config/@DISTRO_ID@/ai.env
+    for line in (string match -rv '^\s*(#|$)' < $HOME/.config/@DISTRO_ID@/ai.env)
+        set -l kv (string split -m1 = -- $line)
+        test (count $kv) -eq 2; and set -gx $kv[1] (string trim -c "'\"" -- $kv[2])
+    end
+end
+
+status is-interactive; or return
+
+# System
+abbr -a -g up '@DISTRO_CLI@ update'
+abbr -a -g doctor '@DISTRO_CLI@ doctor'
+abbr -a -g gpu '@DISTRO_CLI@ gpu status'
+abbr -a -g hw '@DISTRO_CLI@ hardware'
+abbr -a -g pacs 'sudo pacman -S'
+abbr -a -g pacr 'sudo pacman -Rns'
+abbr -a -g pacq 'pacman -Qs'
+abbr -a -g orphans 'pacman -Qdtq'
+abbr -a -g sc 'systemctl'
+abbr -a -g scu 'systemctl --user'
+abbr -a -g jf 'journalctl -f'
+
+# Git
+abbr -a -g g 'git'
+abbr -a -g gs 'git status -sb'
+abbr -a -g ga 'git add'
+abbr -a -g gc 'git commit'
+abbr -a -g gca 'git commit --amend'
+abbr -a -g gp 'git push'
+abbr -a -g gpl 'git pull --rebase'
+abbr -a -g gd 'git diff'
+abbr -a -g gds 'git diff --staged'
+abbr -a -g gsw 'git switch'
+abbr -a -g gl 'git log --oneline --graph --decorate -20'
+
+# Files
+if command -q eza
+    alias ll 'eza -l --icons=auto --git --group-directories-first'
+    alias la 'eza -la --icons=auto --git --group-directories-first'
+    alias lt 'eza --tree --level=2 --icons=auto'
+else
+    alias ll 'ls -lh'
+    alias la 'ls -lAh'
+end
+alias grep 'grep --color=auto'
+alias ip 'ip -color=auto'
+alias df 'df -h'
+alias free 'free -h'
+
+# System information in the distribution's colours.
+function sysinfo --description 'Show system information'
+    fastfetch --config /usr/share/@DISTRO_ID@/fastfetch.jsonc $argv
+end
+
+command -q zoxide; and zoxide init fish | source
+command -q fzf; and fzf --fish 2>/dev/null | source
+command -q direnv; and direnv hook fish | source

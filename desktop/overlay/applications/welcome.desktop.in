@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Welcome to @DISTRO_NAME@
+Comment=Finish setting up your system: updates, drivers, AI, appearance and backups
+Exec=@DISTRO_ID@-welcome
+Icon=@DISTRO_ID@
+Terminal=false
+Categories=System;Settings;
+Keywords=welcome;setup;first boot;help;

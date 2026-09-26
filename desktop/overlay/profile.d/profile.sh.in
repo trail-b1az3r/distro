@@ -1,0 +1,12 @@
+# @DISTRO_PRETTY_NAME@: per-user tools and the local AI environment for POSIX
+# login shells (bash, zsh). Fish has the same in vendor_conf.d.
+case ":${PATH}:" in
+    *":${HOME}/.local/bin:"*) ;;
+    *) PATH="${HOME}/.local/bin:${PATH}"; export PATH ;;
+esac
+if [ -r "${HOME}/.config/@DISTRO_ID@/ai.env" ]; then
+    set -a
+    # shellcheck source=/dev/null
+    . "${HOME}/.config/@DISTRO_ID@/ai.env"
+    set +a
+fi

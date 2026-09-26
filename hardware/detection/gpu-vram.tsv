@@ -1,0 +1,101 @@
+# Typical video memory by model, used only when the running driver cannot
+# report it (for example nouveau on the live ISO). The installer labels these
+# values as estimates. First matching row wins; mobile rows come first.
+# vendor	regex (case-insensitive, matched against the model name)	GiB
+nvidia	RTX 5090 (Laptop|Mobile)	24
+nvidia	RTX 5080 (Laptop|Mobile)	16
+nvidia	RTX 4090 (Laptop|Mobile)	16
+nvidia	RTX 4080 (Laptop|Mobile)	12
+nvidia	RTX 4070 (Laptop|Mobile)	8
+nvidia	RTX 4060 (Laptop|Mobile)	8
+nvidia	RTX 3080 Ti (Laptop|Mobile)	16
+nvidia	RTX 3080 (Laptop|Mobile)	8
+nvidia	RTX 3070 (Laptop|Mobile)	8
+nvidia	RTX 3060 (Laptop|Mobile)	6
+nvidia	GTX 1080 (Laptop|Mobile)	8
+nvidia	GTX 1070 (Laptop|Mobile)	8
+nvidia	GTX 1060 (Laptop|Mobile)	6
+nvidia	RTX PRO 6000	96
+nvidia	RTX 6000 Ada	48
+nvidia	RTX A6000	48
+nvidia	RTX 5090\b	32
+nvidia	RTX 5080\b	16
+nvidia	RTX 5070 Ti	16
+nvidia	RTX 5070\b	12
+nvidia	RTX 5060 Ti	8
+nvidia	RTX 5060\b	8
+nvidia	RTX 4090\b	24
+nvidia	RTX 4080 SUPER	16
+nvidia	RTX 4080\b	16
+nvidia	RTX 4070 Ti SUPER	16
+nvidia	RTX 4070 Ti\b	12
+nvidia	RTX 4070 SUPER	12
+nvidia	RTX 4070\b	12
+nvidia	RTX 4060 Ti	8
+nvidia	RTX 4060\b	8
+nvidia	RTX 3090	24
+nvidia	RTX 3080 Ti	12
+nvidia	RTX 3080\b	10
+nvidia	RTX 3070	8
+nvidia	RTX 3060 Ti	8
+nvidia	RTX 3060\b	12
+nvidia	RTX 3050	8
+nvidia	TITAN RTX	24
+nvidia	RTX 2080 Ti	11
+nvidia	RTX 2080	8
+nvidia	RTX 2070	8
+nvidia	RTX 2060 SUPER	8
+nvidia	RTX 2060	6
+nvidia	GTX 1660	6
+nvidia	GTX 1650	4
+nvidia	TITAN Xp|TITAN X\b	12
+nvidia	GTX 1080 Ti	11
+nvidia	GTX 1080	8
+nvidia	GTX 1070	8
+nvidia	GTX 1060	6
+nvidia	GTX 1050 Ti	4
+nvidia	GTX 1050	2
+nvidia	GTX 980 Ti	6
+nvidia	GTX 980	4
+nvidia	GTX 970	4
+nvidia	GTX 960	2
+amd	RX 9070 XT	16
+amd	RX 9070\b	16
+amd	RX 9060 XT	8
+amd	RX 7900 XTX	24
+amd	RX 7900 XT\b	20
+amd	RX 7900 GRE	16
+amd	RX 7800 XT	16
+amd	RX 7700 XT	12
+amd	RX 7600 XT	16
+amd	RX 7600\b	8
+amd	RX 6950 XT	16
+amd	RX 6900 XT	16
+amd	RX 6800 XT	16
+amd	RX 6800\b	16
+amd	RX 6750 XT	12
+amd	RX 6700 XT	12
+amd	RX 6700\b	10
+amd	RX 6650 XT	8
+amd	RX 6600 XT	8
+amd	RX 6600\b	8
+amd	RX 6500 XT	4
+amd	Radeon VII	16
+amd	RX Vega 64	8
+amd	RX Vega 56	8
+amd	RX 5700 XT	8
+amd	RX 5700\b	8
+amd	RX 5600 XT	6
+amd	RX 5500 XT	4
+amd	RX 590	8
+amd	RX 580	8
+amd	RX 570	4
+amd	RX 480	8
+amd	RX 470	4
+intel	Arc B580	12
+intel	Arc B570	10
+intel	Arc A770	8
+intel	Arc A750	8
+intel	Arc A580	8
+intel	Arc A380	6
+intel	Arc A310	4

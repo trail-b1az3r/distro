@@ -1,0 +1,83 @@
+# Base system: installed on every profile.
+# One package per line. Kernels, microcode, firmware extras and GPU drivers are
+# chosen per machine by the installer (see hardware/gpu/drivers.toml).
+base
+base-devel
+linux-firmware
+sof-firmware
+alsa-firmware
+mkinitcpio
+sudo
+bash-completion
+man-db
+man-pages
+texinfo
+nano
+vim
+less
+which
+
+# Package management: pacman stays the package manager; yay handles the AUR.
+pacman-contrib
+reflector
+endeavouros-keyring
+endeavouros-mirrorlist
+eos-rankmirrors
+yay
+
+# Shells and everyday tools
+git
+fish
+openssh
+curl
+wget
+jq
+unzip
+zip
+p7zip
+rsync
+htop
+btop
+fastfetch
+lsof
+usbutils
+pciutils
+hwdata
+smartmontools
+nvme-cli
+
+# Storage, encryption and boot
+btrfs-progs
+dosfstools
+e2fsprogs
+exfatprogs
+ntfs-3g
+xfsprogs
+cryptsetup
+lvm2
+efibootmgr
+zram-generator
+plymouth
+
+# Networking and Bluetooth
+networkmanager
+wpa_supplicant
+bluez
+bluez-utils
+
+# Audio: PipeWire with WirePlumber
+pipewire
+pipewire-alsa
+pipewire-pulse
+pipewire-jack
+wireplumber
+gst-plugin-pipewire
+alsa-utils
+
+# Power
+power-profiles-daemon
+upower
+
+# Distribution components
+@DISTRO_ID@-core
+@DISTRO_ID@-branding

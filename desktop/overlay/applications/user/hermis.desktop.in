@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Hermis
+Comment=Hermes Agent by Nous Research
+Exec=@DISTRO_ID@-ai --launch hermis
+Icon=@DISTRO_ID@-hermis
+Terminal=false
+Categories=Utility;Development;
+StartupNotify=false

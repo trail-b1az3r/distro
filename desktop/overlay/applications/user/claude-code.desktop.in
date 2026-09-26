@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Claude Code
+Comment=Anthropic's coding agent in your terminal
+Exec=@DISTRO_ID@-ai --launch claude-code
+Icon=@DISTRO_ID@-claude-code
+Terminal=false
+Categories=Utility;Development;
+StartupNotify=false

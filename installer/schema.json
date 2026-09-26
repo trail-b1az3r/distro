@@ -1,0 +1,321 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Installer configuration",
+  "description": "Unattended installation: <id>-installer --config FILE (see docs/installation.md).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "locale": {
+      "type": "string",
+      "default": "en_US.UTF-8"
+    },
+    "timezone": {
+      "type": "string",
+      "default": "UTC"
+    },
+    "keyboard_layout": {
+      "type": "string",
+      "default": "us"
+    },
+    "keyboard_variant": {
+      "type": "string",
+      "default": ""
+    },
+    "hostname": {
+      "type": "string",
+      "default": ""
+    },
+    "user": {
+      "$ref": "#/$defs/UserConfig"
+    },
+    "disk": {
+      "$ref": "#/$defs/DiskConfig"
+    },
+    "bootloader": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "systemd-boot",
+        "grub"
+      ],
+      "default": "auto"
+    },
+    "secure_boot": {
+      "type": "string",
+      "enum": [
+        "off",
+        "sbctl"
+      ],
+      "default": "off"
+    },
+    "kernels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Kernel packages: linux, linux-lts, linux-zen, ...",
+      "default": [
+        "linux"
+      ]
+    },
+    "surface_kernel": {
+      "type": "boolean",
+      "default": false
+    },
+    "profile": {
+      "type": "string",
+      "description": "minimal | standard | developer | ai (profiles/*.toml)",
+      "default": "standard"
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": {},
+      "description": "Overrides of the profile's features (profiles/features.toml), e.g. {\"office\": false}",
+      "default": {}
+    },
+    "gpu_overrides": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "PCI slot -> driver stack (hardware/gpu/drivers.toml), e.g. {\"0000:01:00.0\": \"nouveau\"}",
+      "default": {}
+    },
+    "multilib": {
+      "type": "boolean",
+      "default": true
+    },
+    "ai": {
+      "$ref": "#/$defs/AiConfig"
+    },
+    "extra_packages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "kernel_params": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Extra kernel parameters (the root file system is set by the installer)",
+      "default": []
+    },
+    "rank_mirrors": {
+      "type": "boolean",
+      "default": true
+    },
+    "offline": {
+      "type": "boolean",
+      "description": "Use only the ISO's offline repository",
+      "default": false
+    }
+  },
+  "$defs": {
+    "UserConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "username": {
+          "type": "string",
+          "default": ""
+        },
+        "fullname": {
+          "type": "string",
+          "default": ""
+        },
+        "password": {
+          "type": "string",
+          "description": "May be empty in the file and given as INSTALL_USER_PASSWORD",
+          "default": ""
+        },
+        "root_password": {
+          "type": "string",
+          "description": "Empty: root login disabled (sudo only). Or INSTALL_ROOT_PASSWORD",
+          "default": ""
+        },
+        "shell": {
+          "type": "string",
+          "enum": [
+            "bash",
+            "fish"
+          ],
+          "default": "bash"
+        },
+        "autologin": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "DiskConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "erase",
+            "free-space",
+            "manual"
+          ],
+          "default": "erase"
+        },
+        "disk": {
+          "type": "string",
+          "description": "Whole disk, e.g. /dev/nvme0n1 (erase and free-space modes)",
+          "default": ""
+        },
+        "disk_size_bytes": {
+          "type": "integer",
+          "default": 0
+        },
+        "filesystem": {
+          "type": "string",
+          "enum": [
+            "btrfs",
+            "ext4"
+          ],
+          "default": "btrfs"
+        },
+        "encrypt": {
+          "type": "boolean",
+          "default": false
+        },
+        "passphrase": {
+          "type": "string",
+          "description": "LUKS passphrase (8+ characters). May be given as INSTALL_DISK_PASSPHRASE",
+          "default": ""
+        },
+        "swap": {
+          "type": "string",
+          "enum": [
+            "zram",
+            "partition",
+            "file",
+            "none"
+          ],
+          "default": "zram"
+        },
+        "swap_size_gib": {
+          "type": "integer",
+          "default": 0
+        },
+        "hibernation": {
+          "type": "boolean",
+          "default": false
+        },
+        "separate_home": {
+          "type": "boolean",
+          "default": false
+        },
+        "home_size_gib": {
+          "type": "integer",
+          "default": 0
+        },
+        "region_start_bytes": {
+          "type": "integer",
+          "default": 0
+        },
+        "mounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MountSpec"
+          },
+          "description": "Manual mode: existing partitions and where to mount them",
+          "default": []
+        }
+      }
+    },
+    "MountSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "device": {
+          "type": "string"
+        },
+        "mountpoint": {
+          "type": "string",
+          "enum": [
+            "/",
+            "/home",
+            "/boot",
+            "/efi",
+            "swap"
+          ]
+        },
+        "format": {
+          "type": "boolean",
+          "default": false
+        },
+        "filesystem": {
+          "type": "string",
+          "enum": [
+            "",
+            "btrfs",
+            "ext4",
+            "xfs",
+            "vfat",
+            "swap"
+          ],
+          "default": ""
+        },
+        "encrypt": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "device",
+        "mountpoint"
+      ]
+    },
+    "AiConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Catalogue model id (ai/models/catalog.toml), or empty",
+          "default": ""
+        },
+        "custom_model": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "CustomModel fields: source huggingface|url|path|hypernix, repo, file, url, path, ...",
+          "default": null
+        },
+        "download": {
+          "type": "string",
+          "enum": [
+            "now",
+            "first-boot"
+          ],
+          "default": "now"
+        },
+        "backend": {
+          "type": "string",
+          "enum": [
+            "",
+            "cuda",
+            "cuda_legacy",
+            "rocm",
+            "xpu",
+            "vulkan",
+            "cpu"
+          ],
+          "default": ""
+        }
+      }
+    }
+  }
+}

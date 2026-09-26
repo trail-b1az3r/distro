@@ -1,0 +1,53 @@
+-- @DISTRO_PRETTY_NAME@ layer for Hyprland.
+--
+-- Load order: upstream defaults (hyprland/) -> Halcyon (hyprland/halcyon) ->
+-- this file -> your ~/.config/hypr/custom/*.lua, so anything you put in
+-- custom/ wins. This file is managed by `@DISTRO_CLI@`: updates may replace it
+-- and `@DISTRO_CLI@ reset-desktop` restores it.
+
+local function load_env_file(path)
+    local f = io.open(path, "r")
+    if not f then
+        return
+    end
+    for line in f:lines() do
+        if not line:match("^%s*#") then
+            local key, value = line:match("^%s*([%w_]+)%s*=%s*(.-)%s*$")
+            if key then
+                value = value:gsub("^'(.*)'$", "%1"):gsub('^"(.*)"$', "%1")
+                hl.env(key, value)
+            end
+        end
+    end
+    f:close()
+end
+
+-- Graphics driver environment, written by `@DISTRO_CLI@ gpu configure`
+-- (for example AQ_DRM_DEVICES on hybrid laptops, LIBVA_DRIVER_NAME on NVIDIA).
+load_env_file("/etc/@DISTRO_ID@/gpu.env")
+-- Local AI environment, written by `@DISTRO_CLI@ ai` (e.g. HSA_OVERRIDE_GFX_VERSION).
+load_env_file(HOME .. "/.config/@DISTRO_ID@/ai.env")
+
+-- Per-user tools (Claude Code, HyperNix, AI assistants) live in ~/.local/bin.
+local path = os.getenv("PATH") or "/usr/local/bin:/usr/bin"
+if not path:find(HOME .. "/.local/bin", 1, true) then
+    hl.env("PATH", HOME .. "/.local/bin:" .. path)
+end
+
+-- Sharp XWayland apps on scaled (HiDPI) displays.
+hl.config({
+    xwayland = {
+        force_zero_scaling = true
+    }
+})
+
+-- First-login setup, pending setup tasks and the welcome wizard.
+hl.on("hyprland.start", function()
+    hl.exec_cmd("/usr/lib/@DISTRO_ID@/bin/@DISTRO_ID@-session-start")
+end)
+
+-- Keybinds. Only chords upstream leaves free (checked by the test suite),
+-- because Hyprland runs every action bound to a chord.
+hl.bind("CTRL + SUPER + A", hl.dsp.exec_cmd("@DISTRO_ID@-ai"), { description = "@DISTRO_NAME@: AI launcher" })
+hl.bind("SUPER + SHIFT + U", hl.dsp.exec_cmd("@DISTRO_ID@-update"), { description = "@DISTRO_NAME@: System update" })
+hl.bind("SUPER + F1", hl.dsp.exec_cmd("@DISTRO_ID@-welcome"), { description = "@DISTRO_NAME@: Welcome and help" })

@@ -1,0 +1,23 @@
+# Claude Code (Anthropic). https://docs.anthropic.com/en/docs/claude-code
+#
+# Its licence does not allow redistribution, so it is never copied onto the
+# ISO. It is installed per user from the official npm package, and ~/.local/bin
+# is on PATH in every shell (profile.d and Fish), so `claude` works at once.
+
+[tool]
+id = "claude-code"
+name = "Claude Code"
+homepage = "https://docs.anthropic.com/en/docs/claude-code"
+license = "Proprietary (Anthropic Commercial Terms)"
+
+[install]
+method = "npm-user"
+package = "@anthropic-ai/claude-code"
+version = ""
+node = ">=18.0.0"
+commands = ["claude"]
+
+[launch]
+run = ["claude"]
+doctor = ["claude", "doctor"]
+terminal = true

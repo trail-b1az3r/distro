@@ -1,0 +1,2 @@
+# Live ISO only: the live user administers the machine without a password.
+@LIVE_USER@ ALL=(ALL:ALL) NOPASSWD: ALL

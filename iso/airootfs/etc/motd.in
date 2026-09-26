@@ -1,0 +1,13 @@
+
+  @DISTRO_PRETTY_NAME@ live system
+
+  The graphical session starts on its own. From this console:
+    @DISTRO_ID@-installer                             graphical installer
+    @DISTRO_ID@-installer --config FILE --dry-run      unattended installation (see the docs)
+    @DISTRO_CLI@ hardware                             what this computer has
+    @DISTRO_CLI@ rescue                               repair an installed system
+    nmtui                                             connect to a network
+
+  User "@LIVE_USER@" has no password and can use sudo.
+  Documentation: @DISTRO_DOC_URL@
+

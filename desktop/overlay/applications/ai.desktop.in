@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=AI Assistant
+GenericName=AI launcher
+Comment=Open HyperNix, your AI assistants, Claude Code and local models
+Exec=@DISTRO_ID@-ai
+Icon=@DISTRO_ID@-ai
+Terminal=false
+Categories=Utility;Development;
+Keywords=AI;LLM;assistant;HyperNix;Hermis;Hermes;OpenClaw;Claude;model;
+StartupNotify=true

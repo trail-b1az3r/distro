@@ -1,0 +1,90 @@
+# Nexora Linux: packages the installer adds per machine (generated, do not edit)
+
+## every machine: kernel(s) chosen in the installer, CPU microcode
+linux (or linux-lts, linux-zen; +headers when DKMS modules are used)
+amd-ucode | intel-ucode
+
+## graphics: common
+mesa
+vulkan-icd-loader
+libva-utils
+mesa-utils
+(multilib) lib32-mesa lib32-vulkan-icd-loader
+
+## graphics: amdgpu — AMDGPU with Mesa (RADV Vulkan, VA-API) (repo)
+vulkan-radeon
+(multilib) lib32-vulkan-radeon
+(GPU compute) rocm-hip-runtime rocm-opencl-runtime rocminfo
+
+## graphics: intel — Intel graphics (Mesa, ANV Vulkan, iHD VA-API) (repo)
+vulkan-intel
+intel-media-driver
+(multilib) lib32-vulkan-intel
+(GPU compute) intel-compute-runtime level-zero-loader
+
+## graphics: intel-discrete — Intel Arc (Mesa, ANV Vulkan, oneVPL media) (repo)
+vulkan-intel
+intel-media-driver
+vpl-gpu-rt
+(multilib) lib32-vulkan-intel
+(GPU compute) intel-compute-runtime level-zero-loader
+
+## graphics: intel-legacy — Intel graphics, Haswell and older (Mesa, i965 VA-API) (repo)
+vulkan-intel
+libva-intel-driver
+(multilib) lib32-vulkan-intel
+
+## graphics: nouveau — Nouveau (open-source NVIDIA driver, NVK Vulkan) (repo)
+vulkan-nouveau
+(multilib) lib32-vulkan-nouveau
+
+## graphics: nvidia-580xx — NVIDIA 580 legacy driver (Maxwell, Pascal, Volta) (aur)
+nvidia-580xx-dkms
+nvidia-580xx-utils
+nvidia-580xx-settings
+egl-wayland
+libva-nvidia-driver
+opencl-nvidia-580xx
+(multilib) lib32-nvidia-580xx-utils
+
+## graphics: nvidia-open — NVIDIA driver (open kernel modules) (repo)
+nvidia-open-dkms
+nvidia-utils
+nvidia-settings
+egl-wayland
+libva-nvidia-driver
+opencl-nvidia
+(multilib) lib32-nvidia-utils lib32-opencl-nvidia
+(GPU compute) cuda cudnn
+(prebuilt modules) linux: nvidia-open
+
+## graphics: radeon — Radeon (Mesa, OpenGL only) (repo)
+
+## graphics: virtual — Virtual GPU (Mesa: virgl/venus, vmwgfx, llvmpipe) (repo)
+vulkan-virtio
+vulkan-swrast
+
+## grub
+grub
+os-prober
+
+## laptop
+iio-sensor-proxy
+libwacom
+
+## intel-laptop
+thermald
+
+## virt-qemu
+qemu-guest-agent
+spice-vdagent
+
+## virt-virtualbox
+virtualbox-guest-utils
+
+## virt-vmware
+open-vm-tools
+gtkmm3
+
+## virt-hyperv
+hyperv

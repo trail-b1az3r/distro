@@ -1,0 +1,22 @@
+# Local model server: llama.cpp's llama-server, which speaks the
+# OpenAI-compatible API so assistants and editors can use local models.
+#
+# It runs as a systemd *user* service that is not enabled by default; the AI
+# launcher and `<cli> model serve` start it when needed.
+
+[server]
+host = "127.0.0.1"
+port = 8081
+default_context = 8192
+
+# llama.cpp build per acceleration backend. Vulkan works on NVIDIA, AMD and
+# Intel alike and is prebuilt in the distribution repository; the CUDA and HIP
+# builds are faster on their hardware but are long AUR builds, so they are
+# opt-in (`<cli> ai runtime --backend cuda`).
+[packages]
+vulkan = "llama.cpp-vulkan"
+cuda = "llama.cpp-cuda"
+rocm = "llama.cpp-hip"
+xpu = "llama.cpp-vulkan"
+cpu = "llama.cpp"
+default_gpu = "vulkan"

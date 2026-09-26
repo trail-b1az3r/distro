@@ -1,0 +1,35 @@
+# Code editor implementations. distro.conf's CODE_EDITOR picks one by id.
+#
+# "redistributable" says whether the package may be copied onto the ISO's
+# offline repository. Editors that are not redistributable are installed from
+# their source at installation time instead, and only when the user picks them.
+
+[code]
+name = "Code - OSS"
+package = "code"
+source = "repo"          # Arch [extra]
+license = "MIT"
+redistributable = true
+command = "code"
+desktop_file = "code-oss.desktop"
+notes = "Arch's build of the open-source VS Code, with the Open VSX marketplace."
+
+[vscodium-bin]
+name = "VSCodium"
+package = "vscodium-bin"
+source = "aur"
+license = "MIT"
+redistributable = true
+command = "codium"
+desktop_file = "codium.desktop"
+notes = "Telemetry-free binary build of VS Code."
+
+[visual-studio-code-bin]
+name = "Visual Studio Code (Microsoft)"
+package = "visual-studio-code-bin"
+source = "aur"
+license = "custom: Microsoft Software License"
+redistributable = false
+command = "code"
+desktop_file = "code.desktop"
+notes = "Microsoft's build. Its licence forbids redistribution, so it is installed online."

@@ -1,0 +1,5 @@
+# Btrfs snapshots with pre/post pacman snapshots and bootable snapshot entries.
+snapper
+snap-pac
+grub-btrfs
+inotify-tools

@@ -1,0 +1,13 @@
+[Unit]
+Description=@DISTRO_NAME@ live session: live user and desktop
+After=systemd-sysusers.service systemd-tmpfiles-setup.service
+Before=greetd.service display-manager.service
+ConditionPathExists=/etc/@DISTRO_ID@/live
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/@DISTRO_ID@/bin/@DISTRO_ID@-live-setup
+
+[Install]
+WantedBy=multi-user.target

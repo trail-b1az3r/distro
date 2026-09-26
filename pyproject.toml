@@ -1,0 +1,20 @@
+# Tooling configuration. The distribution itself is built with build.sh and
+# packaged by packages/pkgbuild; distrokit is not published to PyPI.
+[project]
+name = "distrokit"
+dynamic = ["version"]
+description = "Installer, system tools and build tooling of an EndeavourOS-based distribution"
+requires-python = ">=3.11"
+license = "GPL-3.0-or-later"
+
+[tool.ruff]
+line-length = 140
+target-version = "py311"
+extend-exclude = ["desktop/dots", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+ignore = ["E731"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E501"]

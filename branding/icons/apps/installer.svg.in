@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- @DISTRO_NAME@ application icon: a rounded tile with a Lucide glyph (ISC licence, see branding/icons/ui/LICENSE.lucide). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="256" x2="256" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="@BRAND_ACCENT@"/>
+      <stop offset="1" stop-color="@BRAND_ACCENT_2@"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="232" height="232" rx="56" fill="url(#bg)"/>
+  <g transform="translate(56 56) scale(6)" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 15V3" />
+<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+<path d="m7 10 5 5 5-5" />
+  </g>
+</svg>

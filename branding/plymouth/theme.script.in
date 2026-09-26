@@ -1,0 +1,95 @@
+# @DISTRO_PRETTY_NAME@ boot splash (Plymouth script module).
+# Logo, a progress bar, and the disk-encryption passphrase prompt.
+
+Window.SetBackgroundTopColor(@BRAND_BG_R@, @BRAND_BG_G@, @BRAND_BG_B@);
+Window.SetBackgroundBottomColor(@BRAND_BG_R@ * 0.7, @BRAND_BG_G@ * 0.7, @BRAND_BG_B@ * 0.7);
+
+screen_w = Window.GetWidth();
+screen_h = Window.GetHeight();
+scale = Math.Min(screen_w / 1920, screen_h / 1080);
+if (scale < 0.6) scale = 0.6;
+
+logo.image = Image("logo.png");
+logo_size = Math.Int(180 * scale);
+logo.image = logo.image.Scale(logo_size, logo_size);
+logo.sprite = Sprite(logo.image);
+logo.x = screen_w / 2 - logo_size / 2;
+logo.y = screen_h / 2 - logo_size / 2 - 60 * scale;
+logo.sprite.SetPosition(logo.x, logo.y, 10);
+
+bar_w = Math.Int(320 * scale);
+track.image = Image("progress-track.png").Scale(bar_w, 6);
+track.sprite = Sprite(track.image);
+track.x = screen_w / 2 - bar_w / 2;
+track.y = logo.y + logo_size + 70 * scale;
+track.sprite.SetPosition(track.x, track.y, 10);
+fill.original = Image("progress-fill.png");
+fill.sprite = Sprite();
+fill.sprite.SetPosition(track.x, track.y, 11);
+
+fun progress_callback(duration, progress) {
+    width = Math.Int(bar_w * progress);
+    if (width < 1) width = 1;
+    fill.sprite.SetImage(fill.original.Scale(width, 6));
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+# --- Passphrase prompt -------------------------------------------------------
+prompt.sprite = Sprite();
+entry.image = Image("entry.png").Scale(Math.Int(360 * scale), Math.Int(48 * scale));
+entry.sprite = Sprite();
+lock.image = Image("lock.png");
+lock.sprite = Sprite();
+bullet.image = Image("bullet.png");
+bullets = [];
+
+fun hide_prompt() {
+    prompt.sprite.SetOpacity(0);
+    entry.sprite.SetOpacity(0);
+    lock.sprite.SetOpacity(0);
+    for (i = 0; bullets[i]; i++) bullets[i].SetOpacity(0);
+    track.sprite.SetOpacity(1);
+    fill.sprite.SetOpacity(1);
+}
+
+fun display_password_callback(prompt_text, bullet_count) {
+    track.sprite.SetOpacity(0);
+    fill.sprite.SetOpacity(0);
+    if (!prompt_text) prompt_text = "Enter the passphrase to unlock the disk";
+    prompt.image = Image.Text(prompt_text, @BRAND_FG_R@, @BRAND_FG_G@, @BRAND_FG_B@, 1, "Sans 14");
+    prompt.sprite.SetImage(prompt.image);
+    prompt.sprite.SetPosition(screen_w / 2 - prompt.image.GetWidth() / 2, track.y - 20 * scale, 20);
+    prompt.sprite.SetOpacity(1);
+    ex = screen_w / 2 - entry.image.GetWidth() / 2;
+    ey = track.y + 16 * scale;
+    entry.sprite.SetImage(entry.image);
+    entry.sprite.SetPosition(ex, ey, 20);
+    entry.sprite.SetOpacity(1);
+    lock.sprite.SetImage(lock.image);
+    lock.sprite.SetPosition(ex + 12 * scale, ey + entry.image.GetHeight() / 2 - lock.image.GetHeight() / 2, 21);
+    lock.sprite.SetOpacity(1);
+    for (i = 0; bullets[i]; i++) bullets[i].SetOpacity(0);
+    shown = Math.Min(bullet_count, 18);
+    for (i = 0; i < shown; i++) {
+        bullets[i] = Sprite(bullet.image);
+        bullets[i].SetPosition(ex + 48 * scale + i * 18, ey + entry.image.GetHeight() / 2 - 7, 21);
+        bullets[i].SetOpacity(1);
+    }
+}
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+Plymouth.SetDisplayNormalFunction(hide_prompt);
+
+# --- Messages (e.g. fsck, or "Unlocking…") ------------------------------------
+message.sprite = Sprite();
+fun message_callback(text) {
+    message.image = Image.Text(text, @BRAND_MUTED_R@, @BRAND_MUTED_G@, @BRAND_MUTED_B@, 1, "Sans 12");
+    message.sprite.SetImage(message.image);
+    message.sprite.SetPosition(screen_w / 2 - message.image.GetWidth() / 2, screen_h - 80 * scale, 30);
+}
+Plymouth.SetMessageFunction(message_callback);
+
+fun quit_callback() {
+    hide_prompt();
+    logo.sprite.SetOpacity(1);
+}
+Plymouth.SetQuitFunction(quit_callback);

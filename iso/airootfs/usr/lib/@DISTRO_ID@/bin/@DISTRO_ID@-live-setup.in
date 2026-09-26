@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Live ISO: creates the live user and deploys its desktop with the same code
+# an installed system uses (`@DISTRO_CLI@ reset-desktop`). Runs at every boot,
+# before the login manager.
+set -euo pipefail
+user="@LIVE_USER@"
+
+if ! id "$user" &>/dev/null; then
+    groupadd -f i2c
+    useradd -m -u 1000 -U -G wheel,video,audio,input,i2c -s /usr/bin/fish -c "@DISTRO_NAME@ live user" "$user"
+    passwd -d "$user" >/dev/null
+fi
+
+if [[ ! -e "/home/$user/.config/hypr/@DISTRO_ID@/init.lua" ]]; then
+    log="/var/log/@DISTRO_ID@/live-desktop.log"
+    mkdir -p "${log%/*}"
+    if ! runuser -u "$user" -- env HOME="/home/$user" @DISTRO_CLI@ reset-desktop --yes >"$log" 2>&1; then
+        echo "The live desktop could not be set up; see $log" >&2
+    fi
+fi
+
+# Keep the installer's log readable for bug reports.
+install -d -m 0755 /var/log/@DISTRO_ID@

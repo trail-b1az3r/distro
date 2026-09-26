@@ -1,0 +1,16 @@
+[profile]
+id = "developer"
+name = "Developer"
+order = 30
+inherits = "standard"
+summary = "Standard plus editor, compilers, Rust, containers and Claude Code."
+description = """
+Everything in Standard plus a VS Code-compatible editor, GCC/Clang, Rust,
+CMake, debuggers, rootless Podman (or Docker) and Claude Code."""
+approx_size_gb = 14
+
+[features]
+code_editor = true
+dev_full = true
+containers = "podman"
+claude_code = true

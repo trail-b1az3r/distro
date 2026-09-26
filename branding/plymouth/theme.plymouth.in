@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=@DISTRO_PRETTY_NAME@
+Description=@DISTRO_NAME@ boot splash with disk-unlock prompt
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/@DISTRO_ID@
+ScriptFile=/usr/share/plymouth/themes/@DISTRO_ID@/@DISTRO_ID@.script

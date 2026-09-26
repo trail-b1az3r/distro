@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- @DISTRO_NAME@ logo with wordmark. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="256" viewBox="0 0 880 256">
+  <defs>
+    <linearGradient id="g" x1="36" y1="220" x2="220" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="@BRAND_ACCENT@"/>
+      <stop offset="1" stop-color="@BRAND_ACCENT_2@"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="20" y1="236" x2="236" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="@BRAND_ACCENT@" stop-opacity="0.95"/>
+      <stop offset="0.6" stop-color="@BRAND_ACCENT_2@" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="@BRAND_ACCENT_2@" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+  <path d="M 190.2 48.9 A 104 104 0 1 0 207.1 66.8" fill="none" stroke="url(#ring)" stroke-width="12" stroke-linecap="round"/>
+  <path d="M 84 178 L 84 82 L 172 174 L 172 78" fill="none" stroke="url(#g)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="200" cy="56" r="13" fill="@BRAND_ACCENT_2@"/>
+  <text x="270" y="162" font-family="Inter, Rubik, Noto Sans, DejaVu Sans, sans-serif" font-size="112" font-weight="700" letter-spacing="2" fill="@BRAND_FG@">@DISTRO_NAME@</text>
+</svg>

@@ -1,0 +1,17 @@
+# Developer utilities included from the Standard profile up.
+git-lfs
+github-cli
+python
+python-pip
+uv
+nodejs
+npm
+ripgrep
+fd
+bat
+eza
+fzf
+zoxide
+tmux
+direnv
+starship
