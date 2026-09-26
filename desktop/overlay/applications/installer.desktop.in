@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Install @DISTRO_NAME@
+Comment=Install @DISTRO_PRETTY_NAME@ to this computer
+Exec=@DISTRO_ID@-installer
+Icon=@DISTRO_ID@-installer
+Terminal=false
+Categories=System;

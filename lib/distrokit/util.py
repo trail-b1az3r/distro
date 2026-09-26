@@ -152,6 +152,14 @@ class Runner:
         if env:
             full_env.update(env)
         full_env.setdefault("LC_ALL", "C.UTF-8")
+        exe = cmd[0]
+        found = os.path.exists(exe) if "/" in exe else shutil.which(exe, path=full_env.get("PATH"))
+        if not found:
+            message = f"{cmd[0]}: command not found"
+            self._emit(message)
+            if check:
+                raise CommandError(cmd, 127, message)
+            return Result(cmd, 127, "", message)
         if capture or not stream:
             proc = subprocess.run(
                 cmd,

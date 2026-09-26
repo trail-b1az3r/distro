@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=HyperNix
+Comment=Local model chat, conversion and training toolkit
+Exec=@DISTRO_ID@-ai --launch hypernix
+Icon=@DISTRO_ID@-hypernix
+Terminal=false
+Categories=Utility;Development;
+StartupNotify=false

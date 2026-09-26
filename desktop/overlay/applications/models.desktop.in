@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=AI Models
+Comment=Download, choose and manage local AI models
+Exec=@DISTRO_ID@-ai --models
+Icon=@DISTRO_ID@-models
+Terminal=false
+Categories=Utility;Development;
+Keywords=AI;model;GGUF;LLM;download;Hugging Face;

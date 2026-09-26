@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Runs once per Hyprland login (from ~/.config/hypr/@DISTRO_ID@/init.lua).
+#  - first login: the settings end-4's installer applies with gsettings/kwriteconfig
+#  - resumes setup tasks that need the network (AI tools, models), if any
+#  - opens the welcome wizard until it has been completed
+set -u
+state="${XDG_STATE_HOME:-$HOME/.local/state}/@DISTRO_ID@"
+mkdir -p "$state"
+
+if [[ ! -e "$state/session-initialised" ]]; then
+    if command -v gsettings >/dev/null; then
+        gsettings set org.gnome.desktop.interface font-name 'Google Sans Flex Medium 11 @opsz=11,wght=500' || true
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' || true
+    fi
+    if command -v kwriteconfig6 >/dev/null; then
+        kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle Darkly || true
+        kwriteconfig6 --file kdeglobals --group General --key TerminalApplication konsole || true
+        kwriteconfig6 --file kdeglobals --group General --key TerminalService org.kde.konsole.desktop || true
+    fi
+    command -v xdg-user-dirs-update >/dev/null && xdg-user-dirs-update || true
+    touch "$state/session-initialised"
+fi
+
+# Make the session's PATH (with ~/.local/bin) visible to user services.
+systemctl --user import-environment PATH WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE 2>/dev/null || true
+
+# Setup tasks left over from an offline installation (no-op when none).
+@DISTRO_CLI@ setup resume --background >/dev/null 2>&1 &
+
+if [[ ! -e "$state/firstboot-done" ]] && command -v @DISTRO_ID@-welcome >/dev/null; then
+    sleep 4
+    exec @DISTRO_ID@-welcome --first-boot
+fi

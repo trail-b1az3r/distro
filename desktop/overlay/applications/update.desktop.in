@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=System Update
+Comment=Update packages, AUR packages, drivers, the desktop and AI tools
+Exec=@DISTRO_ID@-update
+Icon=@DISTRO_ID@-update
+Terminal=false
+Categories=System;PackageManager;
+Keywords=update;upgrade;pacman;yay;AUR;

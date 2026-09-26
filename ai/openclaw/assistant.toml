@@ -1,0 +1,28 @@
+# OpenClaw (MIT). https://openclaw.ai  https://github.com/openclaw/openclaw
+#
+# Installed per user with npm into ~/.local (no root, no system Node modules).
+
+[assistant]
+id = "openclaw"
+name = "OpenClaw"
+upstream = "OpenClaw"
+homepage = "https://openclaw.ai/"
+source = "https://github.com/openclaw/openclaw"
+license = "MIT"
+description = "A personal assistant with a local gateway, chat channels and a web dashboard."
+icon = "openclaw"
+
+[install]
+method = "npm-user"
+package = "openclaw"
+version = ""
+# From the package's "engines" field.
+node = ">=24.16.0 <25 || >=26.1.0"
+commands = ["openclaw"]
+
+[launch]
+setup = ["openclaw", "onboard"]
+run = ["openclaw", "dashboard"]
+doctor = ["openclaw", "doctor"]
+configured_marker = "~/.openclaw/openclaw.json"
+terminal = true

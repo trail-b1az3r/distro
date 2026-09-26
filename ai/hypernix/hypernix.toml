@@ -1,0 +1,35 @@
+# HyperNix (https://github.com/trail-b1az3r/HyperNix-pip), installed per user
+# into its own virtual environment so its PyTorch build matches the GPU.
+#
+# Installation order matters: PyTorch is installed first from the index that
+# matches the acceleration backend, then hypernix, which reuses it (this is
+# the procedure HyperNix's own README gives).
+
+[install]
+package = "hypernix"
+# PyPI version specifier; empty means latest.
+version = ""
+# HyperNix supports 3.10-3.14; 3.12 has the widest PyTorch wheel coverage.
+python = "3.12"
+# Relative to the user's data directory (~/.local/share/<id>/).
+venv = "hypernix/venv"
+# Console scripts linked into ~/.local/bin.
+commands = ["hypernix", "hnx", "hyped-pro", "hyped-plus", "tvtop", "waiter", "multilama", "hyprslug"]
+
+# PyTorch wheel index per acceleration backend.
+[torch_index]
+cuda = "https://download.pytorch.org/whl/cu128"
+# Maxwell, Pascal and Volta: CUDA 12.8+ builds dropped them.
+cuda_legacy = "https://download.pytorch.org/whl/cu126"
+rocm = "https://download.pytorch.org/whl/rocm6.4"
+xpu = "https://download.pytorch.org/whl/xpu"
+cpu = "https://download.pytorch.org/whl/cpu"
+# PyTorch has no Vulkan backend; Vulkan machines run training on the CPU and
+# inference through llama.cpp's Vulkan backend (see ai/runtime).
+vulkan = "https://download.pytorch.org/whl/cpu"
+
+# Environment for HyperNix, written to ~/.config/<id>/ai.env.
+[env]
+# The distribution manages PATH and dependencies itself.
+HYPERNIX_NO_PATH_SETUP = "1"
+HYPERNIX_AUTO_INSTALL = "0"
