@@ -1,0 +1,108 @@
+{
+  "generated_by": "distrokit 1.0.0",
+  "packages": {
+    "38c3-styles": {
+      "commit": "2b88791111d999c9e14b8dab650f5424333d95ee",
+      "version": "2-2"
+    },
+    "adw-gtk-theme-git": {
+      "commit": "16fdc46376a5c1f758b2a1fc372be741c1931f26",
+      "for": [
+        "adw-gtk-theme"
+      ],
+      "version": "5.10.r2.g5962743-1"
+    },
+    "breeze-plus": {
+      "commit": "faf39cfda93ef93a4514e36674bcf5dcb80d3164",
+      "version": "6.28.0-1"
+    },
+    "darkly-bin": {
+      "commit": "29a5382184e2743749c3a3f77c9f5f588968b3e5",
+      "version": "0.5.39-2"
+    },
+    "html2markdown": {
+      "commit": "46785423a542244c523fb48f7e7741dc1c5b99b1",
+      "version": "2.5.2-1"
+    },
+    "lib32-nvidia-580xx-utils": {
+      "commit": "bbe7b771c897f78e518ab4453b0bc9210ef2f201",
+      "for": [
+        "lib32-nvidia-libgl",
+        "lib32-nvidia-utils",
+        "lib32-opengl-driver",
+        "lib32-vulkan-driver"
+      ],
+      "version": "580.178.04-1"
+    },
+    "llama.cpp-git": {
+      "commit": "067451f7af7b2f7b279325074c5dbea7d223bacd",
+      "for": [
+        "libggml",
+        "llama.cpp"
+      ],
+      "version": "b9554.r2.19bba67c1f-1"
+    },
+    "llama.cpp-vulkan-git": {
+      "commit": "98c8307cd458afd2a9e43541321351869337059c",
+      "for": [
+        "llama.cpp",
+        "llama.cpp-git",
+        "llama.cpp-vulkan"
+      ],
+      "version": "b10242.r10.fe2adf0e72-1"
+    },
+    "material-symbols-git": {
+      "commit": "6536c04924b18483281f9ec432ba71ecba09ab67",
+      "for": [
+        "ttf-material-symbols-variable"
+      ],
+      "version": "4.0.0.r119.gc51274e9-1"
+    },
+    "nvidia-580xx-settings": {
+      "commit": "a5f3d6e5584376722e4921c6a91aaca4ca762cf2",
+      "for": [
+        "nvidia-settings"
+      ],
+      "version": "580.178.04-1"
+    },
+    "nvidia-580xx-utils": {
+      "commit": "3d31a20c08a1e6c11c1abe953954f44158c9a592",
+      "for": [
+        "NVIDIA-MODULE",
+        "nvidia"
+      ],
+      "version": "580.178.04-2"
+    },
+    "onlyoffice-bin": {
+      "commit": "bccf5b407c9dfd64dd80a9b77405aa25184fbad5",
+      "for": [
+        "onlyoffice"
+      ],
+      "version": "9.4.0-1"
+    },
+    "qt5-avif-image-plugin": {
+      "commit": "97faecaf6050c738e23a2a37cbe4046bfccef4bb",
+      "version": "0.10.1-1"
+    },
+    "ttf-readex-pro": {
+      "commit": "39ba0d6672e2be28c63112b6e68b36ddfa83d06f",
+      "version": "1.204-2"
+    },
+    "ttf-rubik-vf": {
+      "commit": "df5b264003f0d39ba75f42970074ff2465ed527c",
+      "version": "2.3.0-3"
+    },
+    "ttf-twemoji": {
+      "commit": "b250a6d51a95fac41ec21f634522ad36177938f0",
+      "for": [
+        "emoji-font",
+        "twemoji-color-font"
+      ],
+      "version": "17.0.2-3"
+    },
+    "wlogout": {
+      "commit": "9904ef2a49026b70e5288965423ee503c95f09cd",
+      "version": "1.2.2-0"
+    }
+  }
+}
