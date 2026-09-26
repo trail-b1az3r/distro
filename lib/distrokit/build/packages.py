@@ -29,11 +29,13 @@ import heapq
 import io
 import json
 import os
+import pwd
 import re
 import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import tomllib
 import urllib.parse
 import urllib.request
@@ -363,11 +365,29 @@ def printsrcinfo(pkgdir: Path, user: str = "") -> SrcInfo:
     cached = pkgdir / ".SRCINFO"
     if cached.is_file() and cached.stat().st_mtime >= (pkgdir / "PKGBUILD").stat().st_mtime:
         return parse_srcinfo(cached.read_text())
-    cmd = ["makepkg", "--printsrcinfo"]
-    if user and os.geteuid() == 0:
-        cmd = ["runuser", "-u", user, "--", *cmd]
-    text = subprocess.run(cmd, cwd=pkgdir, capture_output=True, text=True, check=True).stdout
-    return parse_srcinfo(text)
+    # makepkg refuses directories the build user cannot write to (exit 11),
+    # and the checkout and rendered PKGBUILDs belong to root: work on a
+    # private copy the build user owns.
+    as_user = bool(user) and os.geteuid() == 0
+    with tempfile.TemporaryDirectory(prefix="srcinfo-") as tmp:
+        work = Path(tmp) / pkgdir.name
+        shutil.copytree(pkgdir, work, ignore=shutil.ignore_patterns(".git", "src", "pkg", "*.pkg.tar.*", "*.tar.gz"))
+        cmd = ["makepkg", "--printsrcinfo"]
+        pw = pwd.getpwnam(user) if as_user else None
+        for path in (Path(tmp), *Path(tmp).rglob("*")):
+            if path.is_symlink():
+                continue
+            # copytree keeps the source's modes; a read-only checkout must not
+            # make the copy read-only.
+            path.chmod(path.stat().st_mode | (0o700 if path.is_dir() else 0o600))
+            if pw:
+                os.chown(path, pw.pw_uid, pw.pw_gid)
+        if as_user:
+            cmd = ["runuser", "-u", user, "--", *cmd]
+        res = subprocess.run(cmd, cwd=work, capture_output=True, text=True)
+    if res.returncode != 0:
+        raise util.CommandError(cmd, res.returncode, f"{pkgdir}: {res.stderr or res.stdout}")
+    return parse_srcinfo(res.stdout)
 
 
 def local_nodes(out: Path, src: Path | None = None, user: str = "") -> list[Node]:
@@ -473,12 +493,19 @@ def pacman_lookup(conf: Path) -> Callable[[list[str]], set[str]]:
     return check
 
 
+def build_pacman_conf(b: Branding, repo: Path, archive_date: str = "", multilib: bool = True) -> str:
+    """pacman.conf text for the build host and mkarchiso: the repository
+    being built (``repo``) first. The section name must match the database
+    repo-add writes there (``<repo_name>.db``), or pacman cannot sync it."""
+    text = pacmanconf.render("build", b, archive_date=archive_date, multilib=multilib)
+    local = f"[{b.repo_name}]\nSigLevel = Optional TrustAll\nServer = file://{repo.resolve()}\n\n"
+    return text.replace("[endeavouros]", local + "[endeavouros]", 1)
+
+
 def build_conf(b: Branding, repo: Path, workdir: Path, multilib: bool = True) -> Path:
-    """pacman.conf of the build host: the repository being built first."""
+    """pacman.conf of the build host, written to ``workdir``."""
     conf = workdir / "pacman-build.conf"
-    text = pacmanconf.render("build", b, archive_date=os.environ.get("ARCHIVE_DATE", ""), multilib=multilib)
-    local = f"[{b.repo_name}-build]\nSigLevel = Optional TrustAll\nServer = file://{repo.resolve()}\n\n"
-    text = text.replace("[endeavouros]", local + "[endeavouros]", 1)
+    text = build_pacman_conf(b, repo, os.environ.get("ARCHIVE_DATE", ""), multilib)
     conf.parent.mkdir(parents=True, exist_ok=True)
     conf.write_text(text)
     return conf

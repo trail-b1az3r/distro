@@ -305,9 +305,8 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
         + "\n".join(sorted(live_packages(b))) + "\n")
 
     # pacman.conf for mkarchiso: the freshly built distribution repository first.
-    build_conf = pacmanconf.render("build", b, archive_date=opts.archive_date, multilib=opts.multilib)
-    local = f"[{b.repo_name}-build]\nSigLevel = Optional TrustAll\nServer = file://{opts.repo.resolve()}\n\n"
-    (prof / "pacman.conf").write_text(build_conf.replace("[endeavouros]", local + "[endeavouros]", 1))
+    (prof / "pacman.conf").write_text(
+        pkgbuild.build_pacman_conf(b, opts.repo, opts.archive_date, opts.multilib))
 
     air = prof / "airootfs"
     offline_dir = f"/var/cache/{b.id}/repo"

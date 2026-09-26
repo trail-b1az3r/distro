@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from distrokit import hooks, paths
+from distrokit import hooks, paths, util
 from distrokit.branding import load as load_branding
 from distrokit.build import completions, packages, stage
 from distrokit.build.packages import Node, SrcInfo, dep_name, parse_srcinfo, resolve
@@ -259,3 +259,58 @@ def test_committed_manifests_are_current():
             f"packages/manifests/{name} is stale: python3 -m distrokit.build.manifests"
     assert "uv" in (out / "ai.txt").read_text().split()  # AI tools are installed with uv
     assert "illogical-impulse-hyprland" in (out / "minimal.txt").read_text()
+
+
+FAKE_MAKEPKG = """#!/bin/sh
+# Stand-in for makepkg --printsrcinfo: like the real one, it refuses a
+# directory it cannot write to (E_FS_PERMISSIONS = 11).
+echo "$PWD" >> "$MAKEPKG_CALLS"
+[ -w . ] || { echo "==> ERROR: You do not have write permission for the directory \\$BUILDDIR ($PWD)." >&2; exit 11; }
+name=$(sed -n 's/^pkgname=//p' PKGBUILD)
+printf 'pkgbase = %s\\n\\tpkgver = 1.0\\n\\tpkgrel = 1\\n\\tdepends = glibc\\n\\npkgname = %s\\n' "$name" "$name"
+"""
+
+
+def test_printsrcinfo_uses_a_private_copy(tmp_path, monkeypatch):
+    """makepkg never runs inside the checkout (which the build user may not
+    be able to write to) and its error message is reported."""
+    import os
+
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    (bindir / "makepkg").write_text(FAKE_MAKEPKG)
+    (bindir / "makepkg").chmod(0o755)
+    calls = tmp_path / "calls"
+    monkeypatch.setenv("PATH", f"{bindir}:{os.environ['PATH']}")
+    monkeypatch.setenv("MAKEPKG_CALLS", str(calls))
+    pkgdir = tmp_path / "checkout" / "illogical-impulse-foo"
+    pkgdir.mkdir(parents=True)
+    (pkgdir / "PKGBUILD").write_text("pkgname=illogical-impulse-foo\n")
+    pkgdir.chmod(0o555)
+    try:
+        info = packages.printsrcinfo(pkgdir)
+    finally:
+        pkgdir.chmod(0o755)
+    assert info.pkgbase == "illogical-impulse-foo" and info.depends == ["glibc"]
+    ran_in = calls.read_text().split()
+    assert ran_in and all(d != str(pkgdir) for d in ran_in)
+    assert [p.name for p in pkgdir.iterdir()] == ["PKGBUILD"]  # nothing written into the checkout
+
+    (bindir / "makepkg").write_text("#!/bin/sh\necho '==> ERROR: PKGBUILD does not exist.' >&2\nexit 6\n")
+    with pytest.raises(Exception, match="PKGBUILD does not exist"):
+        packages.printsrcinfo(pkgdir)
+
+
+def test_build_repository_section_matches_its_database(tmp_path):
+    """pacman looks for <section>.db at the Server URL; repo-add writes
+    <repo_name>.db. The build configuration must use the same name."""
+    import re
+
+    b = load_branding()
+    repo = tmp_path / "repo"
+    conf = packages.build_conf(b, repo, tmp_path / "work").read_text()
+    sections = re.findall(r"^\[([^\]]+)\]\nSigLevel = [^\n]*\nServer = file://(.+)$", conf, re.M)
+    local = [name for name, server in sections if server == str(repo.resolve())]
+    builder = packages.Builder(b, repo, tmp_path / "work", tmp_path / "work/pacman-build.conf", "", util.Runner(dry_run=True))
+    assert local == [builder.db.name.removesuffix(".db.tar.gz")]
+    assert conf.index(f"[{local[0]}]") < conf.index("[core]")  # searched first
