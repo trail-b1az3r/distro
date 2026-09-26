@@ -93,6 +93,13 @@ jobs:
           grep "ID=\"$id\"" /usr/lib/os-release
       - name: Dependency plan (AUR resolution)
         run: BUILD_USER=builder scripts/build-packages.sh --plan
+      - name: Build packages the way the ISO build does (an AUR package with a signed source, a local one)
+        run: |
+          rm /etc/sudoers.d/90-builder  # makepkg must not need sudo: the build installs dependencies itself
+          id="$(. ./distro.conf && echo "$DISTRO_ID")"
+          BUILD_USER=builder scripts/build-packages.sh --only wlogout "$id-fonts-google-sans-flex"
+          ls -l build/repo
+          pacman --config build/packages/pacman-build.conf -Sl "$(. ./distro.conf && echo "$DISTRO_REPO_NAME")"
       - name: Show a newly written AUR lock (commit it to pin the AUR packages)
         run: |
           if [ -f packages/aur.lock.json ] && ! git ls-files --error-unmatch packages/aur.lock.json >/dev/null 2>&1; then

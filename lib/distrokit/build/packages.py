@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import functools
 import gzip
 import hashlib
 import heapq
@@ -87,6 +88,7 @@ class SrcInfo:
     makedepends: list[str] = field(default_factory=list)
     checkdepends: list[str] = field(default_factory=list)
     provides: list[str] = field(default_factory=list)
+    validpgpkeys: list[str] = field(default_factory=list)
 
     @property
     def version(self) -> str:
@@ -114,7 +116,7 @@ def parse_srcinfo(text: str) -> SrcInfo:
             setattr(info, key, value)
         elif key == "arch":
             info.arch.append(value)
-        elif base_key in ("depends", "makedepends", "checkdepends", "provides"):
+        elif base_key in ("depends", "makedepends", "checkdepends", "provides", "validpgpkeys"):
             lst = getattr(info, base_key)
             if value not in lst:
                 lst.append(value)
@@ -572,6 +574,46 @@ def locked_lookup(lock: dict, workdir: Path) -> Callable[[list[str]], dict[str, 
     return lookup
 
 
+def in_container() -> bool:
+    return (os.environ.get("BUILD_CONTAINER") == "1" or bool(os.environ.get("container"))
+            or Path("/.dockerenv").exists() or Path("/run/.containerenv").exists())
+
+
+@functools.cache
+def host_problems() -> tuple[str, ...]:
+    """Building installs build dependencies on this system (and removes them
+    afterwards). Refuse where that would be a partial upgrade or a downgrade;
+    containers are throwaway and exempt."""
+    if in_container():
+        return ()
+    problems = []
+    if os.environ.get("ARCHIVE_DATE"):
+        problems.append("ARCHIVE_DATE takes build dependencies from an old snapshot, which would downgrade "
+                        "packages on this system: build with ./build.sh --container.")
+    if shutil.which("checkupdates"):
+        res = subprocess.run(["checkupdates"], capture_output=True, text=True)  # 0: updates, 2: none, 1: error
+        pending = res.stdout.strip().splitlines() if res.returncode == 0 else []
+        if pending:
+            problems.append(f"this system has {len(pending)} pending updates, and the build installs build "
+                            "dependencies from the current repositories (a partial upgrade): "
+                            "run `sudo pacman -Syu` first, or build with ./build.sh --container.")
+    return tuple(problems)
+
+
+def installed_packages() -> set[str]:
+    return set(subprocess.run(["pacman", "-Qq"], capture_output=True, text=True, check=True).stdout.split())
+
+
+def unsatisfied(deps: list[str]) -> list[str]:
+    """The dependencies (with version constraints) the system does not satisfy."""
+    if not deps:
+        return []
+    res = subprocess.run(["pacman", "-T", *deps], capture_output=True, text=True)
+    if res.returncode not in (0, 127):
+        raise util.CommandError(["pacman", "-T", *deps], res.returncode, res.stderr)
+    return res.stdout.split()
+
+
 def pacman_lookup(conf: Path) -> Callable[[list[str]], set[str]]:
     """Which names the binary repositories satisfy (by name or provides)."""
 
@@ -595,7 +637,7 @@ def build_pacman_conf(b: Branding, repo: Path, archive_date: str = "", multilib:
 
 def build_conf(b: Branding, repo: Path, workdir: Path, multilib: bool = True) -> Path:
     """pacman.conf of the build host, written to ``workdir``."""
-    conf = workdir / "pacman-build.conf"
+    conf = workdir.resolve() / "pacman-build.conf"
     text = build_pacman_conf(b, repo, os.environ.get("ARCHIVE_DATE", ""), multilib)
     conf.parent.mkdir(parents=True, exist_ok=True)
     conf.write_text(text)
@@ -607,27 +649,95 @@ def build_conf(b: Branding, repo: Path, workdir: Path, multilib: bool = True) ->
 # ---------------------------------------------------------------------------
 
 
+KEYSERVERS = ("hkps://keyserver.ubuntu.com", "hkps://keys.openpgp.org")
+
+
 class Builder:
+    """Builds package bases with makepkg as ``user`` into ``repo``.
+
+    Build dependencies are installed here, as root, from the build
+    configuration (which knows the repository being built), so makepkg's
+    --syncdeps finds them all and never needs sudo; ``cleanup`` removes them
+    again, like makepkg --rmdeps. Source signatures are checked against a
+    keyring of the build's own (``<workdir>/gnupg``), not the user's."""
+
     def __init__(self, b: Branding, repo: Path, workdir: Path, conf: Path, user: str, runner: util.Runner,
                  sign_key: str = ""):
         self.b = b
         self.repo = repo.resolve()
         self.workdir = workdir.resolve()
-        self.conf = conf
+        self.conf = conf.resolve()  # makepkg runs the wrapper from other directories
         self.user = user
         self.runner = runner
         self.sign_key = sign_key
         self.db = self.repo / f"{b.repo_name}.db.tar.gz"
         self.pacman_wrapper = self.workdir / "pacman-build"
+        # Signing needs the user's secret key, so it also verifies with the user's keyring.
+        self.gnupg = None if sign_key else self.workdir / "gnupg"
+        self.installed_before: set[str] | None = None
+
+    @property
+    def as_user(self) -> list[str]:
+        return ["runuser", "-u", self.user, "--"] if self.user and os.geteuid() == 0 else []
 
     def prepare(self) -> None:
         self.repo.mkdir(parents=True, exist_ok=True)
         if not self.db.exists():
             self.runner.run(["repo-add", str(self.db)])
         # makepkg runs pacman through $PACMAN; this one knows about the new repository.
+        self.pacman_wrapper.parent.mkdir(parents=True, exist_ok=True)
         self.pacman_wrapper.write_text(f'#!/bin/sh\nexec pacman --config "{self.conf}" "$@"\n')
         self.pacman_wrapper.chmod(0o755)
         self.runner.run(["pacman", "--config", str(self.conf), "-Sy"])
+        if not self.runner.dry_run:
+            self.installed_before = installed_packages()
+
+    def install_deps(self, node: Node) -> None:
+        deps = [*node.info.depends, *node.info.makedepends]
+        if node.origin != "aur":  # local packages run their check()
+            deps += node.info.checkdepends
+        missing = list(dict.fromkeys(deps)) if self.runner.dry_run else unsatisfied(deps)
+        if missing:
+            self.runner.run(["pacman", "--config", str(self.conf), "-S", "--needed", "--noconfirm", "--asdeps",
+                             *missing])
+
+    def import_keys(self, node: Node) -> None:
+        """Fetch the keys a PKGBUILD's validpgpkeys names into the build keyring."""
+        env = ["env", f"GNUPGHOME={self.gnupg}"] if self.gnupg else []
+        if self.gnupg and not self.gnupg.is_dir() and not self.runner.dry_run:
+            self.gnupg.mkdir(mode=0o700, parents=True)
+            if self.as_user:
+                self.runner.run(["chown", f"{self.user}:{self.user}", str(self.gnupg)])
+        for key in node.info.validpgpkeys:
+            if not self.runner.dry_run and subprocess.run([*self.as_user, *env, "gpg", "--batch", "--list-keys", key],
+                                                          capture_output=True).returncode == 0:
+                continue
+            for i, server in enumerate(KEYSERVERS):
+                try:
+                    self.runner.run([*self.as_user, *env, "gpg", "--batch", "--keyserver", server, "--recv-keys", key])
+                    break
+                except util.CommandError as e:
+                    if i == len(KEYSERVERS) - 1:
+                        raise FetchError(f"{node.pkgbase}: could not fetch PGP key {key} (it verifies the "
+                                         f"package's sources) from {', '.join(KEYSERVERS)}:\n  {_git_error(e)}") from e
+
+    def cleanup(self) -> None:
+        """Remove the build dependencies the builds installed (and stop the
+        build keyring's gpg-agent and dirmngr)."""
+        if self.gnupg and self.gnupg.is_dir() and not self.runner.dry_run:
+            subprocess.run([*self.as_user, "env", f"GNUPGHOME={self.gnupg}", "gpgconf", "--kill", "all"],
+                           capture_output=True)
+        if self.installed_before is None:
+            return
+        extra = sorted(installed_packages() - self.installed_before)
+        self.installed_before = None
+        if not extra:
+            return
+        print(f"Removing {len(extra)} build dependencies: {' '.join(extra)}")
+        try:
+            self.runner.run(["pacman", "-R", "--noconfirm", *extra])
+        except util.CommandError as e:
+            print(util.style.warn(f"could not remove them ({_git_error(e)}): remove them with `pacman -R`"))
 
     def built(self, node: Node) -> list[Path]:
         return sorted(p for name in node.info.pkgnames
@@ -647,8 +757,12 @@ class Builder:
         out.mkdir(parents=True)
         if self.user and os.geteuid() == 0:
             self.runner.run(["chown", "-R", f"{self.user}:{self.user}", str(work), str(out)])
+        self.install_deps(node)
+        self.import_keys(node)
         env = ["env", f"PACMAN={self.pacman_wrapper}", f"PKGDEST={out}", f"SRCDEST={self.workdir / 'sources'}",
                f"BUILDDIR={self.workdir / 'makepkg'}"]
+        if self.gnupg:
+            env.append(f"GNUPGHOME={self.gnupg}")
         if "SOURCE_DATE_EPOCH" in os.environ:
             env.append(f"SOURCE_DATE_EPOCH={os.environ['SOURCE_DATE_EPOCH']}")
         cmd = [*env, "makepkg", "--syncdeps", "--noconfirm", "--cleanbuild", "--clean", "--force", "--noprogressbar"]
@@ -656,8 +770,7 @@ class Builder:
             cmd.append("--nocheck")  # upstream test suites are not the distribution's to run
         if self.sign_key:
             cmd += ["--sign", "--key", self.sign_key]
-        if self.user and os.geteuid() == 0:
-            cmd = ["runuser", "-u", self.user, "--", *cmd]
+        cmd = [*self.as_user, *cmd]
         for d in ("sources", "makepkg"):
             (self.workdir / d).mkdir(parents=True, exist_ok=True)
             if self.user and os.geteuid() == 0:
@@ -755,14 +868,22 @@ def main(argv: list[str] | None = None) -> int:
     if a.action == "plan":
         return 0
 
+    problems = [] if a.dry_run else host_problems()
+    if problems:
+        for problem in problems:
+            print(util.style.fail(problem), file=sys.stderr)
+        return 1
     builder = Builder(b, repo, work, conf, a.user, runner, a.sign)
     builder.prepare()
-    for base in plan.order:
-        if a.only and base not in a.only:
-            continue
-        node = plan.nodes[base]
-        made = builder.build(node, force=a.force)
-        print(f"{base}: " + (", ".join(p.name for p in made) if made else "already built"))
+    try:
+        for base in plan.order:
+            if a.only and base not in a.only:
+                continue
+            node = plan.nodes[base]
+            made = builder.build(node, force=a.force)
+            print(f"{base}: " + (", ".join(p.name for p in made) if made else "already built"))
+    finally:
+        builder.cleanup()
     return 0
 
 

@@ -60,6 +60,12 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
    AUR packages are pinned to git commits in `packages/aur.lock.json`. The
    first build writes it; commit it. `scripts/build-packages.sh --update-lock`
    refreshes the pins (review the diff: it is code you will run as root).
+   On an Arch host (without `--container`) the build installs the build
+   dependencies on the host itself and removes them when it is done; it
+   refuses to start while the host has pending updates (that would be a
+   partial upgrade: run `sudo pacman -Syu` first) or when `ARCHIVE_DATE` is
+   set (that would downgrade packages: use `--container`). Source signatures
+   are checked against the build's own keyring in `build/packages/gnupg`.
    Pinned commits are fetched from the AUR, or from Arch Linux's GitHub mirror
    of it (`AUR_GIT_MIRROR`, the same commits) when the AUR's git service fails;
    a commit fetched once is reused from `build/packages/aur` without the network.
@@ -112,6 +118,8 @@ qemu-system-x86_64 -enable-kvm -m 4G -smp 2 -cdrom dist/*.iso \
 | Problem | Fix |
 |---|---|
 | `the host is not Arch-based` | use `--container` |
+| `this system has N pending updates` | `sudo pacman -Syu` (reboot if the kernel was updated), then build again; or `--container` |
+| `could not fetch PGP key …` | the keyservers were unreachable; build again later. The key verifies a package's upstream sources |
 | `permission denied while trying to connect to the docker API` | `build.sh` runs Docker through `sudo` when your user cannot reach its socket; to avoid the password prompt, join the `docker` group (`sudo usermod -aG docker $USER`, then log in again) or use rootless Podman. On Arch or EndeavourOS you do not need `--container` at all |
 | Docker: `failed to set up container networking … operation not supported` | the kernel was updated and the running kernel's modules are gone: reboot. Container builds use the host's network, so this only affects older checkouts |
 | `Not found anywhere: X` | a package in `packages/lists` does not exist (renamed or removed upstream): fix the list |
