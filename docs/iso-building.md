@@ -60,6 +60,9 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
    AUR packages are pinned to git commits in `packages/aur.lock.json`. The
    first build writes it; commit it. `scripts/build-packages.sh --update-lock`
    refreshes the pins (review the diff: it is code you will run as root).
+   Pinned commits are fetched from the AUR, or from Arch Linux's GitHub mirror
+   of it (`AUR_GIT_MIRROR`, the same commits) when the AUR's git service fails;
+   a commit fetched once is reused from `build/packages/aur` without the network.
 3. **Offline repository** (`build/offline-repo`): see `--offline`.
 4. **archiso profile** (`build/iso-profile`): archiso's `releng` profile with
    `iso/` laid over it — branded boot menus, the live session, NetworkManager
@@ -111,5 +114,6 @@ qemu-system-x86_64 -enable-kvm -m 4G -smp 2 -cdrom dist/*.iso \
 | `the host is not Arch-based` | use `--container` |
 | `Not found anywhere: X` | a package in `packages/lists` does not exist (renamed or removed upstream): fix the list |
 | an AUR package fails to build | pin an older commit in `aur.lock.json` or remove it from the lists; see `build/packages/src/<pkg>` |
+| `could not fetch the AUR package X` | both the AUR and its mirror failed; the message shows git's error for each. Check the network and [status.archlinux.org](https://status.archlinux.org), then build again. "Commit … is gone": run `scripts/build-packages.sh --update-lock` |
 | `No space left on device` | free space or point `--build-dir` elsewhere; `--clean` removes old work directories |
 | mkarchiso: `must be run as root` | `sudo ./build.sh`, or `--container` |

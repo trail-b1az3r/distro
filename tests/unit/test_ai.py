@@ -239,3 +239,30 @@ def test_node_version_requirement():
 def test_task_dataclass_roundtrip():
     t = Task("x", "tool", "X", {"tool": "hermis"})
     assert Task(**t.to_dict()) == t
+
+
+
+def _local_db(root, name, version, provides=()):
+    d = root / "var/lib/pacman/local" / f"{name}-{version}"
+    d.mkdir(parents=True)
+    text = f"%NAME%\n{name}\n\n%VERSION%\n{version}\n\n"
+    if provides:
+        text += "%PROVIDES%\n" + "\n".join(provides) + "\n\n"
+    (d / "desc").write_text(text)
+
+
+def test_llama_build_found_through_provides(tmp_path):
+    """The distribution repository ships llama.cpp-vulkan-git, which
+    provides llama.cpp-vulkan; the runtime must recognise it."""
+    from distrokit import pkg
+    from distrokit.ai import runtime
+
+    assert runtime.installed_package(tmp_path) == ""
+    _local_db(tmp_path, "glibc", "2.42-1")
+    _local_db(tmp_path, "llama.cpp-vulkan-git", "b10242.r10.fe2adf0e72-1",
+              provides=["llama.cpp-vulkan=b10242", "llama.cpp"])
+    assert runtime.installed_package(tmp_path) == "llama.cpp-vulkan-git"
+    provides = pkg.installed_provides(tmp_path)
+    assert provides["llama.cpp-vulkan"] == "llama.cpp-vulkan-git" and provides["glibc"] == "glibc"
+    # Exact-name checks (used before replacing driver stacks) are unchanged.
+    assert "llama.cpp-vulkan" not in pkg.installed_packages(tmp_path)

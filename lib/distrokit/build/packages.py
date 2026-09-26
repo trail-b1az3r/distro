@@ -36,7 +36,9 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import tomllib
+import urllib.error
 import urllib.parse
 import urllib.request
 from collections import defaultdict, deque
@@ -50,7 +52,17 @@ from ..profiles import read_list
 from . import stage
 
 AUR = "https://aur.archlinux.org"
+# Arch Linux's read-only GitHub mirror of the AUR's git data: one branch per
+# package base with the same commits as the AUR, so a lock written from either
+# is valid for both. Used when the AUR's git service cannot be reached;
+# AUR_GIT_MIRROR="" turns it off.
+AUR_MIRROR = os.environ.get("AUR_GIT_MIRROR", "https://github.com/archlinux/aur.git")
 LOCK_FILE = "packages/aur.lock.json"
+RETRY_DELAY = 2.0  # seconds before the first retry of a failed git fetch; doubles after
+
+
+class FetchError(RuntimeError):
+    """The AUR (or its mirror) could not be reached for what the build needs."""
 
 
 # ---------------------------------------------------------------------------
@@ -405,10 +417,14 @@ def local_nodes(out: Path, src: Path | None = None, user: str = "") -> list[Node
 
 def _rpc(path: str, params: list[tuple[str, str]] | None = None) -> dict:
     url = f"{AUR}/rpc/v5/{path}" + ("?" + urllib.parse.urlencode(params) if params else "")
-    with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310 - fixed https host
-        data = json.load(resp)
+    try:
+        with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310 - fixed https host
+            data = json.load(resp)
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:  # ValueError: not JSON (an error page)
+        raise FetchError(f"the AUR web API gave no usable answer ({url}): {getattr(e, 'reason', e)}. "
+                         "Check the network connection and https://status.archlinux.org, then try again.") from e
     if data.get("type") == "error":
-        raise RuntimeError(f"AUR: {data.get('error')}")
+        raise FetchError(f"the AUR web API refused {url}: {data.get('error')}")
     return data
 
 
@@ -443,23 +459,98 @@ def aur_rpc_lookup(names: list[str]) -> dict[str, Node]:
     return found
 
 
+def _git(*args: str) -> str:
+    cmd = ["git", *args]
+    res = subprocess.run(cmd, capture_output=True, text=True, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
+    if res.returncode != 0:
+        raise util.CommandError(cmd, res.returncode, res.stderr or res.stdout)
+    return res.stdout
+
+
+_failing_hosts: set[str] = set()  # git hosts that already failed in this run: tried once, not retried
+
+
+def _git_network(url: str, *args: str) -> str:
+    """A git command that talks to ``url``, retried with backoff (network hiccups)."""
+    host = urllib.parse.urlsplit(url).netloc
+    for attempt in range(0 if host in _failing_hosts else 2):
+        try:
+            return _git(*args)
+        except util.CommandError:
+            time.sleep(RETRY_DELAY * 2**attempt)
+    try:
+        return _git(*args)
+    except util.CommandError:
+        _failing_hosts.add(host)
+        raise
+
+
+def _git_error(e: util.CommandError) -> str:
+    lines = [ln.strip() for ln in e.output.strip().splitlines() if ln.strip()]
+    return lines[-1] if lines else f"git exited with status {e.returncode}"
+
+
+def aur_git_sources(pkgbase: str) -> list[tuple[str, str]]:
+    """Where the git history of an AUR package base lives, as (url, ref) pairs:
+    the AUR, then its mirror."""
+    sources = [(f"{AUR}/{pkgbase}.git", "HEAD")]
+    if AUR_MIRROR:
+        sources.append((AUR_MIRROR, f"refs/heads/{pkgbase}"))
+    return sources
+
+
+def _fetch_failed(pkgbase: str, errors: list[str], missing: str = "") -> FetchError:
+    hint = ("Check the network connection and https://status.archlinux.org, then run the build again."
+            if not missing else
+            f"Commit {missing} is gone: the package's history was rewritten or it left the AUR (or the mirror "
+            "has not caught up yet). Pin current commits with scripts/build-packages.sh --update-lock.")
+    return FetchError(f"could not fetch the AUR package {pkgbase}:\n" + "\n".join(f"  {e}" for e in errors)
+                      + "\n" + hint)
+
+
 def aur_head(pkgbase: str) -> str:
-    out = subprocess.run(["git", "ls-remote", f"{AUR}/{pkgbase}.git", "HEAD"], capture_output=True, text=True,
-                         check=True).stdout.split()
-    if not out:
-        raise RuntimeError(f"AUR git repository for {pkgbase} is empty")
-    return out[0]
+    """The current commit of an AUR package base."""
+    errors = []
+    for url, ref in aur_git_sources(pkgbase):
+        try:
+            out = _git_network(url, "ls-remote", url, ref).split()
+        except util.CommandError as e:
+            errors.append(f"{url} ({ref}): {_git_error(e)}")
+            continue
+        if not out:
+            raise FetchError(f"{pkgbase} is not on the AUR: {url} has no {ref}")
+        return out[0]
+    raise _fetch_failed(pkgbase, errors)
+
+
+def _has_commit(repo: Path, commit: str) -> bool:
+    return subprocess.run(["git", "-C", str(repo), "cat-file", "-e", f"{commit}^{{commit}}"],
+                          capture_output=True).returncode == 0
 
 
 def clone_aur(pkgbase: str, commit: str, workdir: Path) -> Path:
+    """A checkout of ``pkgbase`` at ``commit``. The network is used only when
+    the commit is not in the local clone yet: the AUR first, then its mirror."""
     dest = workdir / "aur" / pkgbase
     if not (dest / ".git").is_dir():
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["git", "clone", "--quiet", f"{AUR}/{pkgbase}.git", str(dest)], check=True)
-    else:
-        subprocess.run(["git", "-C", str(dest), "fetch", "--quiet", "origin"], check=True)
-    subprocess.run(["git", "-C", str(dest), "checkout", "--quiet", "--force", commit], check=True)
-    subprocess.run(["git", "-C", str(dest), "clean", "-qfdx"], check=True)
+        dest.mkdir(parents=True, exist_ok=True)
+        _git("init", "--quiet", str(dest))
+    errors, missing = [], ""
+    for url, ref in aur_git_sources(pkgbase):
+        if _has_commit(dest, commit):
+            break
+        try:
+            _git_network(url, "-C", str(dest), "fetch", "--quiet", "--no-tags", url, ref)
+        except util.CommandError as e:
+            errors.append(f"{url} ({ref}): {_git_error(e)}")
+            continue
+        if not _has_commit(dest, commit):
+            errors.append(f"{url} ({ref}): has no commit {commit}")
+            missing = commit
+    if not _has_commit(dest, commit):
+        raise _fetch_failed(pkgbase, errors, missing)
+    _git("-C", str(dest), "checkout", "--quiet", "--force", "--detach", commit)
+    _git("-C", str(dest), "clean", "-qfdx")
     return dest
 
 
@@ -676,4 +767,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except (FetchError, util.CommandError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        sys.exit(1)

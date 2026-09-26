@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import pwd
+import re
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -37,6 +38,36 @@ def installed_packages(root: Path | str = "/") -> dict[str, str]:
                 version = lines[i + 1]
         if name:
             result[name] = version
+    return result
+
+
+def installed_provides(root: Path | str = "/") -> dict[str, str]:
+    """{name: installed package} for every package name *and* everything it
+    provides, so a check for "llama.cpp-vulkan" is satisfied by an installed
+    llama.cpp-vulkan-git. Use exact names (installed_packages) where the
+    package itself matters, e.g. before replacing a driver stack."""
+    local = Path(root) / "var" / "lib" / "pacman" / "local"
+    result: dict[str, str] = {}
+    if not local.is_dir():
+        return result
+    for entry in sorted(local.iterdir()):
+        desc = entry / "desc"
+        if not desc.is_file():
+            continue
+        name, provides, section = "", [], ""
+        for line in desc.read_text(errors="replace").splitlines():
+            if line.startswith("%") and line.endswith("%"):
+                section = line
+            elif not line:
+                section = ""
+            elif section == "%NAME%":
+                name = line
+            elif section == "%PROVIDES%":
+                provides.append(re.split(r"[<>=]", line, maxsplit=1)[0])
+        if name:
+            result[name] = name
+            for p in provides:
+                result.setdefault(p, name)
     return result
 
 
