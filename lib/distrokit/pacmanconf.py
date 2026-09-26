@@ -18,7 +18,6 @@ ILoveCandy
 VerbosePkgLists
 CheckSpace
 ParallelDownloads = 5
-DownloadUser = alpm
 SigLevel    = Required DatabaseOptional
 LocalFileSigLevel = Optional
 """
@@ -48,7 +47,12 @@ def render(kind: str, branding: Branding | None = None, *, offline_repo: str = "
     branding = branding or load_branding()
     if kind not in ("target", "live", "offline", "build"):
         raise ValueError(kind)
-    out = [f"# pacman configuration for {branding.pretty_name} ({kind}).\n# See pacman.conf(5).\n\n", OPTIONS, "\n"]
+    options = OPTIONS
+    if kind in ("target", "live", "offline"):
+        # Downloads run as the unprivileged alpm user (pacman 7). Not on the
+        # build host, where containers and root-owned build trees get in the way.
+        options = options.replace("ParallelDownloads = 5\n", "ParallelDownloads = 5\nDownloadUser = alpm\n")
+    out = [f"# pacman configuration for {branding.pretty_name} ({kind}).\n# See pacman.conf(5).\n\n", options, "\n"]
     local_name = f"{branding.repo_name}-offline"
     if kind in ("live", "offline", "build") and offline_repo:
         out.append(f"[{local_name}]\nSigLevel = Optional TrustAll\nServer = file://{offline_repo}\n\n")
