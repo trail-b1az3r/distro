@@ -1,0 +1,25 @@
+# Only on the live ISO (never installed to disk).
+@DISTRO_ID@-installer
+mkinitcpio-archiso
+arch-install-scripts
+archinstall
+syslinux
+memtest86+
+memtest86+-efi
+edk2-shell
+grub
+os-prober
+greetd
+partitionmanager
+gparted
+testdisk
+ddrescue
+gptfdisk
+parted
+dmidecode
+qemu-guest-agent
+spice-vdagent
+open-vm-tools
+virtualbox-guest-utils
+hyperv
+pyside6

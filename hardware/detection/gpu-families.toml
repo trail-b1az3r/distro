@@ -1,0 +1,173 @@
+# GPU generation tables used by distrokit.hardware.graphics.
+#
+# Names come from the PCI ID database (hwdata's pci.ids), which prefixes each
+# device with its chip codename, for example "AD103 [GeForce RTX 4080 SUPER]"
+# or "Navi 31 [Radeon RX 7900 XT/7900 XTX]". These tables map codenames to
+# architectures. When a new GPU generation ships, add a row here; no code
+# change is needed.
+
+# --- NVIDIA ------------------------------------------------------------------
+# Matched against the start of the codename, longest prefix first.
+# branch: which driver stack supports the architecture (hardware/gpu/drivers.toml)
+[nvidia.prefixes]
+GB = { arch = "blackwell", branch = "open" }
+GH = { arch = "hopper", branch = "open" }
+AD = { arch = "ada", branch = "open" }
+GA = { arch = "ampere", branch = "open" }
+TU = { arch = "turing", branch = "open" }
+GV = { arch = "volta", branch = "legacy580" }
+GP = { arch = "pascal", branch = "legacy580" }
+GM = { arch = "maxwell", branch = "legacy580" }
+GK = { arch = "kepler", branch = "nouveau" }
+GF = { arch = "fermi", branch = "nouveau" }
+GT = { arch = "tesla", branch = "nouveau" }
+G9 = { arch = "tesla", branch = "nouveau" }
+G8 = { arch = "tesla", branch = "nouveau" }
+C7 = { arch = "curie", branch = "nouveau" }
+NV = { arch = "curie", branch = "nouveau" }
+
+# When the codename is unknown, fall back to PCI device-ID ranges.
+# Turing and every later generation use IDs from 0x1e00 upwards.
+[nvidia.device_id_ranges]
+open = [[0x1e00, 0xffff]]
+legacy580 = [[0x1340, 0x1dff]]
+
+# --- AMD ---------------------------------------------------------------------
+# Matched as whole words against the pci.ids name (case-insensitive).
+# gfx: the LLVM target, used to decide whether ROCm can run on the card.
+# integrated: the name is an APU's graphics.
+[amd.codenames]
+"Navi 48" = { family = "rdna4", gfx = "gfx1201" }
+"Navi 44" = { family = "rdna4", gfx = "gfx1200" }
+"Navi 31" = { family = "rdna3", gfx = "gfx1100" }
+"Navi 32" = { family = "rdna3", gfx = "gfx1101" }
+"Navi 33" = { family = "rdna3", gfx = "gfx1102" }
+"Strix Halo" = { family = "rdna3.5", gfx = "gfx1151", integrated = true }
+"Strix" = { family = "rdna3.5", gfx = "gfx1150", integrated = true }
+"Krackan" = { family = "rdna3.5", gfx = "gfx1152", integrated = true }
+"Hawk Point" = { family = "rdna3", gfx = "gfx1103", integrated = true }
+"Phoenix" = { family = "rdna3", gfx = "gfx1103", integrated = true }
+"Phoenix1" = { family = "rdna3", gfx = "gfx1103", integrated = true }
+"Phoenix2" = { family = "rdna3", gfx = "gfx1103", integrated = true }
+"Phoenix3" = { family = "rdna3", gfx = "gfx1103", integrated = true }
+"Navi 21" = { family = "rdna2", gfx = "gfx1030" }
+"Navi 22" = { family = "rdna2", gfx = "gfx1031" }
+"Navi 23" = { family = "rdna2", gfx = "gfx1032" }
+"Navi 24" = { family = "rdna2", gfx = "gfx1034" }
+"Rembrandt" = { family = "rdna2", gfx = "gfx1035", integrated = true }
+"Van Gogh" = { family = "rdna2", gfx = "gfx1033", integrated = true }
+"Mendocino" = { family = "rdna2", gfx = "gfx1037", integrated = true }
+"Raphael" = { family = "rdna2", gfx = "gfx1036", integrated = true }
+"Granite Ridge" = { family = "rdna2", gfx = "gfx1036", integrated = true }
+"Dragon Range" = { family = "rdna2", gfx = "gfx1036", integrated = true }
+"Navi 10" = { family = "rdna1", gfx = "gfx1010" }
+"Navi 12" = { family = "rdna1", gfx = "gfx1011" }
+"Navi 14" = { family = "rdna1", gfx = "gfx1012" }
+"Vega 20" = { family = "gcn5", gfx = "gfx906" }
+"Vega 10" = { family = "gcn5", gfx = "gfx900" }
+"Vega 12" = { family = "gcn5", gfx = "gfx904" }
+"Raven Ridge" = { family = "gcn5", gfx = "gfx902", integrated = true }
+"Picasso" = { family = "gcn5", gfx = "gfx902", integrated = true }
+"Dali" = { family = "gcn5", gfx = "gfx902", integrated = true }
+"Pollock" = { family = "gcn5", gfx = "gfx902", integrated = true }
+"Renoir" = { family = "gcn5", gfx = "gfx90c", integrated = true }
+"Lucienne" = { family = "gcn5", gfx = "gfx90c", integrated = true }
+"Cezanne" = { family = "gcn5", gfx = "gfx90c", integrated = true }
+"Barcelo" = { family = "gcn5", gfx = "gfx90c", integrated = true }
+"Ellesmere" = { family = "gcn4", gfx = "gfx803" }
+"Baffin" = { family = "gcn4", gfx = "gfx803" }
+"Lexa" = { family = "gcn4", gfx = "gfx803" }
+"Polaris 10" = { family = "gcn4", gfx = "gfx803" }
+"Polaris 11" = { family = "gcn4", gfx = "gfx803" }
+"Polaris 12" = { family = "gcn4", gfx = "gfx803" }
+"Polaris 20" = { family = "gcn4", gfx = "gfx803" }
+"Polaris 21" = { family = "gcn4", gfx = "gfx803" }
+"Polaris 22" = { family = "gcn4", gfx = "gfx803" }
+"Polaris 23" = { family = "gcn4", gfx = "gfx803" }
+"Fiji" = { family = "gcn3", gfx = "gfx803" }
+"Tonga" = { family = "gcn3", gfx = "gfx802" }
+"Iceland" = { family = "gcn3", gfx = "gfx802" }
+"Topaz" = { family = "gcn3", gfx = "gfx802" }
+"Carrizo" = { family = "gcn3", gfx = "gfx801", integrated = true }
+"Stoney" = { family = "gcn3", gfx = "gfx810", integrated = true }
+# GCN 1.x: amdgpu works (and is required for Vulkan) but older kernels
+# default to the radeon driver, so the kernel parameters below are added.
+"Bonaire" = { family = "gcn2", gfx = "gfx704", cik = true }
+"Hawaii" = { family = "gcn2", gfx = "gfx701", cik = true }
+"Kaveri" = { family = "gcn2", gfx = "gfx700", cik = true, integrated = true }
+"Kabini" = { family = "gcn2", gfx = "gfx703", cik = true, integrated = true }
+"Mullins" = { family = "gcn2", gfx = "gfx703", cik = true, integrated = true }
+"Beema" = { family = "gcn2", gfx = "gfx703", cik = true, integrated = true }
+"Temash" = { family = "gcn2", gfx = "gfx703", cik = true, integrated = true }
+"Tahiti" = { family = "gcn1", gfx = "gfx600", si = true }
+"Pitcairn" = { family = "gcn1", gfx = "gfx601", si = true }
+"Curacao" = { family = "gcn1", gfx = "gfx601", si = true }
+"Cape Verde" = { family = "gcn1", gfx = "gfx601", si = true }
+"Oland" = { family = "gcn1", gfx = "gfx602", si = true }
+"Hainan" = { family = "gcn1", gfx = "gfx602", si = true }
+# TeraScale and older: radeon driver, OpenGL only.
+"Cypress" = { family = "terascale", legacy = true }
+"Juniper" = { family = "terascale", legacy = true }
+"Redwood" = { family = "terascale", legacy = true }
+"Cedar" = { family = "terascale", legacy = true }
+"Barts" = { family = "terascale", legacy = true }
+"Turks" = { family = "terascale", legacy = true }
+"Caicos" = { family = "terascale", legacy = true }
+"Cayman" = { family = "terascale", legacy = true }
+"Wrestler" = { family = "terascale", legacy = true, integrated = true }
+"Trinity" = { family = "terascale", legacy = true, integrated = true }
+"Richland" = { family = "terascale", legacy = true, integrated = true }
+"Sumo" = { family = "terascale", legacy = true, integrated = true }
+
+# Targets for which PyTorch's ROCm wheels ship kernels, and targets that run
+# them through HSA_OVERRIDE_GFX_VERSION.
+[amd.rocm]
+native = ["gfx900", "gfx906", "gfx908", "gfx90a", "gfx942", "gfx1030", "gfx1100", "gfx1101", "gfx1102", "gfx1151", "gfx1200", "gfx1201"]
+[amd.rocm.override]
+gfx1031 = "10.3.0"
+gfx1032 = "10.3.0"
+gfx1034 = "10.3.0"
+gfx1035 = "10.3.0"
+gfx1036 = "10.3.0"
+gfx1103 = "11.0.0"
+gfx1150 = "11.0.0"
+gfx1152 = "11.0.0"
+
+# --- Intel -------------------------------------------------------------------
+# Regular expressions matched against the pci.ids name, first match wins.
+[[intel.rules]]
+match = "Battlemage|\\bArc B\\d{3}|\\bBMG\\b"
+family = "xe2"
+discrete = true
+[[intel.rules]]
+match = "\\bDG2\\b|Alchemist|\\bArc A\\d{3}|\\bArc Pro A"
+family = "xe-hpg"
+discrete = true
+[[intel.rules]]
+match = "\\bDG1\\b|Iris Xe MAX"
+family = "xe-lp"
+discrete = true
+[[intel.rules]]
+match = "Lunar Lake|Arrow Lake|Panther Lake|Arc Graphics 1[34]0V"
+family = "xe2"
+[[intel.rules]]
+match = "Meteor Lake|Intel Arc Graphics"
+family = "xe-lpg"
+[[intel.rules]]
+match = "Iris Xe|Alder Lake|Raptor Lake|Tiger ?Lake|Rocket Lake|Jasper Lake|Elkhart Lake|UHD Graphics 7\\d\\d|\\bGT[12] \\[UHD"
+family = "xe-lp"
+[[intel.rules]]
+match = "Ice ?Lake|Iris Plus Graphics G[47]"
+family = "gen11"
+# Haswell and older need the legacy VA-API driver (i965).
+[[intel.rules]]
+match = "Sandy Bridge|Ivy Bridge|Haswell|2nd Generation Core|3rd Gen Core|4th Gen Core|Xeon E3-1200 v[23]|HD Graphics (2000|2500|3000|4000|4200|4400|4600|5000|5100|5200)\\b|Iris Pro Graphics 5200|Atom Processor Z36|Atom Processor Z37|Bay Trail|Valleyview"
+family = "gen7"
+legacy_vaapi = true
+[[intel.rules]]
+match = "GMA|Mobile 4 Series|G41|G45|Q45|Ironlake|Core Processor Integrated Graphics"
+family = "gen5"
+legacy_vaapi = true
+[[intel.rules]]
+match = ".*"
+family = "gen9"

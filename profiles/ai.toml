@@ -1,0 +1,16 @@
+[profile]
+id = "ai"
+name = "AI"
+order = 40
+inherits = "developer"
+summary = "Developer plus HyperNix, an AI assistant, GPU acceleration and a local model."
+description = """
+Everything in Developer plus HyperNix, your choice of AI assistant, the GPU
+compute toolkit for your hardware and, optionally, a local model sized for
+your machine."""
+approx_size_gb = 24
+
+[features]
+hypernix = true
+assistant = "hermis"
+gpu_compute = true

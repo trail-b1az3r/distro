@@ -1,0 +1,13 @@
+# Local AI tooling. HyperNix, the assistants and PyTorch are installed per
+# user into isolated environments by the AI setup (see ai/), so they are not
+# listed here; this is the system-level support they rely on.
+@DISTRO_ID@-ai
+python
+uv
+nodejs
+npm
+git-lfs
+python-huggingface-hub
+vulkan-tools
+clinfo
+nvtop

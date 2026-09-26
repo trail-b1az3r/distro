@@ -1,0 +1,189 @@
+# Graphics driver stacks.
+#
+# distrokit.gpu picks one stack per GPU from its vendor and driver branch
+# (hardware/detection/gpu-families.toml) and merges them into one plan.
+#
+# Fields
+#   label            shown to the user
+#   packages         always installed with the stack
+#   packages_32bit   multilib packages (Steam, Wine); installed when multilib is on
+#   compute          installed when "GPU compute toolkits" is on
+#   source           "repo" or "aur" (AUR packages are built from the distribution
+#                    repository or, failing that, with yay)
+#   dkms             true: kernel modules are built per kernel, so headers are needed
+#   prebuilt         {kernel = package} replacements for dkms when only that kernel is installed
+#   kernel_params    added to the kernel command line
+#   initramfs_modules  loaded early (early KMS)
+#   drop_kms_hook    remove mkinitcpio's kms hook (keeps nouveau out of the initramfs)
+#   modprobe         lines for /etc/modprobe.d/<id>-gpu.conf
+#   services         systemd units to enable
+#   env_primary      session environment when this GPU drives the desktop
+#   vaapi            VA-API driver name (LIBVA_DRIVER_NAME), informational
+#   vulkan / cuda / wayland   what the stack provides, for status output
+#   conflicts        packages removed when switching to this stack
+
+[common]
+packages = ["mesa", "vulkan-icd-loader", "libva-utils", "mesa-utils"]
+packages_32bit = ["lib32-mesa", "lib32-vulkan-icd-loader"]
+
+[stack.nvidia-open]
+label = "NVIDIA driver (open kernel modules)"
+vendor = "nvidia"
+source = "repo"
+packages = ["nvidia-open-dkms", "nvidia-utils", "nvidia-settings", "egl-wayland", "libva-nvidia-driver", "opencl-nvidia"]
+packages_32bit = ["lib32-nvidia-utils", "lib32-opencl-nvidia"]
+compute = ["cuda", "cudnn"]
+dkms = true
+prebuilt = { linux = "nvidia-open" }
+kernel_params = ["nvidia_drm.modeset=1", "nvidia_drm.fbdev=1"]
+initramfs_modules = ["nvidia", "nvidia_modeset", "nvidia_uvm", "nvidia_drm"]
+drop_kms_hook = true
+modprobe = [
+  "options nvidia NVreg_PreserveVideoMemoryAllocations=1",
+  "options nvidia NVreg_TemporaryFilePath=/var/tmp",
+]
+services = ["nvidia-suspend.service", "nvidia-hibernate.service", "nvidia-resume.service"]
+env_primary = { LIBVA_DRIVER_NAME = "nvidia", __GLX_VENDOR_LIBRARY_NAME = "nvidia", NVD_BACKEND = "direct" }
+vaapi = "nvidia (NVDEC)"
+vulkan = "yes"
+cuda = "yes"
+wayland = "yes"
+conflicts = ["nvidia", "nvidia-lts", "nvidia-dkms", "nvidia-580xx-dkms", "nvidia-580xx-utils", "lib32-nvidia-580xx-utils", "nvidia-470xx-dkms", "vulkan-nouveau", "lib32-vulkan-nouveau"]
+
+[stack.nvidia-580xx]
+label = "NVIDIA 580 legacy driver (Maxwell, Pascal, Volta)"
+vendor = "nvidia"
+source = "aur"
+packages = ["nvidia-580xx-dkms", "nvidia-580xx-utils", "nvidia-580xx-settings", "egl-wayland", "libva-nvidia-driver", "opencl-nvidia-580xx"]
+packages_32bit = ["lib32-nvidia-580xx-utils"]
+# CUDA 13 dropped these GPUs; PyTorch's cu126 wheels carry their own runtime
+# and still work with the 580 driver, which is what the AI setup uses.
+compute = []
+dkms = true
+kernel_params = ["nvidia_drm.modeset=1", "nvidia_drm.fbdev=1"]
+initramfs_modules = ["nvidia", "nvidia_modeset", "nvidia_uvm", "nvidia_drm"]
+drop_kms_hook = true
+modprobe = [
+  "options nvidia NVreg_PreserveVideoMemoryAllocations=1",
+  "options nvidia NVreg_TemporaryFilePath=/var/tmp",
+]
+services = ["nvidia-suspend.service", "nvidia-hibernate.service", "nvidia-resume.service"]
+env_primary = { LIBVA_DRIVER_NAME = "nvidia", __GLX_VENDOR_LIBRARY_NAME = "nvidia", NVD_BACKEND = "direct" }
+vaapi = "nvidia (NVDEC)"
+vulkan = "yes"
+cuda = "yes (CUDA 12.x runtimes)"
+wayland = "yes"
+conflicts = ["nvidia", "nvidia-open", "nvidia-open-dkms", "nvidia-utils", "lib32-nvidia-utils", "nvidia-settings", "opencl-nvidia", "vulkan-nouveau", "lib32-vulkan-nouveau"]
+
+[stack.nouveau]
+label = "Nouveau (open-source NVIDIA driver, NVK Vulkan)"
+vendor = "nvidia"
+source = "repo"
+packages = ["vulkan-nouveau"]
+packages_32bit = ["lib32-vulkan-nouveau"]
+compute = []
+vaapi = "none"
+vulkan = "yes (NVK, Maxwell and newer)"
+cuda = "no"
+wayland = "yes"
+conflicts = ["nvidia", "nvidia-open", "nvidia-open-dkms", "nvidia-dkms", "nvidia-utils", "lib32-nvidia-utils", "nvidia-580xx-dkms", "nvidia-580xx-utils", "lib32-nvidia-580xx-utils", "nvidia-prime"]
+
+[stack.amdgpu]
+label = "AMDGPU with Mesa (RADV Vulkan, VA-API)"
+vendor = "amd"
+source = "repo"
+packages = ["vulkan-radeon"]
+packages_32bit = ["lib32-vulkan-radeon"]
+compute = ["rocm-hip-runtime", "rocm-opencl-runtime", "rocminfo"]
+initramfs_modules = ["amdgpu"]
+vaapi = "radeonsi"
+vulkan = "yes"
+cuda = "no (ROCm/HIP instead)"
+wayland = "yes"
+conflicts = ["amdvlk", "lib32-amdvlk"]
+
+[stack.radeon]
+label = "Radeon (Mesa, OpenGL only)"
+vendor = "amd"
+source = "repo"
+packages = []
+packages_32bit = []
+compute = []
+vaapi = "r600 (limited)"
+vulkan = "no"
+cuda = "no"
+wayland = "yes (OpenGL)"
+conflicts = []
+
+[stack.intel]
+label = "Intel graphics (Mesa, ANV Vulkan, iHD VA-API)"
+vendor = "intel"
+source = "repo"
+packages = ["vulkan-intel", "intel-media-driver"]
+packages_32bit = ["lib32-vulkan-intel"]
+compute = ["intel-compute-runtime", "level-zero-loader"]
+vaapi = "iHD"
+vulkan = "yes"
+cuda = "no (oneAPI Level Zero instead)"
+wayland = "yes"
+conflicts = []
+
+[stack.intel-discrete]
+label = "Intel Arc (Mesa, ANV Vulkan, oneVPL media)"
+vendor = "intel"
+source = "repo"
+packages = ["vulkan-intel", "intel-media-driver", "vpl-gpu-rt"]
+packages_32bit = ["lib32-vulkan-intel"]
+compute = ["intel-compute-runtime", "level-zero-loader"]
+vaapi = "iHD"
+vulkan = "yes"
+cuda = "no (oneAPI Level Zero instead)"
+wayland = "yes"
+conflicts = []
+
+[stack.intel-legacy]
+label = "Intel graphics, Haswell and older (Mesa, i965 VA-API)"
+vendor = "intel"
+source = "repo"
+packages = ["vulkan-intel", "libva-intel-driver"]
+packages_32bit = ["lib32-vulkan-intel"]
+compute = []
+vaapi = "i965"
+vulkan = "partial (hasvk)"
+cuda = "no"
+wayland = "yes"
+conflicts = []
+
+[stack.virtual]
+label = "Virtual GPU (Mesa: virgl/venus, vmwgfx, llvmpipe)"
+vendor = "virtual"
+source = "repo"
+packages = ["vulkan-virtio", "vulkan-swrast"]
+packages_32bit = []
+compute = []
+vaapi = "none"
+vulkan = "software or virtio"
+cuda = "no"
+wayland = "yes"
+conflicts = []
+
+# Extra configuration for laptops whose display runs on the integrated GPU
+# while an NVIDIA GPU renders on demand (PRIME render offload).
+[hybrid.nvidia]
+packages = ["nvidia-prime"]
+# Fine-grained runtime power management lets the dGPU power off when idle
+# (Turing and newer).
+modprobe_turing_plus = ["options nvidia NVreg_DynamicPowerManagement=0x02"]
+udev_turing_plus = """
+# Enable runtime PM for NVIDIA VGA/3D controller devices on driver bind
+ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="auto"
+ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="auto"
+# Disable runtime PM for NVIDIA VGA/3D controller devices on driver unbind
+ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="on"
+"""
+services = ["nvidia-powerd.service"]
+
+[hybrid.any]
+# Stable device names for the compositor, which otherwise picks whichever
+# card the kernel enumerated first.

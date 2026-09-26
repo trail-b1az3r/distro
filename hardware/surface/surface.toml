@@ -1,0 +1,37 @@
+# Microsoft Surface support through the linux-surface project
+# (https://github.com/linux-surface/linux-surface).
+#
+# Nothing here is installed unless the user enables the Surface kernel in the
+# installer (it is pre-selected when Surface hardware is detected) or runs
+# `<cli> surface enable`.
+
+[repository]
+name = "linux-surface"
+server = "https://pkg.surfacelinux.com/arch/"
+# Full fingerprint of the linux-surface package signing key. The key itself is
+# vendored as linux-surface.asc and checked against this fingerprint before it
+# is trusted.
+key_fingerprint = "87DEFA4AB94A99A4C8C3112556C464BAAC421453"
+key_file = "linux-surface.asc"
+
+[packages]
+kernel = ["linux-surface", "linux-surface-headers"]
+# iptsd: touchscreen and pen (Intel Precise Touch). libwacom-surface: pen and
+# touch device descriptions (replaces libwacom).
+support = ["iptsd", "libwacom-surface"]
+# Enroll linux-surface's Secure Boot MOK key (used with shim). Only offered
+# when Secure Boot is on.
+secureboot = ["linux-surface-secureboot-mok"]
+# Marvell Wi-Fi firmware for older models.
+marvell = ["linux-firmware-marvell"]
+
+# Product names (regular expressions) of models with Marvell Wi-Fi.
+[marvell]
+models = [
+  "^Surface Pro [3-6]$",
+  "^Surface Pro$",
+  "^Surface Book$",
+  "^Surface Book 2$",
+  "^Surface Laptop$",
+  "^Surface Studio",
+]

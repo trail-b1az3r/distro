@@ -1,0 +1,28 @@
+[profile]
+id = "minimal"
+name = "Minimal"
+order = 10
+summary = "Base system, desktop, networking and essential utilities."
+description = """
+The Hyprland desktop with Konsole and Dolphin, networking, audio, Bluetooth,
+Git, Fish and yay. Nothing else: add what you need later with pacman or yay."""
+approx_size_gb = 6
+
+[packages]
+lists = ["base", "desktop"]
+
+[features]
+apps = false
+browser = false
+office = false
+plasma_fallback = false
+dev_basic = false
+code_editor = false
+dev_full = false
+containers = "none"
+claude_code = false
+hypernix = false
+assistant = "none"
+gpu_compute = false
+snapshots = true
+firewall = true

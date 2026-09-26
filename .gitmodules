@@ -1,0 +1,3 @@
+[submodule "desktop/dots"]
+	path = desktop/dots
+	url = https://github.com/trail-b1az3r/dots

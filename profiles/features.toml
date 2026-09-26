@@ -1,0 +1,130 @@
+# Features that installation profiles switch on or off. Every profile can be
+# customised in the installer, feature by feature.
+#
+# kind = "bool"   -> on/off; `lists` are installed when on.
+# kind = "choice" -> one of `choices`; each choice names the lists it installs.
+# `group` and `order` arrange the installer's customisation page.
+
+[apps]
+kind = "bool"
+group = "Applications"
+order = 10
+label = "Desktop applications"
+description = "Ark (archives), Gwenview (images), Okular (PDF), Haruna/mpv (media) and Flatpak."
+lists = ["apps"]
+
+[browser]
+kind = "bool"
+group = "Applications"
+order = 20
+label = "Web browser"
+description = "Firefox, configured as the default browser."
+lists = ["browser"]
+
+[office]
+kind = "bool"
+group = "Applications"
+order = 30
+label = "OnlyOffice"
+description = "Documents, spreadsheets and presentations, compatible with Microsoft Office formats."
+lists = ["office"]
+
+[plasma_fallback]
+kind = "bool"
+group = "Applications"
+order = 40
+label = "KDE Plasma fallback session"
+description = "A second, conventional desktop you can pick at the login screen. Works on X11 and Wayland."
+lists = ["plasma-fallback"]
+
+[dev_basic]
+kind = "bool"
+group = "Developer tools"
+order = 10
+label = "Developer utilities"
+description = "Python, Node.js, npm, uv, GitHub CLI, ripgrep, fzf, tmux and friends. Git, Fish and yay are always installed."
+lists = ["dev-basic"]
+
+[code_editor]
+kind = "bool"
+group = "Developer tools"
+order = 20
+label = "Code editor"
+description = "A VS Code-compatible editor (see packages/editors.toml)."
+lists = []
+
+[dev_full]
+kind = "bool"
+group = "Developer tools"
+order = 30
+label = "Compilers and debuggers"
+description = "GCC, Clang/LLVM, Rust, CMake, Meson, GDB, LLDB, Valgrind, strace and kernel headers."
+lists = ["dev-full"]
+
+[containers]
+kind = "choice"
+group = "Developer tools"
+order = 40
+label = "Containers"
+description = "Rootless Podman (recommended) or Docker."
+default = "none"
+[containers.choices]
+none = []
+podman = ["containers-podman"]
+docker = ["containers-docker"]
+
+[claude_code]
+kind = "bool"
+group = "Developer tools"
+order = 50
+label = "Claude Code"
+description = "Anthropic's coding agent, available as `claude` in every shell. Installed online for your user."
+lists = []
+requires_network = true
+
+[hypernix]
+kind = "bool"
+group = "AI"
+order = 10
+label = "HyperNix"
+description = "Local model toolkit: chat, GGUF conversion, quantisation and training, with automatic CUDA/ROCm/CPU selection."
+lists = ["ai"]
+requires_network = true
+
+[assistant]
+kind = "choice"
+group = "AI"
+order = 20
+label = "AI assistant"
+description = "Hermis (Hermes Agent by Nous Research), OpenClaw, both or none."
+default = "none"
+requires_network = true
+[assistant.choices]
+none = []
+hermis = ["ai"]
+openclaw = ["ai"]
+both = ["ai"]
+
+[gpu_compute]
+kind = "bool"
+group = "AI"
+order = 30
+label = "GPU compute toolkits"
+description = "CUDA on NVIDIA, ROCm/HIP on supported AMD GPUs, oneAPI Level Zero on Intel Arc. Large (several GB)."
+lists = []
+
+[snapshots]
+kind = "bool"
+group = "System"
+order = 10
+label = "Btrfs snapshots"
+description = "Automatic snapshots before and after every pacman transaction, bootable from GRUB. Btrfs only."
+lists = ["snapshots"]
+
+[firewall]
+kind = "bool"
+group = "System"
+order = 20
+label = "Firewall"
+description = "An nftables ruleset that blocks unsolicited incoming connections. No background daemon."
+lists = ["firewall"]

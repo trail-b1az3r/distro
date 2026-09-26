@@ -1,0 +1,3 @@
+# Added when the machine is a laptop, convertible or tablet.
+iio-sensor-proxy
+libwacom

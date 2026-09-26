@@ -1,0 +1,20 @@
+# Build outputs
+/build/
+/dist/
+/work/
+/out/
+*.pkg.tar.*
+*.iso
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
+
+# Editors
+.vscode/
+.idea/
+*.swp
