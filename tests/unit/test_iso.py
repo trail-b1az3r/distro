@@ -150,7 +150,8 @@ def test_dry_run_build_commands(tmp_path, releng, monkeypatch):
     assert any("distrokit.build.packages build" in c for c in cmds)
     assert any(c.startswith("repo-add --new") and c.split()[2].endswith(f"{load_branding().repo_name}-offline.db.tar.gz")
                for c in cmds)
-    mk = next(c for c in cmds if c.startswith("mkarchiso"))
+    mk = next(c for c in cmds if "mkarchiso" in c)
+    assert mk.startswith("unshare --mount --propagation private -- mkarchiso ")  # its mounts stay private
     assert " -r " in mk and mk.endswith(str(opts.profile_dir))
     assert not any("-Sw" in c for c in cmds)  # minimal offline repository downloads nothing
 
@@ -174,3 +175,19 @@ def test_checksums_and_finish(tmp_path, releng, monkeypatch):
                    capture_output=True)
     meta = json.loads((root / "metadata" / f"{Path(name).stem}.json").read_text())
     assert meta["live_packages"] == 2 and meta["sha256"] == sha[0]
+
+
+def test_mounts_left_under_the_build_directory(tmp_path):
+    build = tmp_path / "my build"
+    mountinfo = "\n".join([
+        "22 1 0:21 / / rw,relatime - ext4 /dev/sda1 rw",
+        f"90 22 0:5 / {tmp_path}/my\\040build/iso-work/x86_64/airootfs/proc rw - proc proc rw",
+        f"91 22 0:6 / {tmp_path}/my\\040build/iso-work/x86_64/airootfs/dev/pts rw - devpts devpts rw",
+        f"92 22 0:7 / {tmp_path}/my\\040build/iso-work/x86_64/airootfs/dev rw - devtmpfs dev rw",
+        f"93 22 0:8 / {tmp_path}/my\\040buildings rw - tmpfs tmpfs rw",
+    ])
+    points = iso.mounts_under(build, mountinfo)
+    ends = [p.rsplit("airootfs", 1)[1] for p in points]
+    assert ends.index("/dev/pts") < ends.index("/dev")  # nested mounts first
+    assert len(points) == 3 and all(p.startswith(f"{tmp_path}/my build/") for p in points)
+    assert iso.mounts_under(tmp_path / "other", mountinfo) == []

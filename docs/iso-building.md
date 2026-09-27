@@ -125,4 +125,5 @@ qemu-system-x86_64 -enable-kvm -m 4G -smp 2 -cdrom dist/*.iso \
 | an AUR package fails to build | pin an older commit in `aur.lock.json` or remove it from the lists; see `build/packages/src/<pkg>` |
 | `could not fetch the AUR package X` | both the AUR and its mirror failed; the message shows git's error for each. Check the network and [status.archlinux.org](https://status.archlinux.org), then build again. "Commit … is gone": run `scripts/build-packages.sh --update-lock` |
 | `No space left on device` | free space or point `--build-dir` elsewhere; `--clean` removes old work directories |
+| mkarchiso: `umount: …/airootfs/proc: target is busy`, then `find: …/proc/…: Invalid argument` | something on the host (a file indexer, say) held the live system's `/proc`. mkarchiso now runs in a mount namespace of its own, and the next build unmounts whatever an earlier one left mounted under `build/` |
 | mkarchiso: `must be run as root` | `sudo ./build.sh`, or `--container` |
