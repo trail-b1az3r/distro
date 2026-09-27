@@ -59,7 +59,7 @@ if ((container)); then
 fi
 
 step "Installing build tools"
-pkgs=(archiso git base-devel pacman-contrib python python-pillow python-numpy python-pytest
+pkgs=(archiso arch-install-scripts git base-devel pacman-contrib python python-pillow python-numpy python-pytest
     librsvg grub ttf-dejavu squashfs-tools libisoburn mtools dosfstools erofs-utils curl)
 ((qemu)) && pkgs+=(qemu-desktop edk2-ovmf python-pexpect)
 pacman -Syu --needed --noconfirm "${pkgs[@]}"

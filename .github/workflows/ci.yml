@@ -60,7 +60,9 @@ jobs:
   arch:
     name: Arch Linux packages
     runs-on: ubuntu-24.04
-    container: archlinux:base-devel
+    container:
+      image: archlinux:base-devel
+      options: --privileged  # the package build's chroot (pacstrap, arch-chroot) mounts file systems
     steps:
       - name: Git for the checkout
         run: pacman -Syu --noconfirm --needed git
@@ -93,13 +95,17 @@ jobs:
           grep "ID=\"$id\"" /usr/lib/os-release
       - name: Dependency plan (AUR resolution)
         run: BUILD_USER=builder scripts/build-packages.sh --plan
-      - name: Build packages the way the ISO build does (an AUR package with a signed source, a local one)
+      - name: Build packages the way the ISO build does, in its chroot (an AUR package with a signed source, a local one)
         run: |
           rm /etc/sudoers.d/90-builder  # makepkg must not need sudo: the build installs dependencies itself
+          pacman -Qq > /tmp/before
           id="$(. ./distro.conf && echo "$DISTRO_ID")"
           BUILD_USER=builder scripts/build-packages.sh --only wlogout "$id-fonts-google-sans-flex"
           ls -l build/repo
           pacman --config build/packages/pacman-build.conf -Sl "$(. ./distro.conf && echo "$DISTRO_REPO_NAME")"
+          pacman -Qq > /tmp/after
+          if ! diff /tmp/before /tmp/after; then echo "the build changed the host's packages"; exit 1; fi
+          if findmnt -rn -o TARGET | grep -F "$PWD/build/packages/chroot"; then echo "left mounted"; exit 1; fi
       - name: Show a newly written AUR lock (commit it to pin the AUR packages)
         run: |
           if [ -f packages/aur.lock.json ] && ! git ls-files --error-unmatch packages/aur.lock.json >/dev/null 2>&1; then
