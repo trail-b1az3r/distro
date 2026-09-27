@@ -29,6 +29,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -221,7 +222,33 @@ def offline_sets(b: Branding, profile_id: str, multilib: bool = True) -> list[li
 # ---------------------------------------------------------------------------
 
 
+def mounts_under(path: Path, mountinfo: str | None = None) -> list[str]:
+    """Mount points at or below ``path``, deepest first."""
+    root = str(path.resolve())
+    if mountinfo is None:
+        mountinfo = Path("/proc/self/mountinfo").read_text()
+    points = []
+    for line in mountinfo.splitlines():
+        fields = line.split()
+        if len(fields) < 5:
+            continue
+        point = re.sub(r"\\([0-7]{3})", lambda m: chr(int(m.group(1), 8)), fields[4])
+        if point == root or point.startswith(root + "/"):
+            points.append(point)
+    return sorted(points, key=lambda p: p.count("/"), reverse=True)
+
+
+def release_mounts(path: Path, runner: util.Runner) -> None:
+    """Unmount what an interrupted or failed earlier build left mounted under
+    ``path`` (mkarchiso's /proc of the live system, for one)."""
+    for point in mounts_under(path):
+        print(f"    unmounting {point}, left over from an earlier build")
+        runner.run(["umount", "--lazy", point])
+
+
 def _remove(path: Path) -> None:
+    if mounts_under(path):  # never delete through a mount into a live file system
+        raise SystemExit(f"{path} has file systems mounted below it: {', '.join(mounts_under(path))}")
     if path.is_symlink() or path.is_file():
         path.unlink()
     elif path.is_dir():
@@ -436,8 +463,8 @@ def preflight(opts: Options) -> list[str]:
     problems = []
     if os.geteuid() != 0:
         problems.append("mkarchiso needs root: run `sudo ./build.sh`, or `./build.sh --container`.")
-    need = ["mkarchiso", "pacman", "repo-add"]
-    need += [] if opts.skip_packages else ["makepkg", "git", "pacstrap", "arch-chroot", "unshare"]
+    need = ["mkarchiso", "pacman", "repo-add", "unshare"]
+    need += [] if opts.skip_packages else ["makepkg", "git", "pacstrap", "arch-chroot"]
     for exe in need:
         if not shutil.which(exe):
             problems.append(f"`{exe}` is missing: run scripts/bootstrap.sh on an Arch-based host, "
@@ -463,6 +490,8 @@ def build(opts: Options, runner: util.Runner | None = None) -> dict:
     runner.env.update(env)
     os.environ.update(env)
 
+    if opts.build.exists() and not runner.dry_run:
+        release_mounts(opts.build, runner)
     if opts.clean:
         for d in (opts.work, opts.out, opts.profile_dir, opts.offline_repo, opts.build / "packages"):
             _remove(d)
@@ -501,7 +530,10 @@ def build(opts: Options, runner: util.Runner | None = None) -> dict:
     cmd = ["mkarchiso", "-v", "-w", str(opts.work), "-o", str(opts.out), str(prof)]
     if not opts.debug:
         cmd.insert(2, "-r")  # remove the work directory afterwards
-    runner.run(cmd)
+    # In a mount namespace of its own: the live system's /proc, /sys and /dev
+    # mounts are invisible to (and cannot be held busy by) anything else on
+    # the host, such as file indexers, and vanish if mkarchiso is interrupted.
+    runner.run(["unshare", "--mount", "--propagation", "private", "--", *cmd])
     if runner.dry_run:
         return {"dry_run": True, "commands": [" ".join(c) for c in runner.recorded]}
     info = finish(opts, b, epoch, runner)
