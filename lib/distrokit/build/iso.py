@@ -436,7 +436,8 @@ def preflight(opts: Options) -> list[str]:
     problems = []
     if os.geteuid() != 0:
         problems.append("mkarchiso needs root: run `sudo ./build.sh`, or `./build.sh --container`.")
-    need = ["mkarchiso", "pacman", "repo-add"] + ([] if opts.skip_packages else ["makepkg", "git"])
+    need = ["mkarchiso", "pacman", "repo-add"]
+    need += [] if opts.skip_packages else ["makepkg", "git", "pacstrap", "arch-chroot", "unshare"]
     for exe in need:
         if not shutil.which(exe):
             problems.append(f"`{exe}` is missing: run scripts/bootstrap.sh on an Arch-based host, "
@@ -445,8 +446,6 @@ def preflight(opts: Options) -> list[str]:
         problems.append(f"archiso's releng profile is missing ({opts.releng}).")
     if opts.profile not in load_profiles():
         problems.append(f"unknown profile {opts.profile!r}; choose from {', '.join(load_profiles())}.")
-    if not opts.skip_packages:
-        problems += pkgbuild.host_problems()
     free = shutil.disk_usage(opts.build if opts.build.exists() else Path.cwd()).free
     want = (60 if opts.offline == "full" else 30) * 2**30
     if free < want:

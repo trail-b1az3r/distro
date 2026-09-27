@@ -21,7 +21,7 @@ for arg in "$@"; do
     esac
 done
 if [[ $action != render ]] && ((EUID != 0)); then
-    exec sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,BUILD_CONTAINER,AUR_GIT_MIRROR "$0" "$@"
+    exec sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,AUR_GIT_MIRROR "$0" "$@"
 fi
 export BUILD_USER="${BUILD_USER:-${SUDO_USER:-builder}}"
 PYTHONPATH=lib exec python3 -m distrokit.build.packages "$action" --user "$BUILD_USER" "${args[@]}"

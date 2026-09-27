@@ -80,7 +80,7 @@ if ((container)); then
         if [[ -v $v ]]; then envs+=(-e "$v=${!v}"); fi
     done
     owner="${HOST_UID:-${SUDO_UID:-$(id -u)}}:${HOST_GID:-${SUDO_GID:-$(id -g)}}"
-    inner="scripts/bootstrap.sh --container && BUILD_CONTAINER=1 BUILD_USER=builder ./build.sh ${args[*]@Q}"
+    inner="scripts/bootstrap.sh --container && BUILD_USER=builder ./build.sh ${args[*]@Q}"
     inner+=" ; status=\$?; chown -R $owner build dist checksums metadata 2>/dev/null; exit \$status"
     # Host networking: the build only makes outgoing connections, and a bridge
     # needs veth interfaces, which fail on hosts that cannot load the module.
@@ -91,7 +91,7 @@ fi
 
 [[ -e /etc/arch-release ]] || die "this host is not Arch-based: use ./build.sh --container"
 if ((EUID != 0)) && [[ " ${args[*]} " != *" --dry-run "* ]]; then
-    exec sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,BUILD_CONTAINER,ISO_PROFILE,ISO_OFFLINE,AUR_GIT_MIRROR "$0" "${args[@]}"
+    exec sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,ISO_PROFILE,ISO_OFFLINE,AUR_GIT_MIRROR "$0" "${args[@]}"
 fi
 export BUILD_USER="${BUILD_USER:-${SUDO_USER:-builder}}"
 id "$BUILD_USER" &>/dev/null || die "build user '$BUILD_USER' does not exist (makepkg does not run as root): run scripts/bootstrap.sh --builder"
