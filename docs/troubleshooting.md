@@ -13,6 +13,7 @@ sudo nexora repair         # repairs what the doctor found, after showing the pl
 
 | Symptom | Try |
 |---|---|
+| Writing the USB stick stops: "The last block was not fully written (-1 of 1,048,576 bytes)! Aborting." | That is KDE ISO Image Writer, not the image. Check the ISO's checksum and write it with `dd` or GNOME Disks ([installation](installation.md#1-write-the-iso-to-a-usb-stick)). |
 | Black screen after the boot menu | Boot the **diagnostic** entry (text boot, no splash). If that works, it is graphics: see below. |
 | "Please enter passphrase" does not appear | Press Esc to hide the splash; type the passphrase blind and Enter. |
 | Boot menu missing after a firmware update | From the live ISO: `sudo nexora rescue` (reinstalls the boot loader). |
