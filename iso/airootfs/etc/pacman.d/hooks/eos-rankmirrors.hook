@@ -1,0 +1,17 @@
+# remove from airootfs!
+# Overrides eos-rankmirrors' hook while the ISO is built (mkarchiso points
+# HookDir here): ranking EndeavourOS mirrors from the build machine means
+# nothing for the live system and costs a minute of timeouts. archiso's
+# zzzz99 hook deletes this file at the end of the build, so the live system
+# and the systems it installs keep the real hook.
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = endeavouros-mirrorlist
+
+[Action]
+Description = Not ranking EndeavourOS mirrors while the ISO is built
+When = PostTransaction
+Exec = /usr/bin/true
