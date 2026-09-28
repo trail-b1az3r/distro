@@ -61,15 +61,22 @@ fi
 [[ -e desktop/dots/dots ]] || die "desktop/dots is empty: clone with --recursive or run 'git submodule update --init --recursive'"
 
 if ((container)); then
-    engine="$(command -v podman || command -v docker || true)"
-    [[ -n "$engine" ]] || die "--container needs podman or docker"
+    engine="$(command -v docker || command -v podman || true)"
+    [[ -n "$engine" ]] || die "--container needs docker or podman"
     # shellcheck source=SCRIPTDIR/iso/sources.conf
     source iso/sources.conf
+    # The container must be rootful: pacstrap (for the package chroot and for
+    # mkarchiso) mounts devtmpfs and sysfs, which a rootless one cannot.
     run=("$engine")
-    # The Docker daemon's socket belongs to root (and the docker group).
-    if [[ ${engine##*/} == docker && -z ${DOCKER_HOST:-} && -S /var/run/docker.sock && ! -w /var/run/docker.sock ]]; then
-        echo "build.sh: $(id -un) cannot use the Docker daemon: running docker with sudo (or join the docker group)" >&2
-        run=(sudo "$engine")
+    if ((EUID != 0)); then
+        if [[ ${engine##*/} == podman ]]; then
+            echo "build.sh: running podman as root (rootless containers cannot mount what pacstrap needs)" >&2
+            run=(sudo "$engine")
+        elif [[ -z ${DOCKER_HOST:-} && -S /var/run/docker.sock && ! -w /var/run/docker.sock ]]; then
+            # The Docker daemon's socket belongs to root (and the docker group).
+            echo "build.sh: $(id -un) cannot use the Docker daemon: running docker with sudo (or join the docker group)" >&2
+            run=(sudo "$engine")
+        fi
     fi
     if [[ -d /usr/lib/modules && ! -d /usr/lib/modules/$(uname -r) ]]; then
         echo "build.sh: warning: the running kernel's modules ($(uname -r)) are gone, usually after a kernel update:" \

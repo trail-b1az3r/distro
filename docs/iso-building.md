@@ -38,7 +38,7 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
 | `--offline full` | the ISO carries every package any installation needs (all GPU stacks, kernels, the profile's software): installs without a network; about twice the size |
 | `--clean` | start from clean work directories |
 | `--debug` | fast zstd compression, keep `build/iso-work`, print every command |
-| `--container` | run everything in `archlinux:base-devel` with Docker or Podman |
+| `--container` | run everything in `archlinux:base-devel` with Docker (preferred) or Podman, as a rootful container: the build mounts file systems a rootless one cannot |
 | `--skip-packages` | reuse `build/repo` as is |
 | `--archive-date YYYY/MM/DD` | install Arch packages from that day's Arch Linux Archive snapshot |
 | `--config FILE` | settings from a file ([example](../iso/build.env.example)) |
