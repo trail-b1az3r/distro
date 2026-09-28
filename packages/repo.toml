@@ -29,3 +29,9 @@ extra = []
 # Never copied into the repository: the licence does not allow
 # redistribution. The installer installs them online with yay.
 exclude = ["visual-studio-code-bin"]
+
+# Build dependencies an AUR PKGBUILD forgets to declare: it builds where its
+# maintainer happens to have them installed, but not in the clean build
+# chroot. Installed there before the package is built.
+[aur.makedepends]
+"llama.cpp-vulkan-git" = ["shaderc"]  # glslc compiles the Vulkan shaders
