@@ -93,6 +93,11 @@ def test_console_ignores_terminal_escapes(tmp_path):
         conn.sendall(b"\x1b[?2004h[root@qemu ~]# echo x\r\n\x1b[?20")
         time.sleep(0.1)
         conn.sendall(b"04l\r@@CHECK identity 0\r\n\x1b[1;32mgreen\x1b[0m\r\n")
+        time.sleep(0.1)
+        # systemd's OSC 3008 context string, cut between its ESC and backslash
+        conn.sendall(b"\x1b]3008;start=0a2b;type=command;cwd=/root\x1b")
+        time.sleep(0.1)
+        conn.sendall(b"\\@@CHECK second 1\r\n\x1bP+q6E616D65\x1b\\Passwort: ")
         time.sleep(0.3)
         conn.close()
 
@@ -102,6 +107,9 @@ def test_console_ignores_terminal_escapes(tmp_path):
     _i, m = con.expect([r"^@@CHECK identity (\d+)\s*$"], 5)
     assert m.group(1) == "0"
     con.expect([r"^green$"], 5)
+    _i, m = con.expect([r"^@@CHECK second (\d+)\s*$"], 5)
+    assert m.group(1) == "1"
+    con.expect([qemu_test.PASSWORD_PROMPT], 5)  # PAM's prompt in the installed locale
     con.close()
     t.join(2)
     assert "\x1b" not in (tmp_path / "log.txt").read_text()

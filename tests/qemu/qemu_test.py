@@ -59,18 +59,53 @@ class TestFailure(Exception):
 # ---------------------------------------------------------------------------
 
 
-# Terminal control sequences (colours, cursor moves, bash's bracketed-paste
-# switches ESC[?2004h / ESC[?2004l): removed before matching, or they glue
-# themselves to the start of output lines.
-ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][0-9A-Za-z]|\x1b[=>78]")
-ANSI_UNFINISHED = re.compile(r"\x1b(?:\[[0-9;?]*[ -/]*|\][^\x07\x1b]*|[()])?$")
+class EscapeFilter:
+    """Removes terminal control sequences from console output: colours and
+    cursor moves (CSI), bash's bracketed-paste switches (ESC[?2004h/l),
+    systemd's context strings (OSC 3008, ESC]3008;...ESC\\), terminal
+    queries (DCS), and carriage returns. Otherwise they glue themselves to the
+    start of output lines. Keeps its state between reads, since a read can end
+    anywhere inside a sequence."""
+
+    def __init__(self) -> None:
+        self.state = ""
+
+    def feed(self, text: str) -> str:
+        out = []
+        for ch in text:
+            st = self.state
+            if not st:
+                if ch == "\x1b":
+                    self.state = "esc"
+                elif ch != "\r":
+                    out.append(ch)
+            elif st == "esc":  # the character after ESC decides the kind
+                self.state = {"[": "csi", "]": "str", "P": "str", "X": "str", "^": "str", "_": "str",
+                              "(": "charset", ")": "charset", "*": "charset", "+": "charset"}.get(ch, "")
+            elif st == "csi":  # parameters and intermediates, then one final byte
+                if "@" <= ch <= "~":
+                    self.state = ""
+            elif st == "str":  # OSC, DCS...: ends with BEL or ESC \
+                if ch == "\x07":
+                    self.state = ""
+                elif ch == "\x1b":
+                    self.state = "str-esc"
+            elif st == "str-esc":
+                self.state = "" if ch == "\\" else "str"
+            else:  # charset designation: one more character
+                self.state = ""
+        return "".join(out)
+
+
+# login's password prompt, as PAM translates it for the installed locale.
+PASSWORD_PROMPT = r"(?:Password|Passwort|Mot de passe|Contraseña|Senha|Hasło|Пароль|Wachtwoord|Lösenord): *$"
 
 
 class Console:
     def __init__(self, path: Path, log: Path):
         self.log = log.open("w", encoding="utf-8", errors="replace")
         self.buf = ""
-        self.carry = ""  # an escape sequence cut off at the end of a read
+        self.filter = EscapeFilter()
         self.pos = 0
         self.lock = threading.Condition()
         deadline = time.time() + 30
@@ -92,10 +127,7 @@ class Console:
                 data = self.sock.recv(65536)
             except OSError:
                 data = b""
-            text = self.carry + data.decode("utf-8", errors="replace")
-            unfinished = ANSI_UNFINISHED.search(text) if data else None
-            self.carry = text[unfinished.start():] if unfinished else ""
-            text = ANSI.sub("", text[:unfinished.start()] if unfinished else text).replace("\r", "")
+            text = self.filter.feed(data.decode("utf-8", errors="replace"))
             with self.lock:
                 if not data:
                     self.closed = True
@@ -361,7 +393,7 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
             # drops what was typed at the old one: answer it again.
             for _attempt in range(3):
                 con.send("root\n")
-                i, _m = con.expect([r"Password: *$", r"login: *$"], 60)
+                i, _m = con.expect([PASSWORD_PROMPT, r"login: *$"], 60)
                 if i == 0:
                     break
             else:
