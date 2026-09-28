@@ -70,8 +70,9 @@ def test_console_expect(tmp_path):
     con.send("root\n")
     _i, m = con.expect([r"^@@CHECK x (\d+)\s*$"], 5)  # the echoed command line does not match
     assert m.group(1) == "0"
-    with pytest.raises(qemu_test.TestFailure):
+    with pytest.raises(qemu_test.TestFailure) as failure:
         con.expect([r"never"], 2)
+    assert "    | qemu login:" in str(failure.value)  # failures show the end of the console
     con.close()
     t.join(2)
     assert received == [b"secret\n", b"root\n"]

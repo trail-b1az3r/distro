@@ -108,11 +108,17 @@ class Console:
                     self.pos = m.end()
                     return i, m
                 if self.closed:
-                    raise TestFailure(f"console closed while waiting for {patterns}")
+                    raise TestFailure(f"console closed while waiting for {patterns}{self._last_lines()}")
                 left = deadline - time.time()
                 if left <= 0:
-                    raise TestFailure(f"timed out after {timeout:.0f}s waiting for {patterns}")
+                    raise TestFailure(f"timed out after {timeout:.0f}s waiting for {patterns}{self._last_lines()}")
                 self.lock.wait(min(left, 1.0))
+
+    def _last_lines(self, lines: int = 40) -> str:
+        """The end of the console (lock held), for failure messages: CI keeps
+        the job log, and the log files only as artifacts."""
+        tail = "\n".join("    | " + ln for ln in self.buf.splitlines()[-lines:])
+        return f"; the console ended with:\n{tail}" if tail else "; the console printed nothing"
 
     def send(self, text: str) -> None:
         self.sock.sendall(text.encode())
@@ -340,8 +346,15 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
                     continue
                 break
             result["boot_seconds"] = round(time.time() - boot_started)
-            con.send("root\n")
-            con.expect([r"Password: *$"], 60)
+            # A getty restarted late in the boot shows a fresh prompt and
+            # drops what was typed at the old one: answer it again.
+            for _attempt in range(3):
+                con.send("root\n")
+                i, _m = con.expect([r"Password: *$", r"login: *$"], 60)
+                if i == 0:
+                    break
+            else:
+                raise TestFailure("the login prompt kept coming back after 'root'" + con._last_lines())
             con.send(cfg["user"]["root_password"] + "\n")
             con.expect([r"\]# *$|# *$"], 120)
             con.send("export TERM=dumb PAGER=cat SYSTEMD_PAGER= SYSTEMD_COLORS=0 NO_COLOR=1\n")
@@ -412,7 +425,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"== {name}: {scenarios[name].get('description', '')}")
         res = run_scenario(name, scenarios[name], iso, Path(a.out) / name, a.timeout, a.keep)
         results.append(res)
-        print(f"   {'PASS' if res['ok'] else 'FAIL'} in {res['seconds']}s" + (f": {res.get('error', '')[:2000]}"
+        print(f"   {'PASS' if res['ok'] else 'FAIL'} in {res['seconds']}s" + (f": {res.get('error', '')[:6000]}"
                                                                            if not res["ok"] else ""))
     summary = {"iso": iso.name, "results": results, "ok": all(r["ok"] for r in results)}
     Path(a.out).mkdir(parents=True, exist_ok=True)
