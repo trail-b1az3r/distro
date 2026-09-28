@@ -59,10 +59,18 @@ class TestFailure(Exception):
 # ---------------------------------------------------------------------------
 
 
+# Terminal control sequences (colours, cursor moves, bash's bracketed-paste
+# switches ESC[?2004h / ESC[?2004l): removed before matching, or they glue
+# themselves to the start of output lines.
+ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][0-9A-Za-z]|\x1b[=>78]")
+ANSI_UNFINISHED = re.compile(r"\x1b(?:\[[0-9;?]*[ -/]*|\][^\x07\x1b]*|[()])?$")
+
+
 class Console:
     def __init__(self, path: Path, log: Path):
         self.log = log.open("w", encoding="utf-8", errors="replace")
         self.buf = ""
+        self.carry = ""  # an escape sequence cut off at the end of a read
         self.pos = 0
         self.lock = threading.Condition()
         deadline = time.time() + 30
@@ -84,7 +92,10 @@ class Console:
                 data = self.sock.recv(65536)
             except OSError:
                 data = b""
-            text = data.decode("utf-8", errors="replace").replace("\r", "")
+            text = self.carry + data.decode("utf-8", errors="replace")
+            unfinished = ANSI_UNFINISHED.search(text) if data else None
+            self.carry = text[unfinished.start():] if unfinished else ""
+            text = ANSI.sub("", text[:unfinished.start()] if unfinished else text).replace("\r", "")
             with self.lock:
                 if not data:
                     self.closed = True
@@ -357,7 +368,8 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
                 raise TestFailure("the login prompt kept coming back after 'root'" + con._last_lines())
             con.send(cfg["user"]["root_password"] + "\n")
             con.expect([r"\]# *$|# *$"], 120)
-            con.send("export TERM=dumb PAGER=cat SYSTEMD_PAGER= SYSTEMD_COLORS=0 NO_COLOR=1\n")
+            con.send("export TERM=dumb PAGER=cat SYSTEMD_PAGER= SYSTEMD_COLORS=0 NO_COLOR=1; "
+                     "bind 'set enable-bracketed-paste off' 2>/dev/null\n")
             for check in checks_for(scn):
                 con.send(f"( {check.command} ) >/tmp/check.out 2>&1; echo \"@@CHECK\" \"{check.name}\" $?\n")
                 _i, m = con.expect([rf"^@@CHECK {re.escape(check.name)} (\d+)\s*$"], 900)

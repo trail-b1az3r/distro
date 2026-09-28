@@ -77,3 +77,31 @@ def test_console_expect(tmp_path):
     t.join(2)
     assert received == [b"secret\n", b"root\n"]
     assert "qemu login:" in (tmp_path / "log.txt").read_text()
+
+
+def test_console_ignores_terminal_escapes(tmp_path):
+    """bash 5.1+ prints ESC[?2004l before a command's output (bracketed
+    paste): the line must still start with the marker, also when the
+    sequence is cut in two between reads."""
+    path = tmp_path / "serial.sock"
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(str(path))
+    server.listen(1)
+
+    def serve():
+        conn, _ = server.accept()
+        conn.sendall(b"\x1b[?2004h[root@qemu ~]# echo x\r\n\x1b[?20")
+        time.sleep(0.1)
+        conn.sendall(b"04l\r@@CHECK identity 0\r\n\x1b[1;32mgreen\x1b[0m\r\n")
+        time.sleep(0.3)
+        conn.close()
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+    con = qemu_test.Console(path, tmp_path / "log.txt")
+    _i, m = con.expect([r"^@@CHECK identity (\d+)\s*$"], 5)
+    assert m.group(1) == "0"
+    con.expect([r"^green$"], 5)
+    con.close()
+    t.join(2)
+    assert "\x1b" not in (tmp_path / "log.txt").read_text()

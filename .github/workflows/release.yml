@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  actions: read  # iso.yml's QEMU job downloads artifacts through the API
 
 jobs:
   iso:
