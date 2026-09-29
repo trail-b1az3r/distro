@@ -164,7 +164,11 @@ class Doctor:
         kernels = boot.installed_kernels(self.root)
         details = [f"{cfg.bootloader} ({cfg.firmware}), ESP {cfg.esp}, boot {cfg.boot_dir}"]
         boot_root = self.p(cfg.boot_dir)
-        if self.live and not os.path.ismount(boot_root) and cfg.boot_dir != "/":
+        # kernel_prefix "/" means the kernels live at the top of their own
+        # partition (ESP or XBOOTLDR), which must be mounted there; otherwise
+        # /boot is a plain directory on the root file system.
+        separate = cfg.kernel_prefix == "/" and cfg.boot_dir != "/"
+        if self.live and separate and not os.path.ismount(boot_root):
             return Check("Bootloader", FAIL, f"{cfg.boot_dir} is not mounted; kernel updates will not reach the boot partition",
                          details, fix=f"sudo mount {cfg.boot_dir}")
         missing = [k.pkgbase for k in kernels if not (boot_root / k.image).exists() or not (boot_root / k.initramfs).exists()]

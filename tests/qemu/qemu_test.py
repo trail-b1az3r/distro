@@ -414,6 +414,8 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
                 status = "pass" if rc == 0 else ("fail" if check.must_pass else "warn")
                 result["checks"].append({"name": check.name, "status": status, "rc": rc, "output": output})
                 print(f"  {status:4}  {check.name}" + (f" (exit {rc})" if rc else ""))
+                if output:
+                    print("\n".join("        | " + ln for ln in output.splitlines()))
             con.send("systemctl poweroff\n")
             machine.wait(300)
         finally:
@@ -433,6 +435,62 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
     return result
 
 
+# Boots of the ISO itself, through the firmware and the ISO's own boot loader,
+# the way a machine starts it from a USB stick or a DVD (the installation
+# scenarios above boot its kernel directly).
+LIVE = {
+    "live-uefi-usb": {"description": "the ISO as a USB stick on UEFI: firmware, the ISO's systemd-boot, live system",
+                      "firmware": "uefi", "media": "usb"},
+    "live-uefi-cdrom": {"description": "the ISO as a DVD on UEFI: El Torito, the ISO's systemd-boot, live system",
+                        "firmware": "uefi", "media": "cdrom"},
+}
+
+
+def run_live_boot(name: str, scn: dict, iso: Path, out: Path, timeout_min: float) -> dict:
+    out.mkdir(parents=True, exist_ok=True)
+    for old in out.glob("*.log"):
+        old.unlink()
+    result: dict = {"scenario": name, "description": scn["description"], "checks": [], "ok": False}
+    disk = out / "disk.qcow2"  # an empty internal disk, as in a real machine
+    subprocess.run(["qemu-img", "create", "-q", "-f", "qcow2", str(disk), "8G"], check=True)
+    (out / "OVMF_VARS.fd").unlink(missing_ok=True)
+    machine = Machine(out, scn["firmware"], 4096, 2, disk, "virtio")
+    if scn["media"] == "usb":
+        media = ["-drive", f"file={iso},format=raw,readonly=on,if=none,id=stick",
+                 "-device", "qemu-xhci", "-device", "usb-storage,drive=stick,bootindex=0"]
+    else:
+        media = ["-drive", f"file={iso},format=raw,media=cdrom,readonly=on,if=none,id=dvd",
+                 "-device", "ide-cd,drive=dvd,bus=ide.2,bootindex=0"]
+    # systemd-boot appends this SMBIOS string to its entries' command line
+    # (not with Secure Boot): the live system's console on the serial port.
+    serial_console = ["-smbios", "type=11,value=io.systemd.boot.kernel-cmdline-extra=console=tty0 console=ttyS0,,115200"]
+    serial = out / "serial.sock"
+    serial.unlink(missing_ok=True)
+    started = time.time()
+    try:
+        machine.start(serial, [*media, *serial_console])
+        con = Console(serial, out / "live.log")
+        try:
+            con.expect([re.escape(B.pretty_name) + r" live"], 180)
+            result["checks"].append({"name": "boot-menu", "status": "pass", "rc": 0, "output": ""})
+            print("  pass  boot-menu (the ISO's boot loader started)")
+            con.expect([r"login: *$"], timeout_min * 60)
+            result["checks"].append({"name": "live-system", "status": "pass", "rc": 0, "output": ""})
+            result["boot_seconds"] = round(time.time() - started)
+            print(f"  pass  live-system (up in {result['boot_seconds']}s)")
+        finally:
+            con.close()
+        result["ok"] = True
+    except TestFailure as exc:
+        result["error"] = str(exc)
+    finally:
+        machine.kill()
+        result["seconds"] = round(time.time() - started)
+        (out / "result.json").write_text(json.dumps(result, indent=2) + "\n")
+        disk.unlink(missing_ok=True)
+    return result
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Install the ISO in QEMU and check the result.")
     p.add_argument("--iso", help="ISO to test (default: newest in dist/)")
@@ -443,6 +501,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", default=str(REPO / "build" / "qemu"))
     a = p.parse_args(argv)
     scenarios = {f.stem: json.loads(f.read_text()) for f in sorted((REPO / "tests/qemu/scenarios").glob("*.json"))}
+    scenarios |= LIVE
     if a.list:
         for name, scn in scenarios.items():
             print(f"{name:28} {scn.get('description', '')}")
@@ -467,7 +526,10 @@ def main(argv: list[str] | None = None) -> int:
     results = []
     for name in wanted:
         print(f"== {name}: {scenarios[name].get('description', '')}")
-        res = run_scenario(name, scenarios[name], iso, Path(a.out) / name, a.timeout, a.keep)
+        if name in LIVE:
+            res = run_live_boot(name, LIVE[name], iso, Path(a.out) / name, 15)
+        else:
+            res = run_scenario(name, scenarios[name], iso, Path(a.out) / name, a.timeout, a.keep)
         results.append(res)
         print(f"   {'PASS' if res['ok'] else 'FAIL'} in {res['seconds']}s" + (f": {res.get('error', '')[:6000]}"
                                                                            if not res["ok"] else ""))

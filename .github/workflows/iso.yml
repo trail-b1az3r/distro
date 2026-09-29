@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [uefi-btrfs-encrypted, bios-ext4-grub]
+        scenario: [uefi-btrfs-encrypted, bios-ext4-grub, live-uefi-usb, live-uefi-cdrom]
     steps:
       - uses: actions/checkout@v4
       - name: KVM and QEMU
