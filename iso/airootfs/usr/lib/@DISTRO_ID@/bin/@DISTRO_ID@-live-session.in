@@ -4,9 +4,13 @@
 # Normally the full desktop (Hyprland), which opens the installer. When
 # Hyprland cannot start (an unsupported GPU, or the "safe graphics" boot
 # entry), the installer runs on its own in cage with software rendering, which
-# works on any display the firmware can drive.
+# works on any display the firmware can drive. If that fails too, greetd falls
+# back to a text login; this log then says why (the runtime directory, with
+# Hyprland's own log, is gone by then).
 export XDG_SESSION_TYPE=wayland
-log="${XDG_RUNTIME_DIR:-/tmp}/@DISTRO_ID@-live-session.log"
+log=/tmp/@DISTRO_ID@-live-session.log
+exec >>"$log" 2>&1
+echo "== $(date '+%F %T') live session; kernel parameters: $(cat /proc/cmdline)"
 
 safe_graphics() { grep -qw '@DISTRO_ID@.safe_graphics=1' /proc/cmdline; }
 
@@ -18,17 +22,25 @@ if ! safe_graphics; then
         compositor=Hyprland
     fi
     if [[ -n "$compositor" ]]; then
+        echo "-- starting $compositor"
         started=$(date +%s)
-        if "$compositor" >"$log" 2>&1; then
-            exit 0 # logged out
-        fi
+        "$compositor" && exit 0 # logged out
+        rc=$?
+        for f in "${XDG_RUNTIME_DIR:-/run/user/$UID}"/hypr/*/hyprland.log; do
+            [[ -f "$f" ]] && { echo "-- end of $f"; tail -n 150 "$f"; }
+        done
+        echo "-- $compositor exited with status $rc"
         # A crash long after starting is not a start-up problem.
         if (($(date +%s) - started > 30)); then
             exit 1
         fi
-        echo "The desktop could not start; using the basic installer session (log: $log)." >&2
+        echo "-- the desktop could not start: the installer runs on its own instead"
     fi
 fi
 
+echo "-- starting the installer in cage (software rendering)"
 export WLR_RENDERER=pixman WLR_NO_HARDWARE_CURSORS=1 QT_QPA_PLATFORM=wayland XDG_CURRENT_DESKTOP=cage
-exec cage -s -d -- /usr/bin/@DISTRO_ID@-installer
+cage -s -d -- /usr/bin/@DISTRO_ID@-installer
+rc=$?
+echo "-- cage exited with status $rc"
+exit $rc

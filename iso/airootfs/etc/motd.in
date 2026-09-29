@@ -8,6 +8,10 @@
     @DISTRO_CLI@ rescue                               repair an installed system
     nmtui                                             connect to a network
 
+  No graphical session? /tmp/@DISTRO_ID@-live-session.log says why;
+  /usr/lib/@DISTRO_ID@/bin/@DISTRO_ID@-live-session tries again, and the
+  "safe graphics" boot entry uses software rendering.
+
   User "@LIVE_USER@" has no password and can use sudo.
   Documentation: @DISTRO_DOC_URL@
 

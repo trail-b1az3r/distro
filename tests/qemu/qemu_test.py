@@ -478,9 +478,32 @@ def run_live_boot(name: str, scn: dict, iso: Path, out: Path, timeout_min: float
             result["checks"].append({"name": "live-system", "status": "pass", "rc": 0, "output": ""})
             result["boot_seconds"] = round(time.time() - started)
             print(f"  pass  live-system (up in {result['boot_seconds']}s)")
+            # The graphical session on the first VT: the desktop, or the installer
+            # on its own in cage. Log in on the serial console to look.
+            con.send(f"{B['LIVE_USER']}\n")
+            con.expect([r"live system\s*$"], 60)  # the message of the day: logged in
+            time.sleep(2)
+            con.send("sh -c 'for i in $(seq 90); do for p in Hyprland cage; do "
+                     "pgrep -x $p >/dev/null && { echo \"@@SESSION $p\"; exit; }; done; sleep 2; done; "
+                     "echo \"@@SESSION none\"'\n")
+            _i, m = con.expect([r"^@@SESSION (\w+)\s*$"], 240)
+            session = m.group(1)
+            output = ""
+            if session == "none":
+                con.send(f"tail -n 60 /tmp/{B.id}-live-session.log; echo @@END\n")
+                _i, mm = con.expect([r"^@@END\s*$"], 60)
+                output = con.buf[m.end():mm.start()].strip()[-4000:]
+            result["checks"].append({"name": "graphical-session", "status": "pass" if session != "none" else "fail",
+                                     "rc": 0 if session != "none" else 1, "output": output, "session": session})
+            print(f"  {'pass' if session != 'none' else 'fail'}  graphical-session ({session})")
+            if output:
+                print("\n".join("        | " + ln for ln in output.splitlines()))
         finally:
             con.close()
-        result["ok"] = True
+        failed = [c["name"] for c in result["checks"] if c["status"] == "fail"]
+        result["ok"] = not failed
+        if failed:
+            result["error"] = "failed checks: " + ", ".join(failed)
     except TestFailure as exc:
         result["error"] = str(exc)
     finally:
