@@ -113,3 +113,32 @@ def test_console_ignores_terminal_escapes(tmp_path):
     con.close()
     t.join(2)
     assert "\x1b" not in (tmp_path / "log.txt").read_text()
+
+
+def test_console_markers_wait_for_the_whole_line(tmp_path):
+    """A marker read in two pieces ("@@SESSION Hypr", then "land") must
+    not match the first piece."""
+    path = tmp_path / "serial.sock"
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(str(path))
+    server.listen(1)
+
+    def serve():
+        conn, _ = server.accept()
+        conn.sendall(b"@@SESSION Hypr")
+        time.sleep(0.3)
+        conn.sendall(b"land\r\n@@CHECK x 12")
+        time.sleep(0.3)
+        conn.sendall(b"7\r\n")
+        time.sleep(0.2)
+        conn.close()
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+    con = qemu_test.Console(path, tmp_path / "log.txt")
+    _i, m = con.expect([r"^@@SESSION (\w+)[ \t]*\n"], 5)
+    assert m.group(1) == "Hyprland"
+    _i, m = con.expect([r"^@@CHECK x (\d+)[ \t]*\n"], 5)
+    assert m.group(1) == "127"
+    con.close()
+    t.join(2)

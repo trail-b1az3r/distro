@@ -2,8 +2,8 @@
 # Live ISO graphical session, started by greetd.
 #
 # Normally the full desktop (Hyprland), which opens the installer. When
-# Hyprland cannot start (an unsupported GPU, or the "safe graphics" boot
-# entry), the installer runs on its own in cage with software rendering, which
+# Hyprland fails (an unsupported GPU), or with the "safe graphics" boot
+# entry, the installer runs on its own in cage with software rendering, which
 # works on any display the firmware can drive. If that fails too, greetd falls
 # back to a text login; this log then says why (the runtime directory, with
 # Hyprland's own log, is gone by then).
@@ -29,12 +29,10 @@ if ! safe_graphics; then
         for f in "${XDG_RUNTIME_DIR:-/run/user/$UID}"/hypr/*/hyprland.log; do
             [[ -f "$f" ]] && { echo "-- end of $f"; tail -n 150 "$f"; }
         done
-        echo "-- $compositor exited with status $rc"
-        # A crash long after starting is not a start-up problem.
-        if (($(date +%s) - started > 30)); then
-            exit 1
-        fi
-        echo "-- the desktop could not start: the installer runs on its own instead"
+        echo "-- $compositor exited with status $rc after $(($(date +%s) - started))s"
+        # Whether it never came up or crashed later (a GPU driver giving up),
+        # the installer on its own beats a text login.
+        echo "-- the desktop failed: the installer runs on its own instead"
     fi
 fi
 

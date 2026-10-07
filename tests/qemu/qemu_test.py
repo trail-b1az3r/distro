@@ -140,7 +140,9 @@ class Console:
                 return
 
     def expect(self, patterns: list[str], timeout: float) -> tuple[int, re.Match]:
-        """Wait for the first of ``patterns`` after the last match."""
+        """Wait for the first of ``patterns`` after the last match. A pattern
+        ending in ``$`` also matches at the end of what has arrived so far
+        (right for prompts); markers in command output end in ``\\n``."""
         regs = [re.compile(p, re.MULTILINE) for p in patterns]
         deadline = time.time() + timeout
         with self.lock:
@@ -364,7 +366,7 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
                                "-append", append, "-fw_cfg", f"name=opt/{B.id}/config,file={cfg_file}"])
         con = Console(serial, out / "install.log")
         try:
-            _i, m = con.expect([r"AUTOINSTALL: RESULT (\d+)"], timeout_min * 60)
+            _i, m = con.expect([r"AUTOINSTALL: RESULT (\d+)[ \t]*\n"], timeout_min * 60)
             code = int(m.group(1))
             result["install_seconds"] = round(time.time() - started)
             if code != 0:
@@ -404,12 +406,12 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
                      "bind 'set enable-bracketed-paste off' 2>/dev/null\n")
             for check in checks_for(scn):
                 con.send(f"( {check.command} ) >/tmp/check.out 2>&1; echo \"@@CHECK\" \"{check.name}\" $?\n")
-                _i, m = con.expect([rf"^@@CHECK {re.escape(check.name)} (\d+)\s*$"], 900)
+                _i, m = con.expect([rf"^@@CHECK {re.escape(check.name)} (\d+)[ \t]*\n"], 900)
                 rc = int(m.group(1))
                 output = ""
                 if rc != 0:
                     con.send(f"tail -n 25 /tmp/check.out; echo \"@@END\" \"{check.name}\"\n")
-                    _i, mm = con.expect([rf"^@@END {re.escape(check.name)}\s*$"], 60)
+                    _i, mm = con.expect([rf"^@@END {re.escape(check.name)}[ \t]*\n"], 60)
                     output = con.buf[m.end():mm.start()].strip()[-3000:]
                 status = "pass" if rc == 0 else ("fail" if check.must_pass else "warn")
                 result["checks"].append({"name": check.name, "status": status, "rc": rc, "output": output})
@@ -486,12 +488,12 @@ def run_live_boot(name: str, scn: dict, iso: Path, out: Path, timeout_min: float
             con.send("sh -c 'for i in $(seq 90); do for p in Hyprland cage; do "
                      "pgrep -x $p >/dev/null && { echo \"@@SESSION $p\"; exit; }; done; sleep 2; done; "
                      "echo \"@@SESSION none\"'\n")
-            _i, m = con.expect([r"^@@SESSION (\w+)\s*$"], 240)
+            _i, m = con.expect([r"^@@SESSION (\w+)[ \t]*\n"], 240)
             session = m.group(1)
             output = ""
             if session == "none":
                 con.send(f"tail -n 60 /tmp/{B.id}-live-session.log; echo @@END\n")
-                _i, mm = con.expect([r"^@@END\s*$"], 60)
+                _i, mm = con.expect([r"^@@END[ \t]*\n"], 60)
                 output = con.buf[m.end():mm.start()].strip()[-4000:]
             result["checks"].append({"name": "graphical-session", "status": "pass" if session != "none" else "fail",
                                      "rc": 0 if session != "none" else 1, "output": output, "session": session})
