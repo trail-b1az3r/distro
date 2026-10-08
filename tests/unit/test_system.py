@@ -157,3 +157,26 @@ def test_pacman_configs(kind):
     # The offline repository is searched first when present.
     if f"[{b.repo_name}-offline]" in text and kind != "offline":
         assert text.index(f"[{b.repo_name}-offline]") < text.index("[core]")
+
+
+def test_doctor_boot_directory_needs_mounting_only_when_it_is_a_partition(tmp_path):
+    """BIOS + GRUB on ext4 keeps /boot on the root file system: not a mount
+    point, and not a problem. An ESP or XBOOTLDR at /boot must be mounted."""
+    from distrokit import boot
+
+    b = load_branding()
+    root = tmp_path
+    (root / "usr/lib/modules/6.16.1-arch1-1").mkdir(parents=True)
+    (root / "usr/lib/modules/6.16.1-arch1-1/vmlinuz").write_bytes(b"k")
+    (root / "usr/lib/modules/6.16.1-arch1-1/pkgbase").write_text("linux\n")
+    (root / "boot/grub").mkdir(parents=True)
+    for name in ("vmlinuz-linux", "initramfs-linux.img", "grub/grub.cfg"):
+        (root / "boot" / name).write_text("x")
+    doc = doctor.Doctor(root, b, user_home=tmp_path / "home")
+    doc.live = True  # as on the running system, where mount points are checked
+
+    boot.save_config(boot.BootConfig("grub", "bios", kernel_prefix="/boot/", bios_disk="/dev/vda"), root, b)
+    assert doc.bootloader().status == "ok"
+    boot.save_config(boot.BootConfig("systemd-boot", "uefi", kernel_prefix="/"), root, b)
+    check = doc.bootloader()
+    assert check.status == "fail" and "not mounted" in check.summary

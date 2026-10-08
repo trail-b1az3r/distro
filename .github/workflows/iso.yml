@@ -19,6 +19,10 @@ on:
         description: Install the ISO in QEMU and check it
         type: boolean
         default: true
+      iso_run:
+        description: Skip the build and test the ISO of this earlier run (its ID)
+        type: string
+        default: ""
   workflow_call:
     inputs:
       profile:
@@ -38,9 +42,11 @@ on:
 
 permissions:
   contents: read
+  actions: read  # the QEMU job may test an earlier run's ISO
 
 jobs:
   build:
+    if: ${{ !inputs.iso_run }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
@@ -88,13 +94,13 @@ jobs:
 
   qemu:
     needs: build
-    if: ${{ inputs.qemu != false }}
+    if: ${{ !cancelled() && inputs.qemu != false && (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.iso_run)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
-        scenario: [uefi-btrfs-encrypted, bios-ext4-grub]
+        scenario: [uefi-btrfs-encrypted, bios-ext4-grub, live-uefi-usb, live-uefi-cdrom]
     steps:
       - uses: actions/checkout@v4
       - name: KVM and QEMU
@@ -107,6 +113,8 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: iso
+          run-id: ${{ inputs.iso_run || github.run_id }}
+          github-token: ${{ github.token }}
       - name: Install and check (${{ matrix.scenario }})
         run: python3 tests/qemu/qemu_test.py --iso dist/*.iso --scenario "${{ matrix.scenario }}"
       - uses: actions/upload-artifact@v4

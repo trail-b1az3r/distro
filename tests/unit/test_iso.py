@@ -77,6 +77,11 @@ def test_assemble_profile(tmp_path, releng):
     assert not (air / "etc/systemd/system/multi-user.target.wants/iwd.service").is_symlink()
     assert not (air / "etc/systemd/network").exists()
     assert not (air / "etc/resolv.conf").is_symlink()
+    # Build-only hooks carry archiso's marker, so its zzzz99 hook deletes them
+    # before the ISO is sealed (they would otherwise act on installs too).
+    rank = air / "etc/pacman.d/hooks/eos-rankmirrors.hook"
+    assert "Target = endeavouros-mirrorlist" in rank.read_text()
+    assert rank.read_text().startswith("# remove from airootfs!")
     # Kept: keyring initialisation and the archiso initramfs.
     assert (air / "etc/systemd/system/multi-user.target.wants/pacman-init.service").is_symlink()
     assert (air / "etc/mkinitcpio.conf.d/archiso.conf").is_file()

@@ -634,7 +634,7 @@ class Builder:
     build's own keyring, ``<workdir>/gnupg``."""
 
     def __init__(self, b: Branding, repo: Path, workdir: Path, conf: Path, user: str, runner: util.Runner,
-                 sign_key: str = ""):
+                 sign_key: str = "", extra_makedepends: dict[str, list[str]] | None = None):
         self.b = b
         self.repo = repo.resolve()
         self.workdir = workdir.resolve()
@@ -642,6 +642,8 @@ class Builder:
         self.user = user
         self.runner = runner
         self.sign_key = sign_key
+        # Build dependencies PKGBUILDs forget to declare (packages/repo.toml, [aur.makedepends]).
+        self.extra_makedepends = extra_makedepends or {}
         self.db = self.repo / f"{b.repo_name}.db.tar.gz"
         self.root = self.workdir / "chroot"
         self.chroot_conf = self.workdir / "pacman-chroot.conf"
@@ -718,6 +720,7 @@ class Builder:
         # Not the package base's own split packages (nvidia-580xx-settings needs
         # libxnvctrl-580xx, built alongside it); checks run for local packages only.
         deps = node.needs(check=node.origin != "aur")
+        deps += [d for d in self.extra_makedepends.get(node.pkgbase, []) if d not in deps]
         if not deps:
             return
         missing = deps if self.runner.dry_run else self._query(self.chroot("pacman", "-T", *deps), ok=(0, 127)).split()
@@ -881,7 +884,7 @@ def main(argv: list[str] | None = None) -> int:
     if a.action == "plan":
         return 0
 
-    builder = Builder(b, repo, work, conf, a.user, runner, a.sign)
+    builder = Builder(b, repo, work, conf, a.user, runner, a.sign, load_manifest(src)["aur"].get("makedepends", {}))
     builder.prepare()
     try:
         for base in plan.order:

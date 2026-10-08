@@ -25,7 +25,9 @@ Then write it. **This erases the USB stick.**
 
 * Linux: `sudo dd if=Nexora-2026.09-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync`
   (find `/dev/sdX` with `lsblk`; use the whole device, not a partition), or
-  GNOME Disks / KDE ISO Image Writer.
+  GNOME Disks ("Restore Disk Image"). Avoid KDE ISO Image Writer: some of its
+  versions stop with "The last block was not fully written (-1 of 1,048,576
+  bytes)! Aborting." on images that other writers write without trouble.
 * Windows / macOS: [Rufus](https://rufus.ie) (DD mode) or [balenaEtcher](https://etcher.balena.io).
 * [Ventoy](https://www.ventoy.net) works too: copy the ISO onto the Ventoy stick.
 

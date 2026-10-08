@@ -500,3 +500,17 @@ def test_builder_resets_the_chroot_after_each_build(tmp_path):
     assert _inside(calls[-1]) == ["pacman", "-Rn", "--noconfirm", "meson", "scdoc"]
     builder.reset()  # once only
     assert len(calls) == 1
+
+
+def test_builder_adds_build_dependencies_a_pkgbuild_forgets(tmp_path):
+    """llama.cpp-vulkan-git needs glslc (shaderc) but does not say so."""
+    runner = util.Runner(dry_run=True)
+    b = load_branding()
+    conf = packages.build_conf(b, tmp_path / "repo", tmp_path / "work")
+    extra = packages.load_manifest()["aur"]["makedepends"]
+    assert extra["llama.cpp-vulkan-git"] == ["shaderc"]
+    builder = packages.Builder(b, tmp_path / "repo", tmp_path / "work", conf, "", runner, extra_makedepends=extra)
+    (tmp_path / "llama").mkdir()
+    info = SrcInfo("llama.cpp-vulkan-git", ["llama.cpp-vulkan-git"], makedepends=["cmake", "vulkan-headers"])
+    builder.build(Node("llama.cpp-vulkan-git", "aur", info, path=str(tmp_path / "llama")))
+    assert _deps(runner.recorded) == ["cmake", "vulkan-headers", "shaderc"]

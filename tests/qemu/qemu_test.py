@@ -59,10 +59,53 @@ class TestFailure(Exception):
 # ---------------------------------------------------------------------------
 
 
+class EscapeFilter:
+    """Removes terminal control sequences from console output: colours and
+    cursor moves (CSI), bash's bracketed-paste switches (ESC[?2004h/l),
+    systemd's context strings (OSC 3008, ESC]3008;...ESC\\), terminal
+    queries (DCS), and carriage returns. Otherwise they glue themselves to the
+    start of output lines. Keeps its state between reads, since a read can end
+    anywhere inside a sequence."""
+
+    def __init__(self) -> None:
+        self.state = ""
+
+    def feed(self, text: str) -> str:
+        out = []
+        for ch in text:
+            st = self.state
+            if not st:
+                if ch == "\x1b":
+                    self.state = "esc"
+                elif ch != "\r":
+                    out.append(ch)
+            elif st == "esc":  # the character after ESC decides the kind
+                self.state = {"[": "csi", "]": "str", "P": "str", "X": "str", "^": "str", "_": "str",
+                              "(": "charset", ")": "charset", "*": "charset", "+": "charset"}.get(ch, "")
+            elif st == "csi":  # parameters and intermediates, then one final byte
+                if "@" <= ch <= "~":
+                    self.state = ""
+            elif st == "str":  # OSC, DCS...: ends with BEL or ESC \
+                if ch == "\x07":
+                    self.state = ""
+                elif ch == "\x1b":
+                    self.state = "str-esc"
+            elif st == "str-esc":
+                self.state = "" if ch == "\\" else "str"
+            else:  # charset designation: one more character
+                self.state = ""
+        return "".join(out)
+
+
+# login's password prompt, as PAM translates it for the installed locale.
+PASSWORD_PROMPT = r"(?:Password|Passwort|Mot de passe|Contraseña|Senha|Hasło|Пароль|Wachtwoord|Lösenord): *$"
+
+
 class Console:
     def __init__(self, path: Path, log: Path):
         self.log = log.open("w", encoding="utf-8", errors="replace")
         self.buf = ""
+        self.filter = EscapeFilter()
         self.pos = 0
         self.lock = threading.Condition()
         deadline = time.time() + 30
@@ -84,7 +127,7 @@ class Console:
                 data = self.sock.recv(65536)
             except OSError:
                 data = b""
-            text = data.decode("utf-8", errors="replace").replace("\r", "")
+            text = self.filter.feed(data.decode("utf-8", errors="replace"))
             with self.lock:
                 if not data:
                     self.closed = True
@@ -97,7 +140,9 @@ class Console:
                 return
 
     def expect(self, patterns: list[str], timeout: float) -> tuple[int, re.Match]:
-        """Wait for the first of ``patterns`` after the last match."""
+        """Wait for the first of ``patterns`` after the last match. A pattern
+        ending in ``$`` also matches at the end of what has arrived so far
+        (right for prompts); markers in command output end in ``\\n``."""
         regs = [re.compile(p, re.MULTILINE) for p in patterns]
         deadline = time.time() + timeout
         with self.lock:
@@ -108,11 +153,17 @@ class Console:
                     self.pos = m.end()
                     return i, m
                 if self.closed:
-                    raise TestFailure(f"console closed while waiting for {patterns}")
+                    raise TestFailure(f"console closed while waiting for {patterns}{self._last_lines()}")
                 left = deadline - time.time()
                 if left <= 0:
-                    raise TestFailure(f"timed out after {timeout:.0f}s waiting for {patterns}")
+                    raise TestFailure(f"timed out after {timeout:.0f}s waiting for {patterns}{self._last_lines()}")
                 self.lock.wait(min(left, 1.0))
+
+    def _last_lines(self, lines: int = 40) -> str:
+        """The end of the console (lock held), for failure messages: CI keeps
+        the job log, and the log files only as artifacts."""
+        tail = "\n".join("    | " + ln for ln in self.buf.splitlines()[-lines:])
+        return f"; the console ended with:\n{tail}" if tail else "; the console printed nothing"
 
     def send(self, text: str) -> None:
         self.sock.sendall(text.encode())
@@ -315,7 +366,7 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
                                "-append", append, "-fw_cfg", f"name=opt/{B.id}/config,file={cfg_file}"])
         con = Console(serial, out / "install.log")
         try:
-            _i, m = con.expect([r"AUTOINSTALL: RESULT (\d+)"], timeout_min * 60)
+            _i, m = con.expect([r"AUTOINSTALL: RESULT (\d+)[ \t]*\n"], timeout_min * 60)
             code = int(m.group(1))
             result["install_seconds"] = round(time.time() - started)
             if code != 0:
@@ -340,23 +391,33 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
                     continue
                 break
             result["boot_seconds"] = round(time.time() - boot_started)
-            con.send("root\n")
-            con.expect([r"Password: *$"], 60)
+            # A getty restarted late in the boot shows a fresh prompt and
+            # drops what was typed at the old one: answer it again.
+            for _attempt in range(3):
+                con.send("root\n")
+                i, _m = con.expect([PASSWORD_PROMPT, r"login: *$"], 60)
+                if i == 0:
+                    break
+            else:
+                raise TestFailure("the login prompt kept coming back after 'root'" + con._last_lines())
             con.send(cfg["user"]["root_password"] + "\n")
             con.expect([r"\]# *$|# *$"], 120)
-            con.send("export TERM=dumb PAGER=cat SYSTEMD_PAGER= SYSTEMD_COLORS=0 NO_COLOR=1\n")
+            con.send("export TERM=dumb PAGER=cat SYSTEMD_PAGER= SYSTEMD_COLORS=0 NO_COLOR=1; "
+                     "bind 'set enable-bracketed-paste off' 2>/dev/null\n")
             for check in checks_for(scn):
                 con.send(f"( {check.command} ) >/tmp/check.out 2>&1; echo \"@@CHECK\" \"{check.name}\" $?\n")
-                _i, m = con.expect([rf"^@@CHECK {re.escape(check.name)} (\d+)\s*$"], 900)
+                _i, m = con.expect([rf"^@@CHECK {re.escape(check.name)} (\d+)[ \t]*\n"], 900)
                 rc = int(m.group(1))
                 output = ""
                 if rc != 0:
                     con.send(f"tail -n 25 /tmp/check.out; echo \"@@END\" \"{check.name}\"\n")
-                    _i, mm = con.expect([rf"^@@END {re.escape(check.name)}\s*$"], 60)
+                    _i, mm = con.expect([rf"^@@END {re.escape(check.name)}[ \t]*\n"], 60)
                     output = con.buf[m.end():mm.start()].strip()[-3000:]
                 status = "pass" if rc == 0 else ("fail" if check.must_pass else "warn")
                 result["checks"].append({"name": check.name, "status": status, "rc": rc, "output": output})
                 print(f"  {status:4}  {check.name}" + (f" (exit {rc})" if rc else ""))
+                if output:
+                    print("\n".join("        | " + ln for ln in output.splitlines()))
             con.send("systemctl poweroff\n")
             machine.wait(300)
         finally:
@@ -376,6 +437,85 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
     return result
 
 
+# Boots of the ISO itself, through the firmware and the ISO's own boot loader,
+# the way a machine starts it from a USB stick or a DVD (the installation
+# scenarios above boot its kernel directly).
+LIVE = {
+    "live-uefi-usb": {"description": "the ISO as a USB stick on UEFI: firmware, the ISO's systemd-boot, live system",
+                      "firmware": "uefi", "media": "usb"},
+    "live-uefi-cdrom": {"description": "the ISO as a DVD on UEFI: El Torito, the ISO's systemd-boot, live system",
+                        "firmware": "uefi", "media": "cdrom"},
+}
+
+
+def run_live_boot(name: str, scn: dict, iso: Path, out: Path, timeout_min: float) -> dict:
+    out.mkdir(parents=True, exist_ok=True)
+    for old in out.glob("*.log"):
+        old.unlink()
+    result: dict = {"scenario": name, "description": scn["description"], "checks": [], "ok": False}
+    disk = out / "disk.qcow2"  # an empty internal disk, as in a real machine
+    subprocess.run(["qemu-img", "create", "-q", "-f", "qcow2", str(disk), "8G"], check=True)
+    (out / "OVMF_VARS.fd").unlink(missing_ok=True)
+    machine = Machine(out, scn["firmware"], 4096, 2, disk, "virtio")
+    if scn["media"] == "usb":
+        media = ["-drive", f"file={iso},format=raw,readonly=on,if=none,id=stick",
+                 "-device", "qemu-xhci", "-device", "usb-storage,drive=stick,bootindex=0"]
+    else:
+        media = ["-drive", f"file={iso},format=raw,media=cdrom,readonly=on,if=none,id=dvd",
+                 "-device", "ide-cd,drive=dvd,bus=ide.2,bootindex=0"]
+    # systemd-boot appends this SMBIOS string to its entries' command line
+    # (not with Secure Boot): the live system's console on the serial port.
+    serial_console = ["-smbios", "type=11,value=io.systemd.boot.kernel-cmdline-extra=console=tty0 console=ttyS0,,115200"]
+    serial = out / "serial.sock"
+    serial.unlink(missing_ok=True)
+    started = time.time()
+    try:
+        machine.start(serial, [*media, *serial_console])
+        con = Console(serial, out / "live.log")
+        try:
+            con.expect([re.escape(B.pretty_name) + r" live"], 180)
+            result["checks"].append({"name": "boot-menu", "status": "pass", "rc": 0, "output": ""})
+            print("  pass  boot-menu (the ISO's boot loader started)")
+            con.expect([r"login: *$"], timeout_min * 60)
+            result["checks"].append({"name": "live-system", "status": "pass", "rc": 0, "output": ""})
+            result["boot_seconds"] = round(time.time() - started)
+            print(f"  pass  live-system (up in {result['boot_seconds']}s)")
+            # The graphical session on the first VT: the desktop, or the installer
+            # on its own in cage. Log in on the serial console to look.
+            con.send(f"{B['LIVE_USER']}\n")
+            con.expect([r"live system\s*$"], 60)  # the message of the day: logged in
+            time.sleep(2)
+            con.send("sh -c 'for i in $(seq 90); do for p in Hyprland cage; do "
+                     "pgrep -x $p >/dev/null && { echo \"@@SESSION $p\"; exit; }; done; sleep 2; done; "
+                     "echo \"@@SESSION none\"'\n")
+            _i, m = con.expect([r"^@@SESSION (\w+)[ \t]*\n"], 240)
+            session = m.group(1)
+            output = ""
+            if session == "none":
+                con.send(f"tail -n 60 /tmp/{B.id}-live-session.log; echo @@END\n")
+                _i, mm = con.expect([r"^@@END[ \t]*\n"], 60)
+                output = con.buf[m.end():mm.start()].strip()[-4000:]
+            result["checks"].append({"name": "graphical-session", "status": "pass" if session != "none" else "fail",
+                                     "rc": 0 if session != "none" else 1, "output": output, "session": session})
+            print(f"  {'pass' if session != 'none' else 'fail'}  graphical-session ({session})")
+            if output:
+                print("\n".join("        | " + ln for ln in output.splitlines()))
+        finally:
+            con.close()
+        failed = [c["name"] for c in result["checks"] if c["status"] == "fail"]
+        result["ok"] = not failed
+        if failed:
+            result["error"] = "failed checks: " + ", ".join(failed)
+    except TestFailure as exc:
+        result["error"] = str(exc)
+    finally:
+        machine.kill()
+        result["seconds"] = round(time.time() - started)
+        (out / "result.json").write_text(json.dumps(result, indent=2) + "\n")
+        disk.unlink(missing_ok=True)
+    return result
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Install the ISO in QEMU and check the result.")
     p.add_argument("--iso", help="ISO to test (default: newest in dist/)")
@@ -386,6 +526,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", default=str(REPO / "build" / "qemu"))
     a = p.parse_args(argv)
     scenarios = {f.stem: json.loads(f.read_text()) for f in sorted((REPO / "tests/qemu/scenarios").glob("*.json"))}
+    scenarios |= LIVE
     if a.list:
         for name, scn in scenarios.items():
             print(f"{name:28} {scn.get('description', '')}")
@@ -410,9 +551,12 @@ def main(argv: list[str] | None = None) -> int:
     results = []
     for name in wanted:
         print(f"== {name}: {scenarios[name].get('description', '')}")
-        res = run_scenario(name, scenarios[name], iso, Path(a.out) / name, a.timeout, a.keep)
+        if name in LIVE:
+            res = run_live_boot(name, LIVE[name], iso, Path(a.out) / name, 15)
+        else:
+            res = run_scenario(name, scenarios[name], iso, Path(a.out) / name, a.timeout, a.keep)
         results.append(res)
-        print(f"   {'PASS' if res['ok'] else 'FAIL'} in {res['seconds']}s" + (f": {res.get('error', '')[:2000]}"
+        print(f"   {'PASS' if res['ok'] else 'FAIL'} in {res['seconds']}s" + (f": {res.get('error', '')[:6000]}"
                                                                            if not res["ok"] else ""))
     summary = {"iso": iso.name, "results": results, "ok": all(r["ok"] for r in results)}
     Path(a.out).mkdir(parents=True, exist_ok=True)
