@@ -43,6 +43,8 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
 | `--archive-date YYYY/MM/DD` | install Arch packages from that day's Arch Linux Archive snapshot |
 | `--config FILE` | settings from a file ([example](../iso/build.env.example)) |
 | `--dry-run` | print the build commands without running them (works on any Linux) |
+| `--publish` | after a successful build, publish it: a GitHub release with the ISO, its checksums and metadata, a tag on the commit it was built from, and the package repository (see [release-process.md](release-process.md#from-your-own-build)) |
+| `--tag vYYYY.MM[.N]` | the tag to publish as (implies `--publish`; default `v<version>`, or the next free `v<version>.N`) |
 
 ## What happens
 
