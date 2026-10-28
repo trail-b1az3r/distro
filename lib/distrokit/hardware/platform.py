@@ -173,6 +173,7 @@ class ChassisInfo:
     has_lid: bool
     surface: bool
     surface_model: str
+    product_sku: str = ""
 
     @property
     def portable(self) -> bool:
@@ -244,6 +245,7 @@ def detect_chassis(sysroot: SysRoot, virtual: bool = False) -> ChassisInfo:
         has_lid=has_lid,
         surface=surface,
         surface_model=surface_model,
+        product_sku=r("product_sku"),
     )
 
 

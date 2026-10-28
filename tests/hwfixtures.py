@@ -157,9 +157,10 @@ class FakeMachine:
         self.write("/proc/meminfo", f"MemTotal:       {kb} kB\nMemFree:        {kb // 2} kB\nSwapTotal:      {int(swap_gib * 1048576)} kB\n")
         return self
 
-    def dmi(self, vendor: str, product: str, chassis_type: int, family: str = "", version: str = "") -> "FakeMachine":
+    def dmi(self, vendor: str, product: str, chassis_type: int, family: str = "", version: str = "",
+            sku: str = "") -> "FakeMachine":
         base = "/sys/class/dmi/id"
-        for k, v in {"sys_vendor": vendor, "product_name": product, "product_family": family,
+        for k, v in {"sys_vendor": vendor, "product_name": product, "product_family": family, "product_sku": sku,
                      "product_version": version, "chassis_type": str(chassis_type), "board_vendor": vendor,
                      "board_name": product, "bios_vendor": "American Megatrends", "bios_version": "1.0"}.items():
             self.write(f"{base}/{k}", v + "\n")
@@ -401,6 +402,33 @@ def surface_pro7(root: Path) -> FakeMachine:
     return m
 
 
+def surface_pro5(root: Path) -> FakeMachine:
+    """Surface Pro (5th Gen, 2017): Kaby Lake, HD 620, Marvell 88W8897 Wi-Fi
+    and Bluetooth, 2736 x 1824 at 12.3 inches, UEFI with Secure Boot on."""
+    m = FakeMachine(root)
+    m.cpu("GenuineIntel", "Intel(R) Core(TM) i5-7300U CPU @ 2.60GHz", 2, 4, model_no=142)
+    m.memory(8).dmi("Microsoft Corporation", "Surface Pro", 9, family="Surface",
+                    sku="Surface_Pro_1796").battery().uefi(True)
+    m.acpi_device("MSHW0040")
+    m.pci("0000:00:02.0", 0x030000, 0x8086, 0x5916, "i915", boot_vga=True)
+    m.gpu_card("card0", "0000:00:02.0")
+    m.connector("card0", "eDP-1", "0000:00:02.0", make_edid("", 2736, 1824, 260, 173, "LGD"), ["2736x1824"])
+    m.pci("0000:02:00.0", 0x010802, 0x144D, 0xA804, "nvme")
+    m.disk("nvme0n1", 256 * GB, "SAMSUNG KUS040202M-B000", "nvme",
+           partitions=[
+               {"start": 1 << 20, "size": 260 << 20, "fstype": "vfat", "parttype": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"},
+               {"start": 261 << 20, "size": 128 << 20, "parttype": "e3c9e316-0b5c-4db8-817d-f92df00215ae"},
+               {"start": 389 << 20, "size": 200 * GB, "fstype": "ntfs", "parttype": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7", "label": "Windows"},
+           ])
+    m.pci("0000:01:00.0", 0x028000, 0x11AB, 0x2B38, "mwifiex_pcie")
+    m.wifi_pci("wlp1s0", "0000:01:00.0", "mwifiex_pcie")
+    m.usb("1-7", 0x1286, 0x204C, "Bluetooth and Wireless LAN Composite Device", [(0xE0, 0x01, 0x01)])
+    m.bluetooth_usb("hci0", "1-7")
+    m.input("Microsoft Surface Type Cover Touchpad", "0003", 0x5, "mouse0", {"ID_INPUT_TOUCHPAD": "1"})
+    m.input("Microsoft Surface Type Cover Keyboard", "0003", 0, "sysrq kbd leds", {"ID_INPUT_KEYBOARD": "1"})
+    return m
+
+
 def qemu_vm(root: Path) -> FakeMachine:
     m = FakeMachine(root)
     m.cpu("GenuineIntel", "QEMU Virtual CPU version 2.5+", 4, 4, flags="fpu sse sse2 hypervisor")
@@ -480,6 +508,7 @@ MACHINES = {
     "rx7900xtx_desktop": rx7900xtx_desktop,
     "hybrid_gtx1080_laptop": hybrid_gtx1080_laptop,
     "surface_pro7": surface_pro7,
+    "surface_pro5": surface_pro5,
     "qemu_vm": qemu_vm,
     "rembrandt_laptop": rembrandt_laptop,
     "kepler_desktop": kepler_desktop,

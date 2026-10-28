@@ -189,7 +189,7 @@ def offline_sets(b: Branding, profile_id: str, multilib: bool = True) -> list[li
     for extra in ("grub", "laptop", "intel-laptop", "snapshots", "firewall", "virt-qemu", "virt-virtualbox",
                   "virt-vmware", "virt-hyperv"):
         base += read_list(extra, b)
-    base += ["linux", "linux-headers", "amd-ucode", "intel-ucode", "sbctl", "zram-generator"]
+    base += ["linux", "linux-headers", "amd-ucode", "intel-ucode", "sbctl", "zram-generator", "linux-firmware-marvell"]
     with (root / "ai" / "runtime" / "llama-server.toml").open("rb") as fh:
         llama = tomllib.load(fh)["packages"]
     base += [llama["vulkan"], llama["cpu"]]

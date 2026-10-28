@@ -25,7 +25,17 @@ secureboot = ["linux-surface-secureboot-mok"]
 # Marvell Wi-Fi firmware for older models.
 marvell = ["linux-firmware-marvell"]
 
-# Product names (regular expressions) of models with Marvell Wi-Fi.
+# Models whose firmware product name is ambiguous, by product SKU
+# (/sys/class/dmi/id/product_sku). The 5th-generation Surface Pro (2017)
+# reports itself as plain "Surface Pro".
+[models]
+"Surface_Pro_1796" = "Surface Pro (5th Gen)"
+"Surface_Pro_1807" = "Surface Pro (5th Gen) LTE"
+"Surface_Laptop" = "Surface Laptop"
+
+# Product names (regular expressions) of models with Marvell Wi-Fi. Their Wi-Fi
+# firmware (linux-firmware-marvell) is also installed with the regular kernel:
+# the Wi-Fi card itself is detected (hardware/network.py).
 [marvell]
 models = [
   "^Surface Pro [3-6]$",

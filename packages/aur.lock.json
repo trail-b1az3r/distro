@@ -12,6 +12,10 @@
       ],
       "version": "5.10.r2.g5962743-1"
     },
+    "avizo": {
+      "commit": "16e8df6aabb93036dc752c258b8bef4c7fc956b3",
+      "version": "1.3-1"
+    },
     "breeze-plus": {
       "commit": "faf39cfda93ef93a4514e36674bcf5dcb80d3164",
       "version": "6.28.0-1"
@@ -50,6 +54,13 @@
         "llama.cpp-vulkan"
       ],
       "version": "b10242.r10.fe2adf0e72-1"
+    },
+    "loaf-fm": {
+      "commit": "30877971ceac1da99ffca7220646e6e6bda99455",
+      "for": [
+        "loaf"
+      ],
+      "version": "0.2.1-2"
     },
     "material-symbols-git": {
       "commit": "6536c04924b18483281f9ec432ba71ecba09ab67",
@@ -99,6 +110,13 @@
         "twemoji-color-font"
       ],
       "version": "17.0.2-3"
+    },
+    "wayscriber-bin": {
+      "commit": "79173461a470b4274c04acfaec405e8f5f43936f",
+      "for": [
+        "wayscriber"
+      ],
+      "version": "0.9.28-1"
     },
     "wlogout": {
       "commit": "9904ef2a49026b70e5288965423ee503c95f09cd",

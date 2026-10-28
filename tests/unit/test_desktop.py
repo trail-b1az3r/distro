@@ -1,6 +1,7 @@
 """The desktop: deploying the dots with the distribution layer, and keeping
 the layer's keybinds off chords upstream already uses."""
 
+import os
 import re
 from pathlib import Path
 
@@ -130,6 +131,14 @@ def test_first_deploy(deployer):
     assert f"Welcome to {b.pretty_name}" in greeting
     wants = home / ".config/systemd/user/default.target.wants/ydotool.service"
     assert wants.is_symlink()
+    # Halcyon 2.0: icon, cursors, the theme schedule timer; not its own git updater.
+    assert (home / ".local/share/icons/halcyon.svg").is_file()
+    assert (home / ".local/share/icons/Halcyon-Glass/index.theme").is_file()
+    assert (home / ".local/share/icons/Halcyon-Glass/cursors/left_ptr").is_symlink()
+    timer = home / ".config/systemd/user/timers.target.wants/halcyon-auto-theme.timer"
+    assert timer.is_symlink() and os.readlink(timer) == f"{home}/.config/systemd/user/halcyon-auto-theme.timer"
+    assert not (home / ".config/systemd/user/halcyon-update.timer").exists()
+    assert (home / ".config/systemd/user/halcyon-quickshell.service").is_file()
     assert (home / f".local/state/{b.id}/desktop-manifest.json").is_file()
 
 
@@ -165,4 +174,4 @@ def test_reset_backs_up_custom_and_restores_defaults(deployer):
 
 def test_default_apps_only_lists_installed_software():
     apps = deploy.default_apps({"kate"})
-    assert apps == {"terminal": "konsole", "fileManager": "dolphin", "textEditor": "kate"}
+    assert apps == {"terminal": "konsole", "textEditor": "kate"}

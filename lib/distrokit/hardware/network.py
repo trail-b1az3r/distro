@@ -12,6 +12,19 @@ from .sysroot import SysRoot
 # (vendor, bus) -> extra package list name / package
 _BROADCOM_WL_IDS = {0x4311, 0x4312, 0x4313, 0x4315, 0x4328, 0x4329, 0x432A, 0x432B, 0x432C,
                     0x432D, 0x4353, 0x4357, 0x4358, 0x4359, 0x4365, 0x43A0, 0x43B1}
+# Marvell Wi-Fi (mwifiex: 88W8897 in Surface Pro 3-6, Surface Book and Laptop
+# 1-2, 88W8997...). Arch's linux-firmware no longer pulls its firmware in.
+_MARVELL_VENDORS = {0x11AB, 0x1B4B}
+MARVELL_FIRMWARE = "linux-firmware-marvell"
+
+
+def _marvell(driver: str, dev_id: str) -> bool:
+    if driver.startswith("mwifiex"):
+        return True
+    try:
+        return int(dev_id.split(":")[0], 16) in _MARVELL_VENDORS
+    except (IndexError, ValueError):
+        return False
 
 
 @dataclass
@@ -84,6 +97,8 @@ def detect_network(sysroot: SysRoot, pci_devices: list[PciDevice]) -> list[NetAd
                     extra.append("broadcom-wl-dkms")
             except (IndexError, ValueError):
                 pass
+        if wifi and _marvell(driver, dev_id):
+            extra.append(MARVELL_FIRMWARE)
         adapters.append(
             NetAdapter(
                 interface=iface,
@@ -110,7 +125,8 @@ def detect_network(sysroot: SysRoot, pci_devices: list[PciDevice]) -> list[NetAd
                     name=ids.marketing_name(dev.name) or dev.name,
                     driver=dev.driver,
                     device_id=f"{dev.vendor_id:04x}:{dev.device_id:04x}",
-                    extra_packages=["broadcom-wl-dkms"] if dev.vendor_id == 0x14E4 and dev.device_id in _BROADCOM_WL_IDS else [],
+                    extra_packages=(["broadcom-wl-dkms"] if dev.vendor_id == 0x14E4 and dev.device_id in _BROADCOM_WL_IDS
+                                    else [MARVELL_FIRMWARE] if dev.vendor_id in _MARVELL_VENDORS else []),
                 )
             )
     return adapters

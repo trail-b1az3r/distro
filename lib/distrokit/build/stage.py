@@ -148,6 +148,15 @@ class Stage:
             f"Exec = {lib}/bin/{b.id}-update-boot\n"
         ))
 
+        # Marvell mwifiex Wi-Fi (Surface Pro 3-6, Surface Book and Laptop 1-2...)
+        # drops the connection and stalls with power saving on; only these cards.
+        self.text(f"/usr/lib/NetworkManager/conf.d/50-{b.id}-mwifiex.conf", (
+            f"# {b.pretty_name}: Marvell mwifiex Wi-Fi loses its connection with power saving on.\n"
+            f"[connection-{b.id}-mwifiex]\n"
+            "match-device=driver:mwifiex_pcie,driver:mwifiex_sdio,driver:mwifiex_usb\n"
+            "wifi.powersave=2\n"
+        ))
+
         self.text(f"/usr/share/polkit-1/actions/org.{b.id}.privileged.policy", polkit_policy(b, lib))
         self.text(f"/usr/lib/systemd/user/{runtime.service_name(b)}", runtime.unit_text(b))
 

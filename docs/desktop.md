@@ -52,9 +52,9 @@ Konsole (terminal), Dolphin (files), Firefox (browser, if installed), Okular
 ## The Plasma fallback session
 
 If you enabled *KDE Plasma fallback session*, the login screen offers
-*Plasma (Wayland)* and *Plasma (X11)*: a conventional desktop for when you need
-X11 or something more familiar. Choose the session at the bottom left of the
-login screen.
+*Plasma*: a conventional desktop for when you want something more familiar
+(Wayland only: Plasma 6.8 dropped its X11 session; X11 apps still run through
+XWayland). Choose the session at the bottom left of the login screen.
 
 ## Shells
 

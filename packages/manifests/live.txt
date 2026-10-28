@@ -1,6 +1,6 @@
 # Nexora Linux: live ISO (packages.x86_64; generated, do not edit)
 # lists: base, desktop, browser, live + linux, amd-ucode, intel-ucode
-# 136 packages
+# 137 packages
 
 alsa-firmware
 alsa-utils
@@ -65,6 +65,7 @@ konsole
 less
 linux
 linux-firmware
+linux-firmware-marvell
 lsof
 lvm2
 man-db

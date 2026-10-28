@@ -49,11 +49,12 @@ class SurfaceInfo:
 
 
 def detect(report: HardwareReport) -> SurfaceInfo:
-    model = report.chassis.surface_model
+    product = report.chassis.surface_model
+    model = config().get("models", {}).get(report.chassis.product_sku, product) if report.chassis.surface else product
     marvell = False
     if report.chassis.surface:
         for pattern in config()["marvell"]["models"]:
-            if re.search(pattern, model):
+            if re.search(pattern, product):
                 marvell = True
     return SurfaceInfo(
         detected=report.chassis.surface,
