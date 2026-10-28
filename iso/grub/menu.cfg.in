@@ -1,0 +1,103 @@
+# @DISTRO_PRETTY_NAME@ live ISO: the UEFI boot menu (BIOS uses syslinux).
+# Sourced by grub.cfg (booted from the ISO, a USB stick or a copy of its files)
+# and by loopback.cfg (the ISO file booted from another GRUB), which set
+# ${archiso_params}: how the live system finds the ISO. mkarchiso fills in the
+# %TOKENS%; the theme is drawn from distro.conf (branding/grub/theme.txt.in).
+
+# Graphical menu with the theme, when the firmware offers a graphics mode.
+if loadfont "${prefix}/fonts/unicode.pf2"; then
+    insmod all_video
+    insmod gfxterm
+    insmod png
+    set gfxmode="auto"
+    terminal_input console
+    terminal_output gfxterm
+    set archiso_theme="/boot/grub/themes/@DISTRO_ID@"
+    for font in "${archiso_theme}"/*.pf2; do
+        loadfont "${font}"
+    done
+    if [ -f "${archiso_theme}/theme.txt" ]; then
+        set theme="${archiso_theme}/theme.txt"
+        export theme
+    fi
+fi
+
+# A serial console too, where there is one (virtual machines, servers).
+insmod serial
+if serial --unit=0 --speed=115200; then
+    terminal_input --append serial
+    terminal_output --append serial
+fi
+
+# Kernel parameters a QEMU virtual machine hands over in an SMBIOS OEM string,
+# the way systemd-boot reads them: io.systemd.boot.kernel-cmdline-extra=...
+# (the QEMU tests put the live system's console on the serial port with it).
+# Offset 4 of an OEM-strings structure holds their count, so this reads the
+# last one. Only asked of QEMU: where there are no OEM strings, the smbios
+# command prints an error.
+set archiso_cmdline_extra=""
+insmod smbios
+if smbios --type 1 --get-string 4 --set=archiso_manufacturer; then
+    if [ "${archiso_manufacturer}" == "QEMU" ]; then
+        if smbios --type 11 --get-string 4 --set=archiso_oem_string; then
+            regexp --set=1:archiso_cmdline_extra '^io\.systemd\.boot\.kernel-cmdline-extra=(.*)$' "${archiso_oem_string}"
+        fi
+    fi
+fi
+export archiso_params archiso_cmdline_extra
+
+set default="live"
+set timeout=10
+set timeout_style="menu"
+
+# copytoram=n: archiso otherwise copies the whole live system into memory by
+# itself whenever it is under 4 GiB and the RAM allows, which delays the start
+# by minutes from a USB stick and leaves the live desktop short of memory.
+menuentry "@DISTRO_PRETTY_NAME@ live" --class @DISTRO_ID@ --class arch --id "live" {
+    set gfxpayload=keep
+    linux /%INSTALL_DIR%/boot/%ARCH%/vmlinuz-linux ${archiso_params} copytoram=n quiet loglevel=3 rd.udev.log_level=3 cow_spacesize=4G ${archiso_cmdline_extra}
+    initrd /%INSTALL_DIR%/boot/%ARCH%/initramfs-linux.img
+}
+
+menuentry "@DISTRO_PRETTY_NAME@ live, safe graphics" --hotkey s --class safe --id "safe-graphics" {
+    set gfxpayload=keep
+    linux /%INSTALL_DIR%/boot/%ARCH%/vmlinuz-linux ${archiso_params} copytoram=n nomodeset @DISTRO_ID@.safe_graphics=1 cow_spacesize=4G ${archiso_cmdline_extra}
+    initrd /%INSTALL_DIR%/boot/%ARCH%/initramfs-linux.img
+}
+
+menuentry "@DISTRO_PRETTY_NAME@ live, copied to RAM" --hotkey r --class ram --id "copytoram" {
+    set gfxpayload=keep
+    linux /%INSTALL_DIR%/boot/%ARCH%/vmlinuz-linux ${archiso_params} copytoram=y quiet loglevel=3 rd.udev.log_level=3 cow_spacesize=4G ${archiso_cmdline_extra}
+    initrd /%INSTALL_DIR%/boot/%ARCH%/initramfs-linux.img
+}
+
+if [ "${grub_platform}" == "efi" -a "${grub_cpu}" == "x86_64" -a -f "/boot/memtest86+/memtest.efi" ]; then
+    menuentry "Memory test (Memtest86+)" --hotkey m --class memtest --id "memtest" {
+        set gfxpayload=800x600,1024x768
+        linux /boot/memtest86+/memtest.efi
+    }
+fi
+
+if [ "${grub_platform}" == "efi" ]; then
+    if [ "${grub_cpu}" == "x86_64" -a -f "/shellx64.efi" ]; then
+        menuentry "UEFI shell" --class shell --id "uefi-shell" {
+            chainloader /shellx64.efi
+        }
+    elif [ "${grub_cpu}" == "i386" -a -f "/shellia32.efi" ]; then
+        menuentry "UEFI shell" --class shell --id "uefi-shell" {
+            chainloader /shellia32.efi
+        }
+    fi
+    # Secure Boot, the boot order and (on a Surface) the USB boot setting live here.
+    menuentry "Firmware settings" --hotkey f --class firmware --id "uefi-firmware" {
+        fwsetup
+    }
+fi
+
+menuentry "Reboot" --class reboot --id "reboot" {
+    reboot
+}
+
+menuentry "Power off" --class shutdown --id "poweroff" {
+    halt
+}

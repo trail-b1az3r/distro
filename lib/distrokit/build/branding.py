@@ -146,6 +146,77 @@ def aurora(b: Branding, width: int, height: int, *, light: bool = False, seed: i
     return Image.fromarray(out.astype(np.uint8), "RGB")
 
 
+def bootmenu_background(b: Branding, width: int, height: int):
+    """The boot menu's backdrop (GRUB and syslinux): near-black with a soft
+    glow of the second accent behind the logo, the first rising from the
+    bottom corner, and a faint dot grid. Quiet enough for a menu to sit on."""
+    np = _np()
+    from PIL import Image
+
+    y, x = np.mgrid[0:height, 0:width].astype(np.float32)
+    u, v = x / width, y / height
+    aspect = width / height
+    bg = np.array(hex_rgb(b["BRAND_BG"]), np.float32) / 255
+    c1 = np.array(hex_rgb(b["BRAND_ACCENT"]), np.float32) / 255
+    c2 = np.array(hex_rgb(b["BRAND_ACCENT_2"]), np.float32) / 255
+    img = np.ones((height, width, 3), np.float32) * bg * 0.8
+
+    def glow(cx: float, cy: float, radius: float, colour, strength: float) -> None:
+        nonlocal img
+        r2 = ((u - cx) * aspect) ** 2 + (v - cy) ** 2
+        img = img + colour * (np.exp(-r2 / (radius * radius)) * strength)[..., None]
+
+    glow(0.5, 0.22, 0.42, c2, 0.16)
+    glow(0.92, 1.08, 0.62, c1, 0.20)
+    glow(0.04, 1.02, 0.40, c2, 0.07)
+    # Dot grid, fading out towards the edges.
+    step = max(18, height // 40)
+    on = ((x % step) < 1.5) & ((y % step) < 1.5)
+    fade = np.exp(-(((u - 0.5) * aspect) ** 2 + (v - 0.45) ** 2) / 0.35)
+    img = img + (on * fade * 0.035)[..., None]
+    # Vignette.
+    img *= (1 - 0.35 * (((u - 0.5) * 1.2) ** 2 + ((v - 0.5) * 1.2) ** 2))[..., None]
+    threshold = np.tile(_bayer(8), (height // 8 + 1, width // 8 + 1))[:height, :width, None]
+    out = np.floor(img.clip(0, 1) * 255 + 0.5 + threshold).clip(0, 255)
+    return Image.fromarray(out.astype(np.uint8), "RGB")
+
+
+# Boot menu icons by GRUB menu entry class (the first class with an icon is
+# shown): the ISO's entries, GRUB's own and os-prober's. "LOGO" is the logo mark.
+GRUB_ICONS = {
+    "LOGO": ("{id}", "arch"),
+    "desktop.svg": ("os", "gnu-linux", "windows"),
+    "display.svg": ("safe",),
+    "memory.svg": ("ram",),
+    "cpu.svg": ("memtest", "memtest86"),
+    "terminal.svg": ("shell", "efi"),
+    "settings.svg": ("firmware", "uefi-firmware"),
+    "refresh.svg": ("reboot", "restart"),
+    "power.svg": ("shutdown", "poweroff"),
+}
+
+
+def grub_icons(b: Branding, out: Path, logo_mark: Path, size: int = 32) -> list[Path]:
+    """PNG icons for the boot menu entries, from the UI icon set (drawn in the
+    muted text colour) and the logo mark."""
+    ui = paths.data("branding", "icons", "ui")
+    out.mkdir(parents=True, exist_ok=True)
+    made = []
+    for source, classes in GRUB_ICONS.items():
+        if source == "LOGO":
+            svg = logo_mark
+        else:
+            svg = out / f".{source}"
+            svg.write_text((ui / source).read_text().replace("currentColor", b["BRAND_FG"]))
+        for cls in classes:
+            png = out / f"{cls.format(id=b.id)}.png"
+            rasterise(svg, png, size)
+            made.append(png)
+        if svg != logo_mark:
+            svg.unlink()
+    return made
+
+
 def _bayer(n: int):
     """n x n ordered-dither thresholds in (-0.5, 0.5)."""
     np = _np()
@@ -188,7 +259,8 @@ def plymouth_assets(b: Branding, out: Path, logo_png: Path) -> None:
 
 
 def grub_slices(b: Branding, out: Path) -> None:
-    """Nine-slice pixmaps for the GRUB menu highlight and terminal box."""
+    """Nine-slice pixmaps for the GRUB menu: the highlight of the chosen entry,
+    the scrollbar thumb and the terminal box."""
     from PIL import Image, ImageDraw
 
     def nine(prefix: str, fill: tuple, outline: tuple | None, radius: int) -> None:
@@ -206,9 +278,10 @@ def grub_slices(b: Branding, out: Path) -> None:
             tile.crop(box).save(out / f"{prefix}_{name}.png")
 
     out.mkdir(parents=True, exist_ok=True)
-    accent = hex_rgb(b["BRAND_ACCENT"])
+    accent2 = hex_rgb(b["BRAND_ACCENT_2"])
     surface = hex_rgb(b["BRAND_SURFACE"])
-    nine("select", accent + (150,), accent + (255,), 10)
+    nine("select", accent2 + (52,), accent2 + (255,), 8)
+    nine("thumb", accent2 + (200,), None, 2)
     nine("terminal_box", surface + (235,), None, 8)
 
 
@@ -246,8 +319,8 @@ def grub_fonts(out: Path) -> list[Path]:
                       if (d / "DejaVuSans.ttf").is_file()), None)
     if not exe or fonts_dir is None:
         return []
-    wanted = [("DejaVuSansMono.ttf", 16), ("DejaVuSans.ttf", 14), ("DejaVuSans.ttf", 18),
-              ("DejaVuSans-Bold.ttf", 18), ("DejaVuSans-Bold.ttf", 24)]
+    wanted = [("DejaVuSansMono.ttf", 16), ("DejaVuSans.ttf", 15), ("DejaVuSans.ttf", 20),
+              ("DejaVuSans-Bold.ttf", 20), ("DejaVuSans-Bold.ttf", 30)]
     made = []
     for ttf, size in wanted:
         target = out / f"{Path(ttf).stem.lower()}-{size}.pf2"
@@ -293,9 +366,8 @@ def generate(quick: bool = False, b: Branding | None = None, log=print) -> None:
     bg = aurora(b, 1920, 1080, seed=3)
     grub_dir = gen / "grub"
     grub_dir.mkdir(parents=True, exist_ok=True)
-    from PIL import ImageEnhance
-
-    ImageEnhance.Brightness(bg).enhance(0.7).save(grub_dir / "background.png")
+    bootmenu_background(b, 1920, 1080).save(grub_dir / "background.png", optimize=True)
+    grub_icons(b, grub_dir / "icons", logo_mark)
     sddm_dir = gen / "sddm"
     sddm_dir.mkdir(parents=True, exist_ok=True)
     bg.save(sddm_dir / "background.png")
@@ -306,7 +378,7 @@ def generate(quick: bool = False, b: Branding | None = None, log=print) -> None:
         log("grub-mkfont or DejaVu fonts missing: the GRUB theme will use GRUB's built-in font")
     (gen / "fastfetch").mkdir(parents=True, exist_ok=True)
     (gen / "fastfetch" / "logo.ansi").write_text(ansi_logo(logo256))
-    splash = ImageEnhance.Brightness(aurora(b, 640, 480, seed=3)).enhance(0.55)
+    splash = bootmenu_background(b, 640, 480)
     syslinux = gen / "syslinux"
     syslinux.mkdir(parents=True, exist_ok=True)
     from PIL import Image

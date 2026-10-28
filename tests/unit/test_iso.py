@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -19,7 +20,8 @@ RELENG_FILES = {
     "bootstrap_packages": "base\n",
     "efiboot/loader/loader.conf": "timeout 15\n",
     "efiboot/loader/entries/01-archiso-linux.conf": "title Arch\n",
-    "grub/grub.cfg": "",
+    "grub/grub.cfg": "menuentry 'Arch Linux install medium' {}\n",
+    "grub/loopback.cfg": "menuentry 'Arch Linux install medium' {}\n",
     "syslinux/syslinux.cfg": "",
     "syslinux/archiso_sys-linux.cfg": "MENU LABEL Arch Linux install medium\n",
     "airootfs/etc/mkinitcpio.conf.d/archiso.conf": "HOOKS=(base udev archiso)\n",
@@ -70,8 +72,8 @@ def test_assemble_profile(tmp_path, releng):
     air = prof / "airootfs"
 
     # releng's Arch branding, root autologin, sshd and networkd are gone.
-    assert not (prof / "grub").exists()
-    assert not (prof / "efiboot/loader/entries/01-archiso-linux.conf").exists()
+    assert not (prof / "efiboot").exists()  # systemd-boot: UEFI boots with GRUB
+    assert "Arch Linux" not in (prof / "grub/grub.cfg").read_text()
     assert not (air / "root/.automated_script.sh").exists()
     assert not (air / "etc/systemd/system/multi-user.target.wants/sshd.service").is_symlink()
     assert not (air / "etc/systemd/system/multi-user.target.wants/iwd.service").is_symlink()
@@ -90,13 +92,23 @@ def test_assemble_profile(tmp_path, releng):
     out = subprocess.run(["bash", "-c", 'declare -A file_permissions; source profiledef.sh; '
                           'echo "$iso_name|$iso_label|$iso_version|${bootmodes[*]}|${file_permissions[/etc/shadow]}"'],
                          cwd=prof, capture_output=True, text=True, check=True).stdout.strip()
-    assert out == f"{b.name}|{b['ISO_LABEL_PREFIX']}_202609|2026.09|bios.syslinux uefi.systemd-boot|0:0:400"
+    assert out == f"{b.name}|{b['ISO_LABEL_PREFIX']}_202609|2026.09|bios.syslinux uefi.grub|0:0:400"
 
     # Boot menus are branded and keep archiso's placeholders.
-    entry = (prof / "efiboot/loader/entries/01-live.conf").read_text()
-    assert b.pretty_name in entry and "archisosearchuuid=%ARCHISO_UUID%" in entry
+    grub = (prof / "grub/grub.cfg").read_text()
+    assert "archisosearchuuid=%ARCHISO_UUID%" in grub and "source /boot/grub/menu.cfg" in grub
+    assert "img_loop=${iso_path}" in (prof / "grub/loopback.cfg").read_text()
+    menu = (prof / "grub/menu.cfg").read_text()
+    assert f'menuentry "{b.pretty_name} live" --class {b.id}' in menu and "@" not in menu
+    assert "/%INSTALL_DIR%/boot/%ARCH%/vmlinuz-linux ${archiso_params}" in menu
+    assert f"themes/{b.id}" in menu and "io\\.systemd\\.boot\\.kernel-cmdline-extra" in menu
     safe = (prof / "syslinux/archiso_sys-linux.cfg").read_text()
     assert f"{b.id}.safe_graphics=1" in safe and "nomodeset" in safe and "Arch Linux" not in safe
+    # archiso copies the live system into RAM by itself unless told not to.
+    for text in (menu, safe):
+        entries = [ln for ln in text.splitlines() if ln.lstrip().startswith(("APPEND", "linux /%INSTALL_DIR%"))]
+        assert entries and all("copytoram=" in ln for ln in entries)
+        assert sum("copytoram=y" in ln for ln in entries) == 1
     assert "@" not in (prof / "syslinux/archiso_head.cfg").read_text()
 
     packages = (prof / "packages.x86_64").read_text().split()
@@ -129,6 +141,44 @@ def test_assemble_profile(tmp_path, releng):
     assert (air / "etc/shadow").read_text().startswith("root:!*:")  # no empty root password
     for script in (f"{b.id}-live-session", f"{b.id}-live-setup"):
         subprocess.run(["bash", "-n", str(air / f"usr/lib/{b.id}/bin/{script}")], check=True)
+
+
+def test_boot_menu_theme_goes_onto_the_iso(tmp_path, releng, monkeypatch):
+    b = load_branding()
+    src = tmp_path / "src"
+    shutil.copytree(iso.paths.DATA_ROOT / "iso", src / "iso")
+    (src / "packages").symlink_to(iso.paths.DATA_ROOT / "packages")
+    theme = src / "branding/generated/grub"
+    (theme / "icons").mkdir(parents=True)
+    (theme / "theme.txt").write_text("title-text: \"\"\n")
+    (theme / "icons" / f"{b.id}.png").write_bytes(b"png")
+    monkeypatch.setattr(iso.paths, "DATA_ROOT", src)
+    prof = iso.assemble(iso.Options(build=tmp_path / "build", releng=releng), b, epoch=1790393700)
+    assert (prof / f"grub/themes/{b.id}/theme.txt").is_file()
+    assert (prof / f"grub/themes/{b.id}/icons/{b.id}.png").is_file()
+
+
+def test_offline_repository_leaves_out_debug_packages(tmp_path):
+    b = load_branding()
+    opts = iso.Options(build=tmp_path / "build")
+    opts.repo.mkdir(parents=True)
+    names = ["llama.cpp-git-b1.r0.abc-1-x86_64.pkg.tar.zst", "llama.cpp-git-debug-b1.r0.abc-1-x86_64.pkg.tar.zst",
+             "llama.cpp-git-debug-b1.r0.abc-1-x86_64.pkg.tar.zst.sig", f"{b.id}-core-1.0-1-any.pkg.tar.zst"]
+    for name in names:
+        (opts.repo / name).write_bytes(b"pkg")
+    runner = iso.util.Runner(dry_run=True)
+    out = iso.offline_repository(opts, b, runner, tmp_path / "pacman.conf")
+    assert sorted(f.name for f in out.iterdir()) == sorted([names[0], names[3]])
+
+
+def test_iso_files_and_the_fat32_limit(tmp_path, monkeypatch):
+    listing = ("-rw-r--r--    1 0        0        4294967296 Oct 28 22:16 '/arch/x86_64/airootfs.sfs'\n"
+               "-rw-r--r--    1 0        0              37 Oct 28 22:16 '/boot/1234.uuid'\n")
+    monkeypatch.setattr(iso.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, listing, ""))
+    files = iso.iso_files(tmp_path / "x.iso")
+    assert files == {"/arch/x86_64/airootfs.sfs": 2**32, "/boot/1234.uuid": 37}
+    assert [f.split()[0] for f in iso.too_big_for_fat32(files)] == ["/arch/x86_64/airootfs.sfs"]
+    assert iso.too_big_for_fat32({"/arch/x86_64/airootfs.sfs": 2**32 - 1}) == []
 
 
 def test_offline_sets_keep_conflicting_stacks_apart():
