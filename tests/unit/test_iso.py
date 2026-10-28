@@ -220,7 +220,10 @@ def test_checksums_and_finish(tmp_path, releng, monkeypatch):
     (opts.work / "iso/arch/pkglist.x86_64.txt").write_text("base 3-2\nlinux 6.16-1\n")
     from distrokit import util
 
+    # Not a real ISO 9660 image: its file listing (xorriso) is stood in for.
+    monkeypatch.setattr(iso, "iso_files", lambda path: {"/arch/x86_64/airootfs.sfs": 3 * 2**30})
     info = iso.finish(opts, b, 1790393700, util.Runner(dry_run=True))
+    assert info["largest_file"] == 3 * 2**30
     name = f"{b.name}-2026.09-x86_64.iso"
     assert info["iso"] == name and (opts.dist / name).is_file()
     root = opts.dist.parent
@@ -230,6 +233,18 @@ def test_checksums_and_finish(tmp_path, releng, monkeypatch):
                    capture_output=True)
     meta = json.loads((root / "metadata" / f"{Path(name).stem}.json").read_text())
     assert meta["live_packages"] == 2 and meta["sha256"] == sha[0]
+
+
+def test_finish_refuses_a_file_too_big_for_fat32(tmp_path, releng, monkeypatch):
+    b = load_branding()
+    opts = iso.Options(build=tmp_path / "build", dist=tmp_path / "out" / "dist", releng=releng)
+    opts.out.mkdir(parents=True)
+    (opts.out / "whatever.iso").write_bytes(b"iso9660")
+    monkeypatch.setattr(iso, "iso_files", lambda path: {"/arch/x86_64/airootfs.sfs": 2**32})
+    from distrokit import util
+
+    with pytest.raises(SystemExit, match="airootfs.sfs .* FAT32"):
+        iso.finish(opts, b, 1790393700, util.Runner(dry_run=True))
 
 
 def test_mounts_left_under_the_build_directory(tmp_path):
