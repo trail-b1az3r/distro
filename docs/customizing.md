@@ -25,7 +25,7 @@ DISTRO_REPO_SERVER="https://github.com/you/aurora/releases/download/repo"
 
 Then rebuild: `./build.sh`. The logo, icons, wallpapers, boot splash, GRUB,
 SDDM and syslinux themes, fastfetch logo, os-release, pacman hooks, polkit
-policy, completions, man page and every string in the apps follow. The logo
+policy, completions, man page, the website (`site/`) and every string in the apps follow. The logo
 itself is `branding/logo/logo-mark.svg.in` (an SVG template using the
 `@BRAND_*@` colours: a faceted gem with the initial cut through it and three
 sparks); replace it with your own mark. `make test` checks that a

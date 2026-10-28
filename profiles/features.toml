@@ -34,7 +34,7 @@ kind = "bool"
 group = "Applications"
 order = 40
 label = "KDE Plasma fallback session"
-description = "A second, conventional desktop you can pick at the login screen. Works on X11 and Wayland."
+description = "A second, conventional desktop you can pick at the login screen (Wayland; X11 apps run through XWayland)."
 lists = ["plasma-fallback"]
 
 [dev_basic]

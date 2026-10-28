@@ -1,0 +1,280 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/jetbrains-mono";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-line: var(--line);
+  --color-band: var(--band);
+  --color-band-2: var(--band-2);
+  --color-band-ink: var(--band-ink);
+  --color-band-soft: var(--band-soft);
+  --color-teal: var(--teal);
+  --color-violet: var(--violet);
+}
+
+/* Paper and ink, a violet band, teal for actions: distro.conf's colours,
+   toned for a page you read rather than a screen you boot. */
+:root,
+.light,
+[data-theme="light"] {
+  --paper: #f8f6f1;
+  --paper-2: #efebe3;
+  --ink: #2b2d4f;
+  --line: #ddd7cc;
+  --band: #4a3fb4;
+  --band-2: #3a3093;
+  --band-ink: #ffffff;
+  --band-soft: #cbc4ff;
+  --teal: #1f8a81;
+  --violet: #5a4bd1;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --surface: #fdfcf9;
+  --surface-secondary: var(--paper-2);
+  --muted: #6b6d8a;
+  --border: var(--line);
+  --separator: var(--line);
+  --accent: var(--teal);
+  --accent-foreground: #ffffff;
+  --accent-hover: #19776f;
+  --focus: var(--teal);
+  --link: var(--ink);
+  --radius: 3px;
+  --field-radius: 3px;
+  --code-bg: #24264a;
+  --code-fg: #eceaf6;
+}
+
+.dark,
+[data-theme="dark"] {
+  --paper: #0e1020;
+  --paper-2: #13162a;
+  --ink: #e4e2f2;
+  --line: #262a45;
+  --band: #2c2580;
+  --band-2: #211b66;
+  --band-ink: #ffffff;
+  --band-soft: #b5adff;
+  --teal: #2fb3a6;
+  --violet: #a79dff;
+
+  --surface: #15182c;
+  --overlay: #15182c;
+  --muted: #9396b4;
+  --default: #1c2036;
+  --default-foreground: var(--ink);
+  --accent: var(--teal);
+  --accent-foreground: #06201d;
+  --accent-hover: #3cc6b8;
+  --code-bg: #090b16;
+  --code-fg: #e4e2f2;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 1.5rem;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--band);
+  color: var(--band-ink);
+}
+
+/* Underlined text links with an arrow (Omarchy-style). */
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 4px;
+}
+.text-link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* Flat buttons with a mono label. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 3px;
+  padding: 0.55rem 0.95rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.2;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--teal);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--teal) 86%, black);
+}
+.btn-outline {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+.btn-outline:hover {
+  border-color: color-mix(in srgb, var(--ink) 40%, var(--line));
+}
+.btn-band {
+  background: var(--band-soft);
+  color: var(--band-2);
+  font-weight: 500;
+}
+.btn-band:hover {
+  background: #fff;
+}
+
+.box {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Documentation pages rendered from docs/*.md. */
+.prose {
+  font-family: var(--font-sans);
+  line-height: 1.7;
+  font-size: 1rem;
+}
+/* The page title is in the band above. */
+.prose > h1:first-child {
+  display: none;
+}
+.prose h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--violet);
+  margin: 0 0 1.2rem;
+}
+.prose h2 {
+  font-size: 1.45rem;
+  font-weight: 650;
+  color: var(--violet);
+  margin: 2.4rem 0 0.8rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+}
+.prose h3 {
+  font-size: 1.12rem;
+  font-weight: 650;
+  margin: 1.8rem 0 0.6rem;
+}
+.prose p,
+.prose ul,
+.prose ol,
+.prose table,
+.prose pre,
+.prose blockquote {
+  margin: 0 0 1rem;
+}
+.prose ul {
+  list-style: disc;
+  padding-left: 1.4rem;
+}
+.prose ol {
+  list-style: decimal;
+  padding-left: 1.4rem;
+}
+.prose li {
+  margin: 0.25rem 0;
+}
+.prose a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--teal) 70%, transparent);
+  text-underline-offset: 3px;
+}
+.prose a:hover {
+  color: var(--teal);
+}
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.84em;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+}
+.prose :not(pre) > code {
+  overflow-wrap: anywhere;
+}
+.prose pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border-radius: 3px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+.prose pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+.prose table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.prose th,
+.prose td {
+  border: 1px solid var(--line);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+.prose th {
+  background: var(--paper-2);
+  font-weight: 600;
+}
+.prose blockquote {
+  border-left: 3px solid var(--violet);
+  padding: 0.2rem 0 0.2rem 1rem;
+  color: var(--muted);
+}
+.prose img {
+  max-width: 100%;
+}
