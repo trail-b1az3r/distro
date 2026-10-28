@@ -175,6 +175,8 @@ def test_stage_core_layout_and_entry_point(tmp_path):
     policy = (tmp_path / f"usr/share/polkit-1/actions/org.{b.id}.privileged.policy").read_text()
     assert f"/usr/lib/{b.id}/bin/{b.id}-privileged" in policy and "auth_admin_keep" in policy
     assert (tmp_path / f"usr/lib/systemd/user/{b.id}-llm.service").is_file()
+    wifi = (tmp_path / f"usr/lib/NetworkManager/conf.d/50-{b.id}-mwifiex.conf").read_text()
+    assert "match-device=driver:mwifiex_pcie" in wifi and "wifi.powersave=2" in wifi
 
     # The staged CLI runs from the installed layout (code in /usr/lib/<id>,
     # data in /usr/share/<id>).

@@ -1,0 +1,14 @@
+# @DISTRO_PRETTY_NAME@ live ISO, UEFI: GRUB starts here once it has found the
+# ISO's file system (by its UUID file, also on a USB stick made by copying the
+# ISO's files to a FAT32, exFAT or NTFS partition). The menu is in menu.cfg.
+insmod part_gpt
+insmod part_msdos
+insmod fat
+insmod iso9660
+insmod ntfs
+insmod ntfscomp
+insmod exfat
+insmod udf
+
+set archiso_params="archisobasedir=%INSTALL_DIR% archisosearchuuid=%ARCHISO_UUID%"
+source /boot/grub/menu.cfg

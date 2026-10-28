@@ -122,3 +122,20 @@ def test_branding_rejects_bad_values(tmp_path, bad):
     p.write_text("\n".join(lines))
     with pytest.raises(branding.BrandingError):
         branding.load_file(p)
+
+
+def test_surface_pro5_named_and_wifi_firmware_without_surface_kernel(machine):
+    _, r = machine("surface_pro5")
+    info = surface.detect(r)
+    # The 2017 Surface Pro reports itself as plain "Surface Pro": its SKU names it.
+    assert info.detected and info.model == "Surface Pro (5th Gen)"
+    assert "Surface Pro (5th Gen)" in info.message
+    assert info.needs_marvell_firmware and info.secure_boot is True
+    assert "linux-firmware-marvell" in surface.plan(info, enabled=True).packages
+    # Its Marvell Wi-Fi needs firmware Arch's linux-firmware no longer pulls in,
+    # with or without the Surface kernel.
+    wifi = [a for a in r.network if a.kind == "wifi"]
+    assert wifi and wifi[0].driver == "mwifiex_pcie" and wifi[0].extra_packages == ["linux-firmware-marvell"]
+    assert r.has_touchpad and r.displays[0].hidpi
+    assert dict(r.summary_rows())["Surface"] == "Microsoft Surface Pro (5th Gen)"
+    assert r.displays[0].recommended_scale == 2

@@ -43,6 +43,8 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
 | `--archive-date YYYY/MM/DD` | install Arch packages from that day's Arch Linux Archive snapshot |
 | `--config FILE` | settings from a file ([example](../iso/build.env.example)) |
 | `--dry-run` | print the build commands without running them (works on any Linux) |
+| `--publish` | after a successful build, publish it: a GitHub release with the ISO, its checksums and metadata, a tag on the commit it was built from, and the package repository (see [release-process.md](release-process.md#from-your-own-build)) |
+| `--tag vYYYY.MM[.N]` | the tag to publish as (implies `--publish`; default `v<version>`, or the next free `v<version>.N`) |
 
 ## What happens
 
@@ -68,13 +70,19 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
    Pinned commits are fetched from the AUR, or from Arch Linux's GitHub mirror
    of it (`AUR_GIT_MIRROR`, the same commits) when the AUR's git service fails;
    a commit fetched once is reused from `build/packages/aur` without the network.
-3. **Offline repository** (`build/offline-repo`): see `--offline`.
+3. **Offline repository** (`build/offline-repo`): see `--offline`. makepkg's
+   `-debug` packages stay out of it (they remain in `build/repo`).
 4. **archiso profile** (`build/iso-profile`): archiso's `releng` profile with
    `iso/` laid over it — branded boot menus, the live session, NetworkManager
    instead of systemd-networkd, no root autologin or SSH, the package list
    (`base`, `desktop`, `browser`, `live` lists), pacman configurations, build
    information.
+   UEFI machines boot it with GRUB (`iso/grub`, themed), BIOS machines with
+   syslinux.
 5. **mkarchiso**, then the ISO, checksums and metadata are moved into place.
+   The build fails if any file on the ISO is over 4 GiB: such an ISO could only
+   be written as an image, not with tools that copy its files to a FAT32 stick
+   (Rufus's default mode). The largest file's size is in the metadata.
 
 Build the repository alone with `scripts/build-packages.sh` (`--plan` shows
 the order without building).
@@ -124,6 +132,7 @@ qemu-system-x86_64 -enable-kvm -m 4G -smp 2 -cdrom dist/*.iso \
 | `Not found anywhere: X` | a package in `packages/lists` does not exist (renamed or removed upstream): fix the list |
 | an AUR package fails to build | pin an older commit in `aur.lock.json` or remove it from the lists; see `build/packages/src/<pkg>` |
 | `could not fetch the AUR package X` | both the AUR and its mirror failed; the message shows git's error for each. Check the network and [status.archlinux.org](https://status.archlinux.org), then build again. "Commit … is gone": run `scripts/build-packages.sh --update-lock` |
+| `… exceeds FAT32's 4 GiB file size limit` | the live system's image (`airootfs.sfs`, which also carries the offline repository) grew past 4 GiB: drop packages from `packages/lists/live.list` or the distribution repository, or build with `--offline minimal` |
 | `No space left on device` | free space or point `--build-dir` elsewhere; `--clean` removes old work directories |
 | mkarchiso: `umount: …/airootfs/proc: target is busy`, then `find: …/proc/…: Invalid argument` | something on the host (a file indexer, say) held the live system's `/proc`. mkarchiso now runs in a mount namespace of its own, and the next build unmounts whatever an earlier one left mounted under `build/` |
 | mkarchiso: `must be run as root` | `sudo ./build.sh`, or `--container` |

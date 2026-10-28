@@ -2,18 +2,27 @@
 <!-- @DISTRO_NAME@ logo with wordmark. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="256" viewBox="0 0 880 256">
   <defs>
-    <linearGradient id="g" x1="36" y1="220" x2="220" y2="36" gradientUnits="userSpaceOnUse">
+    <linearGradient id="gem" x1="30" y1="230" x2="214" y2="46" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="@BRAND_ACCENT@"/>
       <stop offset="1" stop-color="@BRAND_ACCENT_2@"/>
     </linearGradient>
-    <linearGradient id="ring" x1="20" y1="236" x2="236" y2="20" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="@BRAND_ACCENT@" stop-opacity="0.95"/>
-      <stop offset="0.6" stop-color="@BRAND_ACCENT_2@" stop-opacity="0.75"/>
-      <stop offset="1" stop-color="@BRAND_ACCENT_2@" stop-opacity="0.2"/>
+    <linearGradient id="facet" x1="120" y1="42" x2="120" y2="234" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M 86 176 L 86 100 L 154 176 L 154 100" fill="none" stroke="#000" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
   </defs>
-  <path d="M 190.2 48.9 A 104 104 0 1 0 207.1 66.8" fill="none" stroke="url(#ring)" stroke-width="12" stroke-linecap="round"/>
-  <path d="M 84 178 L 84 82 L 172 174 L 172 78" fill="none" stroke="url(#g)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="200" cy="56" r="13" fill="@BRAND_ACCENT_2@"/>
-  <text x="270" y="162" font-family="Inter, Rubik, Noto Sans, DejaVu Sans, sans-serif" font-size="112" font-weight="700" letter-spacing="2" fill="@BRAND_FG@">@DISTRO_NAME@</text>
+  <!-- The gem with its lit top facet; the N is cut out of it (transparent). -->
+  <g mask="url(#cut)">
+    <path d="M 120 42 L 203 90 L 203 186 L 120 234 L 37 186 L 37 90 Z" fill="url(#gem)" stroke="url(#gem)" stroke-width="24" stroke-linejoin="round"/>
+    <path d="M 120 42 L 203 90 L 120 138 L 37 90 Z" fill="url(#facet)"/>
+  </g>
+  <!-- Three sparks trailing off the top corner. -->
+  <circle cx="214" cy="46" r="13" fill="@BRAND_ACCENT_2@"/>
+  <circle cx="237" cy="23" r="8" fill="@BRAND_ACCENT_2@" fill-opacity="0.75"/>
+  <circle cx="250" cy="9" r="4.5" fill="@BRAND_ACCENT_2@" fill-opacity="0.5"/>
+  <text x="290" y="168" font-family="Inter, Rubik, Noto Sans, DejaVu Sans, sans-serif" font-size="112" font-weight="700" letter-spacing="2" fill="@BRAND_FG@">@DISTRO_NAME@</text>
 </svg>

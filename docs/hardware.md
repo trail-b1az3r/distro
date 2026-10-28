@@ -37,7 +37,7 @@ Recommended Configuration
 | Memory | RAM and swap |
 | Storage | disks, transport (NVMe, SATA, USB, virtio), SSD/HDD, partitions and free space, existing operating systems; the live USB stick is never offered as a target |
 | Chassis | laptop / desktop / tablet / convertible (DMI chassis type, battery, lid) |
-| Displays | connectors, EDID (name, size in mm, resolution), internal vs external, and a scale for HiDPI screens that Hyprland accepts exactly |
+| Displays | connectors, EDID (name, size in mm, resolution), internal vs external, and a scale for HiDPI screens that Hyprland accepts exactly and that leaves a desktop of at least 1280 × 720 |
 | Wi-Fi, Bluetooth, Ethernet | adapters and drivers, extra firmware where needed (e.g. Broadcom, Marvell) |
 | Input | keyboards, touchpads, touchscreens, pens/styluses (udev properties, with a `/proc/bus/input` fallback) |
 | Firmware | UEFI or BIOS, Secure Boot and Setup Mode |

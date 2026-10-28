@@ -441,9 +441,9 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
 # the way a machine starts it from a USB stick or a DVD (the installation
 # scenarios above boot its kernel directly).
 LIVE = {
-    "live-uefi-usb": {"description": "the ISO as a USB stick on UEFI: firmware, the ISO's systemd-boot, live system",
+    "live-uefi-usb": {"description": "the ISO as a USB stick on UEFI: firmware, the ISO's GRUB, live system",
                       "firmware": "uefi", "media": "usb"},
-    "live-uefi-cdrom": {"description": "the ISO as a DVD on UEFI: El Torito, the ISO's systemd-boot, live system",
+    "live-uefi-cdrom": {"description": "the ISO as a DVD on UEFI: El Torito, the ISO's GRUB, live system",
                         "firmware": "uefi", "media": "cdrom"},
 }
 
@@ -463,8 +463,9 @@ def run_live_boot(name: str, scn: dict, iso: Path, out: Path, timeout_min: float
     else:
         media = ["-drive", f"file={iso},format=raw,media=cdrom,readonly=on,if=none,id=dvd",
                  "-device", "ide-cd,drive=dvd,bus=ide.2,bootindex=0"]
-    # systemd-boot appends this SMBIOS string to its entries' command line
-    # (not with Secure Boot): the live system's console on the serial port.
+    # The ISO's GRUB menu (iso/grub/menu.cfg) appends this SMBIOS string to its
+    # entries' command line, as systemd-boot does: the live system's console on
+    # the serial port.
     serial_console = ["-smbios", "type=11,value=io.systemd.boot.kernel-cmdline-extra=console=tty0 console=ttyS0,,115200"]
     serial = out / "serial.sock"
     serial.unlink(missing_ok=True)

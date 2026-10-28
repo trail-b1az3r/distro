@@ -27,3 +27,7 @@ cage
 mkinitcpio-nfs-utils
 nbd
 terminus-font
+# Wi-Fi firmware outside Arch's linux-firmware set: Marvell (mwifiex) in Surface
+# Pro 3-6, Surface Book/Laptop 1-2 and others. Without it there is no Wi-Fi in
+# the live system, and the installer needs the internet.
+linux-firmware-marvell

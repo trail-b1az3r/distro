@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import re
+import tomllib
 from dataclasses import asdict, dataclass, field
 
-from .. import util
+from .. import paths, util
 from .sysroot import SysRoot
 
 # ---------------------------------------------------------------------------
@@ -173,6 +174,7 @@ class ChassisInfo:
     has_lid: bool
     surface: bool
     surface_model: str
+    product_sku: str = ""
 
     @property
     def portable(self) -> bool:
@@ -196,6 +198,16 @@ class ChassisInfo:
 _SURFACE_ACPI_PREFIX = "MSHW"
 
 
+def _surface_model_names() -> dict[str, str]:
+    """Surface models whose product name is ambiguous, by product SKU
+    (hardware/surface/surface.toml: the 2017 Surface Pro says "Surface Pro")."""
+    try:
+        with paths.data("hardware", "surface", "surface.toml").open("rb") as fh:
+            return tomllib.load(fh).get("models", {})
+    except (OSError, tomllib.TOMLDecodeError):
+        return {}
+
+
 def detect_chassis(sysroot: SysRoot, virtual: bool = False) -> ChassisInfo:
     dmi = "/sys/class/dmi/id"
 
@@ -217,7 +229,7 @@ def detect_chassis(sysroot: SysRoot, virtual: bool = False) -> ChassisInfo:
     surface_model = ""
     if "microsoft" in vendor.lower() and ("surface" in product.lower() or "surface" in family.lower()):
         surface = True
-        surface_model = product or family
+        surface_model = _surface_model_names().get(r("product_sku")) or product or family
     elif any(dev.startswith(_SURFACE_ACPI_PREFIX) for dev in sysroot.listdir("/sys/bus/acpi/devices")):
         # Surface-specific ACPI devices (MSHWxxxx) without matching DMI strings,
         # e.g. boards with replaced firmware tables.
@@ -244,6 +256,7 @@ def detect_chassis(sysroot: SysRoot, virtual: bool = False) -> ChassisInfo:
         has_lid=has_lid,
         surface=surface,
         surface_model=surface_model,
+        product_sku=r("product_sku"),
     )
 
 

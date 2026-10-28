@@ -32,6 +32,15 @@ from .. import paths, util
 from ..branding import Branding, load as load_branding
 
 MISC_EXCLUDE = {"quickshell", "fish", "hypr", "fontconfig"}
+# Halcyon's own updater pulls the dots repository into the home directory. Here
+# the desktop is pinned and updated with the distribution's packages, so its
+# units are not deployed (Hyprland's attempt to enable the timer then does
+# nothing).
+NOT_DEPLOYED = {".config/systemd/user/halcyon-update.service", ".config/systemd/user/halcyon-update.timer"}
+# User timers upstream's installer enables (sdata/subcmd-install/6.auto-theme.sh).
+USER_TIMERS = ("halcyon-auto-theme.timer",)
+# Upstream's icon was renamed with Halcyon 2.0; the old name is kept for older pins.
+SHARED_ICONS = ("halcyon.svg", "halcyon-hyper.svg", "illogical-impulse.svg")
 ENTRY_ANCHOR = 'require("hyprland.halcyon")'
 
 
@@ -119,6 +128,8 @@ class Deployer:
 
     def _install(self, src: Path, target: Path, *, content: bytes | None = None, overwrite: bool = True) -> None:
         rel = self._rel(target)
+        if rel in NOT_DEPLOYED:
+            return
         if content is None and rel in self._overrides:
             src = self._overrides[rel]
         data = content if content is not None else src.read_bytes()
@@ -232,9 +243,14 @@ class Deployer:
         self._install(layer_src, hypr / self.branding.id / "init.lua",
                       content=self.branding.render(layer_src.read_text()).encode())
 
-        icon = self.dots / "dots" / ".local" / "share" / "icons" / "illogical-impulse.svg"
-        if icon.exists():
-            self._install(icon, self.home / ".local" / "share" / "icons" / "illogical-impulse.svg")
+        icons_src = self.dots / "dots" / ".local" / "share" / "icons"
+        icons = self.home / ".local" / "share" / "icons"
+        for name in SHARED_ICONS:
+            if (icons_src / name).is_file():
+                self._install(icons_src / name, icons / name)
+        # Halcyon Glass cursors (XCursor and hyprcursor; the aliases are symlinks).
+        if (icons_src / "Halcyon-Glass").is_dir():
+            self._sync_dir(icons_src / "Halcyon-Glass", icons / "Halcyon-Glass")
 
         # Wallpapers into the folder the wallpaper picker opens; the
         # distribution's own wallpaper becomes the first-run default.
@@ -259,6 +275,13 @@ class Deployer:
         link = wants / "ydotool.service"
         if not link.exists() and not link.is_symlink():
             os.symlink("/usr/lib/systemd/user/ydotool.service", link)
+        timers = self.config / "systemd" / "user" / "timers.target.wants"
+        for timer in USER_TIMERS:
+            unit = self.config / "systemd" / "user" / timer
+            link = timers / timer
+            if unit.is_file() and not link.exists() and not link.is_symlink():
+                timers.mkdir(parents=True, exist_ok=True)
+                os.symlink(f"{self.visible_home}/.config/systemd/user/{timer}", link)
 
         if settings is not None and (first or not custom_exists):
             self.write_user_settings(settings)
@@ -365,8 +388,10 @@ def _lua_str(value: str) -> str:
 
 
 def default_apps(installed: set[str], editor_command: str = "") -> dict[str, str]:
-    """Keybind applications, only for what is actually installed."""
-    apps = {"terminal": "konsole", "fileManager": "dolphin"}
+    """Keybind applications, only for what is actually installed. The file
+    manager is left to upstream, which opens the first one installed (Loaf,
+    then Dolphin, ...)."""
+    apps = {"terminal": "konsole"}
     if "firefox" in installed:
         apps["browser"] = "firefox"
     if editor_command:

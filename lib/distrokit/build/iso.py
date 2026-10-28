@@ -53,7 +53,7 @@ LIVE_EXTRA = ["linux", "amd-ucode", "intel-ucode"]
 # (NetworkManager manages the network here), sshd with an empty root
 # password, and the speech/sound helpers of packages that are not installed.
 RELENG_REMOVE = [
-    "efiboot/loader/entries",
+    "efiboot",  # systemd-boot's; the ISO boots UEFI machines with GRUB (iso/grub)
     "grub",
     "syslinux",
     "packages.x86_64",
@@ -93,6 +93,11 @@ RELENG_REMOVE = [
     "airootfs/usr/local/share/livecd-sound",
     "airootfs/usr/local/bin/Installation_guide",
 ]
+
+# The largest file a FAT32 file system holds. USB writers that copy the ISO's
+# files instead of its image (Rufus's default "ISO mode", Windows' own copy,
+# some multiboot tools) need every file to fit.
+FAT32_MAX_FILE = 2**32 - 1
 
 SQUASHFS = {
     "release": "'-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M'",
@@ -189,7 +194,7 @@ def offline_sets(b: Branding, profile_id: str, multilib: bool = True) -> list[li
     for extra in ("grub", "laptop", "intel-laptop", "snapshots", "firewall", "virt-qemu", "virt-virtualbox",
                   "virt-vmware", "virt-hyperv"):
         base += read_list(extra, b)
-    base += ["linux", "linux-headers", "amd-ucode", "intel-ucode", "sbctl", "zram-generator"]
+    base += ["linux", "linux-headers", "amd-ucode", "intel-ucode", "sbctl", "zram-generator", "linux-firmware-marvell"]
     with (root / "ai" / "runtime" / "llama-server.toml").open("rb") as fh:
         llama = tomllib.load(fh)["packages"]
     base += [llama["vulkan"], llama["cpu"]]
@@ -323,9 +328,14 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
     render_tree(src / "iso", prof, b, extra)
     (prof / "sources.conf").unlink(missing_ok=True)
 
-    splash = src / "branding" / "generated" / "syslinux" / "splash.png"
+    generated = src / "branding" / "generated"
+    splash = generated / "syslinux" / "splash.png"
     if splash.is_file():
         shutil.copyfile(splash, prof / "syslinux" / "splash.png")
+    # The boot menu theme, in /boot/grub/themes/<id> on the ISO (mkarchiso
+    # copies everything in grub/ but the .cfg files there).
+    if (generated / "grub" / "theme.txt").is_file():
+        shutil.copytree(generated / "grub", prof / "grub" / "themes" / b.id, dirs_exist_ok=True)
 
     (prof / "packages.x86_64").write_text(
         f"# {b.pretty_name} live system, generated from packages/lists/{{{','.join(LIVE_LISTS)}}}.list\n"
@@ -378,13 +388,19 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
 # ---------------------------------------------------------------------------
 
 
+DEBUG_PACKAGE = re.compile(r"-debug-[^-]+-[^-]+-[^-]+\.pkg\.tar\.")
+
+
 def offline_repository(opts: Options, b: Branding, runner: util.Runner, conf: Path) -> Path:
-    """Fill ``opts.offline_repo`` and index it as ``<repo>-offline``."""
+    """Fill ``opts.offline_repo`` and index it as ``<repo>-offline``. The
+    debug symbol packages makepkg splits off stay in the distribution
+    repository: nothing installs them from the ISO."""
     out = opts.offline_repo
     _remove(out)
     out.mkdir(parents=True)
     for f in sorted(opts.repo.glob("*.pkg.tar.*")):
-        shutil.copyfile(f, out / f.name)
+        if not DEBUG_PACKAGE.search(f.name):
+            shutil.copyfile(f, out / f.name)
     if opts.offline == "full":
         db = opts.build / "offline-db"
         _remove(db)
@@ -419,6 +435,22 @@ def checksum_files(iso: Path, dest: Path) -> list[Path]:
     return out
 
 
+def iso_files(iso: Path) -> dict[str, int]:
+    """Path -> size of every file in an ISO 9660 image."""
+    out = subprocess.run(["xorriso", "-no_rc", "-indev", str(iso), "-find", "/", "-type", "f", "-exec", "lsdl", "--"],
+                         capture_output=True, text=True, check=True).stdout
+    files = {}
+    for line in out.splitlines():
+        m = re.match(r"^\S+\s+\d+\s+\S+\s+\S+\s+(\d+)\s+\w+\s+\d+\s+[\d:]+\s+'(.*)'$", line)
+        if m:
+            files[m.group(2)] = int(m.group(1))
+    return files
+
+
+def too_big_for_fat32(files: dict[str, int]) -> list[str]:
+    return sorted(f"{path} ({util.human_bytes(size)})" for path, size in files.items() if size > FAT32_MAX_FILE)
+
+
 def finish(opts: Options, b: Branding, epoch: int, runner: util.Runner) -> dict:
     """Move the ISO to dist/ and write checksums and metadata."""
     version = iso_version(b, epoch)
@@ -450,7 +482,15 @@ def finish(opts: Options, b: Branding, epoch: int, runner: util.Runner) -> dict:
     lock = paths.DATA_ROOT / pkgbuild.LOCK_FILE
     if lock.is_file():
         shutil.copyfile(lock, meta_dir / f"{iso.stem}.aur.lock.json")
+    files = iso_files(iso)
+    info["largest_file"] = max(files.values(), default=0)
     (meta_dir / f"{iso.stem}.json").write_text(json.dumps(info, indent=2) + "\n")
+    big = too_big_for_fat32(files)
+    if big:
+        raise SystemExit(f"{iso.name}: {', '.join(big)} exceeds FAT32's 4 GiB file size limit, so the ISO could "
+                         "only be written to a USB stick as an image (dd, Etcher, Rufus in DD mode), not with tools "
+                         "that copy its files. Make the live system smaller (packages/lists/live.list) or carry "
+                         "fewer packages offline.")
     return info
 
 

@@ -27,7 +27,8 @@ Then rebuild: `./build.sh`. The logo, icons, wallpapers, boot splash, GRUB,
 SDDM and syslinux themes, fastfetch logo, os-release, pacman hooks, polkit
 policy, completions, man page and every string in the apps follow. The logo
 itself is `branding/logo/logo-mark.svg.in` (an SVG template using the
-`@BRAND_*@` colours); replace it with your own mark. `make test` checks that a
+`@BRAND_*@` colours: a faceted gem with the initial cut through it and three
+sparks); replace it with your own mark. `make test` checks that a
 renamed configuration renders everywhere (`test_branding_rename`).
 
 `distro.conf` is validated: IDs must be lowercase `[a-z0-9-]`, colours
@@ -78,6 +79,9 @@ Data files, not code:
 
 ## The live ISO and boot menus
 
-`iso/`: `profiledef.sh.in`, `efiboot/` (systemd-boot), `syslinux/` (BIOS),
-`airootfs/` (files added to the live system). Files ending in `.in` and
+`iso/`: `profiledef.sh.in`, `grub/` (UEFI: `menu.cfg.in` holds the entries,
+`grub.cfg.in` and `loopback.cfg.in` load it), `syslinux/` (BIOS), `airootfs/`
+(files added to the live system). The UEFI menu's look is
+`branding/grub/theme.txt.in`, shared with GRUB on installed systems; its
+background, icons and highlight are drawn by `distrokit.build.branding`. Files ending in `.in` and
 `@TOKENS@` in paths are rendered from `distro.conf`.
