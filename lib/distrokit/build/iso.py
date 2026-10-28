@@ -447,6 +447,19 @@ def iso_files(iso: Path) -> dict[str, int]:
     return files
 
 
+def extract_from_iso(iso: Path, path: str, dest: Path) -> bool:
+    """Copy one file out of an ISO 9660 image (False if it cannot)."""
+    dest.unlink(missing_ok=True)
+    try:
+        subprocess.run(["xorriso", "-no_rc", "-osirrox", "on", "-indev", str(iso), "-extract", path, str(dest)],
+                       capture_output=True, check=True)
+    except (OSError, subprocess.CalledProcessError):
+        return False
+    if dest.is_file():
+        dest.chmod(0o644)  # xorriso keeps the ISO's read-only mode
+    return dest.is_file()
+
+
 def too_big_for_fat32(files: dict[str, int]) -> list[str]:
     return sorted(f"{path} ({util.human_bytes(size)})" for path, size in files.items() if size > FAT32_MAX_FILE)
 
@@ -472,10 +485,14 @@ def finish(opts: Options, b: Branding, epoch: int, runner: util.Runner) -> dict:
     info["iso"] = name
     info["size_bytes"] = iso.stat().st_size
     info["sha256"] = sums[0].read_text().split()[0]
+    packages = meta_dir / f"{iso.stem}.packages.txt"
     pkglist = next(opts.work.glob("iso/arch/pkglist.*.txt"), None) if opts.work.is_dir() else None
     if pkglist:
-        shutil.copyfile(pkglist, meta_dir / f"{iso.stem}.packages.txt")
-        info["live_packages"] = len(pkglist.read_text().splitlines())
+        shutil.copyfile(pkglist, packages)
+    else:  # mkarchiso -r removed the work directory: the list is on the ISO too
+        extract_from_iso(iso, "/arch/pkglist.x86_64.txt", packages)
+    if packages.is_file():
+        info["live_packages"] = len(packages.read_text().splitlines())
     offline = sorted(p.name for p in opts.offline_repo.glob("*.pkg.tar.*") if not p.name.endswith(".sig"))
     (meta_dir / f"{iso.stem}.offline-repo.txt").write_text("\n".join(offline) + "\n")
     info["offline_packages"] = len(offline)

@@ -235,6 +235,28 @@ def test_checksums_and_finish(tmp_path, releng, monkeypatch):
     assert meta["live_packages"] == 2 and meta["sha256"] == sha[0]
 
 
+def test_finish_reads_the_package_list_from_the_iso(tmp_path, releng, monkeypatch):
+    # mkarchiso -r removes its work directory, list and all: the ISO has a copy.
+    b = load_branding()
+    opts = iso.Options(build=tmp_path / "build", dist=tmp_path / "out" / "dist", releng=releng)
+    opts.out.mkdir(parents=True)
+    (opts.out / "whatever.iso").write_bytes(b"iso9660")
+    monkeypatch.setattr(iso, "iso_files", lambda path: {})
+    asked = []
+
+    def extract(path, inside, dest):
+        asked.append(inside)
+        dest.write_text("base 3-2\nlinux 6.16-1\nmesa 25.2-1\n")
+        return True
+
+    monkeypatch.setattr(iso, "extract_from_iso", extract)
+    from distrokit import util
+
+    info = iso.finish(opts, b, 1790393700, util.Runner(dry_run=True))
+    assert asked == ["/arch/pkglist.x86_64.txt"] and info["live_packages"] == 3
+    assert (opts.dist.parent / "metadata" / f"{b.name}-2026.09-x86_64.packages.txt").is_file()
+
+
 def test_finish_refuses_a_file_too_big_for_fat32(tmp_path, releng, monkeypatch):
     b = load_branding()
     opts = iso.Options(build=tmp_path / "build", dist=tmp_path / "out" / "dist", releng=releng)
