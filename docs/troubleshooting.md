@@ -14,7 +14,10 @@ sudo nexora repair         # repairs what the doctor found, after showing the pl
 | Symptom | Try |
 |---|---|
 | Writing the USB stick stops: "The last block was not fully written (-1 of 1,048,576 bytes)! Aborting." | That is KDE ISO Image Writer, not the image. Check the ISO's checksum and write it with `dd` or GNOME Disks ([installation](installation.md#1-write-the-iso-to-a-usb-stick)). |
-| Black screen after the boot menu | Boot the **diagnostic** entry (text boot, no splash). If that works, it is graphics: see below. |
+| The computer ignores the USB stick and starts Windows (or shows "Secure Boot violation") | Secure Boot is on: turn it off in the firmware ([installation](installation.md#2-boot-it); Surface: [surface.md](surface.md#starting-the-iso)). Also check the firmware allows booting from USB. |
+| The ISO's boot menu shows, then nothing happens for minutes | Older ISOs copied the whole live system into RAM by themselves from a USB stick. Use a current ISO, or press E on **live** and add `copytoram=n` to the `linux` line. |
+| Rufus or a copy of the ISO's files does not boot | Use a current ISO (older ones had a file too large for FAT32), or write it in Rufus's DD Image mode, with balenaEtcher or with `dd`. |
+| Black screen after the boot menu | Live ISO: the **safe graphics** entry. Installed system: boot the **diagnostic** entry (text boot, no splash). If that works, it is graphics: see below. |
 | "Please enter passphrase" does not appear | Press Esc to hide the splash; type the passphrase blind and Enter. |
 | Boot menu missing after a firmware update | From the live ISO: `sudo nexora rescue` (reinstalls the boot loader). |
 | Windows disappeared from the menu | systemd-boot: check the Windows boot manager is on the ESP. GRUB: `sudo nexora repair boot` (runs os-prober). |

@@ -28,24 +28,35 @@ Then write it. **This erases the USB stick.**
   GNOME Disks ("Restore Disk Image"). Avoid KDE ISO Image Writer: some of its
   versions stop with "The last block was not fully written (-1 of 1,048,576
   bytes)! Aborting." on images that other writers write without trouble.
-* Windows / macOS: [Rufus](https://rufus.ie) (DD mode) or [balenaEtcher](https://etcher.balena.io).
+* Windows / macOS: [Rufus](https://rufus.ie) (either mode: "ISO Image mode", its
+  default, or "DD Image mode") or [balenaEtcher](https://etcher.balena.io).
 * [Ventoy](https://www.ventoy.net) works too: copy the ISO onto the Ventoy stick.
+* Or by hand: copy every file of the ISO onto a stick with one FAT32 partition
+  (no file on the ISO is over FAT32's 4 GiB limit). This boots on UEFI only.
 
 ## 2. Boot it
 
 Choose the USB stick in your firmware's boot menu (often F12, F11, F8, Esc or
-Option on Macs). The boot menu offers:
+Option on Macs; on a Microsoft Surface hold Volume Down while pressing Power,
+see [surface.md](surface.md#starting-the-iso)). The boot menu offers:
 
 | Entry | Use it when |
 |---|---|
 | **live** | Normal start. |
-| **safe graphics** | The screen stays black or the desktop does not start (uses the firmware's display driver; the installer then runs on its own in a simple session). |
-| **copied to RAM** | You want to remove the USB stick after starting (needs 8 GB RAM or more). |
-| **Memory test** | You suspect faulty RAM. |
+| **safe graphics** (S) | The screen stays black or the desktop does not start (uses the firmware's display driver; the installer then runs on its own in a simple session). |
+| **copied to RAM** (R) | You want to remove the USB stick after starting (needs 8 GB RAM or more; copying takes a few minutes from a USB 2 stick). |
+| **Memory test** (M) | You suspect faulty RAM. |
+| **UEFI shell** | Firmware-level troubleshooting. |
+| **Firmware settings** (F) | Restart into the firmware's setup, e.g. to turn Secure Boot off. |
 
-**Secure Boot:** the ISO's boot loader is not signed by Microsoft. Turn Secure
-Boot off in the firmware to start the ISO. The installer can set up Secure
-Boot with your own keys afterwards (see below).
+On UEFI machines the menu is GRUB's, in the distribution's theme; legacy BIOS
+machines get the syslinux menu. Both wait 10 seconds before starting **live**.
+
+**Secure Boot:** the ISO's boot loader is not signed by Microsoft, so with
+Secure Boot on, the firmware refuses it: usually it skips the stick and starts
+Windows, or shows a "Secure Boot violation". Turn Secure Boot off in the
+firmware to start the ISO. The installer can set up Secure Boot with your own
+keys afterwards (see below).
 
 The live desktop starts and opens the installer. Log out to get a text login:
 user `liveuser`, no password (it has `sudo`).

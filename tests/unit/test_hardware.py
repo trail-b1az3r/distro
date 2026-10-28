@@ -30,6 +30,9 @@ def test_edid_roundtrip():
         (3840, 2160, 597, False, 1.666667),  # 27" 4K
         (1920, 1200, 301, True, 1.5),  # 14" laptop
         (2560, 1600, 302, True, 2.0),  # 14" 2.5K laptop
+        (2736, 1824, 260, True, 2.0),  # 12.3" Surface Pro 5: 2.4 would leave 1140 x 760
+        (3840, 2400, 286, True, 3.0),  # 13" 4K+ laptop
+        (1920, 1080, 256, True, 1.5),  # 11.6" 1080p: 1.75 would leave 1097 x 617
         (1280, 800, 0, False, 1.0),  # unknown physical size
     ],
 )

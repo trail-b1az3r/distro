@@ -137,3 +137,5 @@ def test_surface_pro5_named_and_wifi_firmware_without_surface_kernel(machine):
     wifi = [a for a in r.network if a.kind == "wifi"]
     assert wifi and wifi[0].driver == "mwifiex_pcie" and wifi[0].extra_packages == ["linux-firmware-marvell"]
     assert r.has_touchpad and r.displays[0].hidpi
+    assert dict(r.summary_rows())["Surface"] == "Microsoft Surface Pro (5th Gen)"
+    assert r.displays[0].recommended_scale == 2

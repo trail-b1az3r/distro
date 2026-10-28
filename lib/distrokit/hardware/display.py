@@ -51,6 +51,10 @@ def parse_edid(data: bytes) -> Edid | None:
 # Scales Hyprland accepts cleanly are those that divide the resolution into
 # whole logical pixels.
 _SCALES = (1.0, 1.25, 1.333333, 1.5, 1.6, 1.666667, 1.75, 2.0, 2.4, 2.5, 3.0)
+# The smallest desktop a scale may leave: below it the bar, the sidebars and
+# two windows side by side no longer fit (a 12.3" Surface Pro at 2.4 would be
+# 1140 x 760).
+_MIN_LOGICAL = (1280, 720)
 
 
 def recommend_scale(width: int, height: int, width_mm: int, internal: bool) -> float:
@@ -66,6 +70,8 @@ def recommend_scale(width: int, height: int, width_mm: int, internal: bool) -> f
     for scale in _SCALES:
         lw, lh = width / scale, height / scale
         if abs(lw - round(lw)) > 1e-3 or abs(lh - round(lh)) > 1e-3:
+            continue
+        if scale > 1.0 and (lw < _MIN_LOGICAL[0] - 1e-3 or lh < _MIN_LOGICAL[1] - 1e-3):
             continue
         err = abs(target - scale)
         if err < best_err - 1e-9:
