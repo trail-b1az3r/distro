@@ -1,0 +1,95 @@
+# The website (site/): built on every change to it, its documentation or its
+# branding, and published to GitHub Pages from main. Pages must be set to
+# deploy from GitHub Actions (Settings > Pages > Source); until it is, the
+# site is still built and checked, and publishing is skipped with a notice.
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - site/**
+      - docs/**
+      - cli/README.md
+      - CONTRIBUTING.md
+      - distro.conf
+      - branding/logo/**
+      - desktop/dots
+      - .gitmodules
+      - .github/workflows/pages.yml
+  pull_request:
+    paths:
+      - site/**
+      - docs/**
+      - cli/README.md
+      - CONTRIBUTING.md
+      - distro.conf
+      - branding/logo/**
+      - desktop/dots
+      - .gitmodules
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    outputs:
+      publish: ${{ steps.pages.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true  # the desktop screenshots come from desktop/dots
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: GitHub Pages settings
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base="/${GITHUB_REPOSITORY#*/}/"
+          publish=false
+          if info="$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '[.build_type, (.cname // "")] | @tsv' 2>/dev/null)"; then
+            IFS=$'\t' read -r build_type cname <<<"$info"
+            [[ -n "$cname" ]] && base="/"
+            [[ "$build_type" == workflow ]] && publish=true
+          fi
+          if [[ "$publish" != true && "$GITHUB_EVENT_NAME" != pull_request ]]; then
+            echo "::notice::GitHub Pages is not set to deploy from GitHub Actions (Settings > Pages > Source), so the site is built but not published."
+          fi
+          [[ "$GITHUB_EVENT_NAME" == pull_request ]] && publish=false
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+      - name: Build
+        working-directory: site
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base }}
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.pages.outputs.publish == 'true'
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

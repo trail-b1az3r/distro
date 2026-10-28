@@ -81,6 +81,7 @@ hardware/          detection tables (GPU families, VRAM), GPU driver stacks, Sur
 desktop/           dots submodule (upstream desktop) + overlay (distribution layer)
 ai/                HyperNix, Hermis, OpenClaw, Claude Code specs; model catalogue; model server
 branding/          logo and icon sources, boot/login/terminal themes (artwork is generated)
+site/              the website (GitHub Pages): Vite + React + HeroUI, built from distro.conf and docs/
 profiles/          Minimal / Standard / Developer / AI and the feature switches
 scripts/           bootstrap, package builds, checks, repository publishing
 tests/             unit, GUI, loop-device integration and QEMU install tests
