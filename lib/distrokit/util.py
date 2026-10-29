@@ -140,7 +140,10 @@ class Runner:
         stream: bool = True,
         mutating: bool = True,
         secret_input: bool = False,
+        terminal: bool = False,
     ) -> Result:
+        """``terminal``: the command gets this terminal (its questions reach
+        the user, its output is not captured), for interactive pacman and yay."""
         cmd = [str(c) for c in cmd]
         shown = shlex.join(cmd)
         self._emit(f"$ {shown}")
@@ -160,6 +163,11 @@ class Runner:
             if check:
                 raise CommandError(cmd, 127, message)
             return Result(cmd, 127, "", message)
+        if terminal:
+            rc = subprocess.run(cmd, cwd=cwd, env=full_env).returncode
+            if check and rc != 0:
+                raise CommandError(cmd, rc, f"{cmd[0]} exited with status {rc}")
+            return Result(cmd, rc, "", "")
         if capture or not stream:
             proc = subprocess.run(
                 cmd,

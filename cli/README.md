@@ -25,6 +25,7 @@ themselves through `sudo`.
 | `nexora model list\|recommend\|installed\|info\|install\|add\|remove\|default\|serve` | Local models (see [docs/models.md](../docs/models.md)) |
 | `nexora doctor` | Diagnose problems; each finding comes with a fix |
 | `nexora repair [auto\|packages\|boot\|all]` | Repair what the doctor found |
+| `nexora repo [status\|on\|off\|auto]` | The `[nexora]` package repository in `/etc/pacman.conf`: `off` while it is not published (pacman cannot sync with it on), `auto` to match whether it is |
 | `nexora repair-gpu [--safe]` | Re-detect GPUs and reinstall drivers (`--safe`: open-source drivers) |
 | `nexora reset-desktop` | Restore the default desktop configuration; yours is backed up first |
 | `nexora rescue` | From the live ISO: mount an installed system (unlocking it) and repair it |
