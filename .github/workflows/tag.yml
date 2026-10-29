@@ -10,6 +10,9 @@ on:
       tag:
         description: "Tag to create, e.g. v26.10.0.1.1"
         required: true
+      commit:
+        description: "Commit to tag (default: the head of the branch chosen above)"
+        required: false
 
 permissions:
   contents: write
@@ -22,8 +25,13 @@ jobs:
       - name: Create and push the tag
         env:
           TAG: ${{ inputs.tag }}
+          COMMIT: ${{ inputs.commit }}
         run: |
           [[ "$TAG" == v* ]] || TAG="v$TAG"
+          if [[ -n "$COMMIT" ]]; then
+            git fetch --depth=1 origin "$COMMIT"
+            git checkout -q FETCH_HEAD
+          fi
           if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
             echo "::error::$TAG already exists"; exit 1
           fi
