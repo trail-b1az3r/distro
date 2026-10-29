@@ -474,6 +474,17 @@ def test_builder_builds_in_the_chroot(tmp_path):
     assert makepkg[makepkg.index("sh") + 3] == str(builder.workdir / "src" / "wlogout")  # its working directory
     assert f"GNUPGHOME={builder.gnupg}" in makepkg and "--nocheck" in makepkg and "--syncdeps" not in makepkg
     assert not any(c[0] in ("pacman", "sudo") for c in cmds)  # nothing on the host
+    assert f"SRCDEST={builder.workdir / 'sources'}" in makepkg  # downloads shared between builds
+
+    # makepkg runs verify() in the PKGBUILD's directory, where it opens the
+    # downloads (python315: cosign verify-blob ./Python-*.tar.xz).
+    signed = tmp_path / "aur" / "python315"
+    signed.mkdir()
+    (signed / "PKGBUILD").write_text("pkgname=python315\nverify() {\n  cosign verify-blob ./x.tar.xz\n}\n")
+    runner.recorded.clear()
+    builder.build(Node("python315", "aur", SrcInfo("python315", ["python315"]), path=str(signed)))
+    makepkg = [_inside(c) for c in runner.recorded if c[0] == "unshare"][-1]
+    assert f"SRCDEST={builder.workdir / 'src' / 'python315'}" in makepkg
 
     local = SrcInfo("demo", ["demo"], depends=["python"], checkdepends=["python-pytest"])
     (tmp_path / "demo").mkdir()
