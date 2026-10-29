@@ -181,7 +181,7 @@ if sys.version_info < (3, 11):
 missing = [pkg for mod, pkg in (("PIL", "pillow"), ("numpy", "numpy")) if importlib.util.find_spec(mod) is None]
 if missing:
     sys.exit(f"build.sh: --py: {sys.argv[1]} cannot import {', '.join(missing)}: "
-             f"{sys.argv[1]} -m pip install --user {' '.join(missing)}")
+             f"{sys.argv[1]} -m pip install --user --break-system-packages {' '.join(missing)}")
 PY
     BUILD_PYTHON="$py" BUILD_PYTHON_CHECKED=1
     export BUILD_PYTHON BUILD_PYTHONPATH BUILD_PYTHON_CHECKED
