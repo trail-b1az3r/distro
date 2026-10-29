@@ -25,7 +25,9 @@ xorg-xwayland
 qt6-wayland
 qt5-wayland
 
-# Default terminal and file manager, with thumbnails and remote folders
+# Default terminal and file manager, with thumbnails and remote folders. Halcyon 2.0.3 and later open
+# Alacritty (its Ctrl+C always interrupts); Konsole stays for KDE's parts.
+alacritty
 konsole
 dolphin
 kio-extras

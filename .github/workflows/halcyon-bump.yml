@@ -1,0 +1,121 @@
+# Keeps the desktop current: when trail-b1az3r/dots publishes a new Halcyon release, move the desktop/dots
+# submodule to it, check the distribution still builds its desktop from it, and open a pull request. Merging that
+# pull request and releasing ships it to installed systems (`<cli> auto-update`, docs/packages.md).
+#
+# Runs weekly and by hand (Actions > Halcyon update > Run workflow, optionally with a tag such as v2.0.3).
+# Nothing is merged automatically: a new desktop is reviewed like any other change.
+name: Halcyon update
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "dots release tag to move to (empty: the latest release)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: halcyon-bump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Which release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WANTED: ${{ inputs.tag }}
+        run: |
+          tag="${WANTED:-$(gh api repos/trail-b1az3r/dots/releases/latest --jq .tag_name)}"
+          [ -n "$tag" ] || { echo "No dots release found."; exit 1; }
+          git -C desktop/dots fetch --depth 1 origin "refs/tags/$tag:refs/tags/$tag"
+          new="$(git -C desktop/dots rev-parse "$tag^{commit}")"
+          old="$(git -C desktop/dots rev-parse HEAD)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ "$new" = "$old" ]; then
+            echo "desktop/dots is already at $tag."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Already proposed?
+        id: open
+        if: steps.release.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          branch="auto/halcyon-$TAG"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+            echo "Branch $branch already exists: nothing new to propose."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Move the submodule and the README pin
+        if: steps.release.outputs.changed == 'true' && steps.open.outputs.skip != 'true'
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          git -C desktop/dots checkout -q "$TAG"
+          version="$(head -n1 desktop/dots/VERSION | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          codename="$(head -n1 desktop/dots/CODENAME 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          pin="Halcyon $version${codename:+ \"$codename\"}"
+          sed -i -E "s/\(pinned: Halcyon [^)]*\)/(pinned: ${pin//\//\\/})/" README.md
+          grep -q "(pinned: $pin)" README.md || { echo "README pin not found to update"; exit 1; }
+          echo "PIN=$pin" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-python@v5
+        if: steps.release.outputs.changed == 'true' && steps.open.outputs.skip != 'true'
+        with:
+          python-version: "3.12"
+
+      - name: The desktop still deploys and packages
+        if: steps.release.outputs.changed == 'true' && steps.open.outputs.skip != 'true'
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 libglib2.0-0 \
+            fonts-dejavu-core librsvg2-bin
+          pip install pytest pyside6 pillow numpy
+          python -m pytest -q tests/unit/test_desktop.py tests/unit/test_packaging.py
+
+      - name: Open the pull request
+        if: steps.release.outputs.changed == 'true' && steps.open.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          BRANCH: ${{ steps.open.outputs.branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add desktop/dots README.md
+          git commit -m "Desktop: $PIN" -m "desktop/dots moves to trail-b1az3r/dots $TAG."
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" --title "Desktop: $PIN" --body "$(cat <<EOF
+          The desktop/dots submodule moves to [trail-b1az3r/dots $TAG](https://github.com/trail-b1az3r/dots/releases/tag/$TAG).
+          The desktop deploy and packaging tests passed on it in this run.
+
+          Release notes: https://github.com/trail-b1az3r/dots/releases/tag/$TAG
+
+          Opened by the Halcyon update workflow (.github/workflows/halcyon-bump.yml). Pull requests opened with the
+          workflow token do not start CI on their own: run CI on the branch (Actions > CI > Run workflow).
+          EOF
+          )"

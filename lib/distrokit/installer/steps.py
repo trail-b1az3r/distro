@@ -614,11 +614,14 @@ class Installation:
             units.append("grub-btrfsd.service")
         if self.bootloader == "systemd-boot":
             units.append("systemd-boot-update.service")  # updates the boot manager after systemd upgrades
+        # Automatic updates (system/autoupdate.py): the daily check notifies by default; installing unattended is
+        # `auto-update mode apply`.
+        units.append(f"{self.branding.id}-auto-update.timer")
         for unit in units:
             self.chroot(["systemctl", "enable", unit], check=False)
         # Per-user units every account gets (the dots use ydotool for the OSK).
-        self.chroot(["systemctl", "--global", "enable", "pipewire.socket", "pipewire-pulse.socket", "wireplumber.service"],
-                    check=False)
+        self.chroot(["systemctl", "--global", "enable", "pipewire.socket", "pipewire-pulse.socket", "wireplumber.service",
+                     f"{self.branding.id}-update-notify.timer"], check=False)
 
     def snapshots(self) -> None:
         self.chroot(["snapper", "--no-dbus", "-c", "root", "create-config", "/"])
