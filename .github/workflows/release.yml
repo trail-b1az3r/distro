@@ -79,4 +79,13 @@ jobs:
           # A run by hand creates the tag (publish-release.sh pushes it).
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # The tag goes up with git first: the releases API refuses to create
+          # a tag with the workflow's token (403 "Resource not accessible by
+          # integration"), while a git push of the tag is allowed.
+          if ! git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            name="$(. ./distro.conf && echo "$DISTRO_PRETTY_NAME")"
+            git tag -a "$TAG" -m "$name ${TAG#v}" HEAD
+            git push origin "refs/tags/$TAG"
+          fi
+          git fetch --depth=1 origin "refs/tags/$TAG:refs/tags/$TAG"
           scripts/publish-release.sh --tag "$TAG"
