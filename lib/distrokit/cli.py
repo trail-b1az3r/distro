@@ -613,6 +613,37 @@ def cmd_model(a) -> int:
 # ---------------------------------------------------------------------------
 
 
+def cmd_logs(a) -> int:
+    """Diagnostic logs: kept locally; sent only when sharing is on."""
+    from .system import logs
+
+    repo = logs.log_repo(B)
+    if a.action == "status":
+        on = logs.sharing_enabled(B)
+        print(f"Log sharing: {'on' if on else 'off'}"
+              + (f" (to github.com/{repo})" if on and repo else "")
+              + f". Saved logs: {logs.local_dir(B)}")
+        if not repo:
+            print(S.dim("No log repository is set (DISTRO_LOG_REPO), so logs cannot be sent."))
+        return 0
+    if a.action in ("on", "off"):
+        _need_root(f"turn log sharing {a.action}")
+        logs.set_sharing(a.action == "on", B)
+        print(S.ok(f"Log sharing is {a.action}."
+                   + (" Logs are only sent when you run `" + B.cli + " logs send`." if a.action == "on" else "")))
+        return 0
+    bundle = logs.save(B)
+    print(S.ok(f"Saved {bundle} (it stays on this computer)."))
+    if a.action == "send":
+        try:
+            where = logs.send(bundle, B)
+        except RuntimeError as e:
+            print(S.warn(str(e)))
+            return 1
+        print(S.ok(f"Sent: {where}"))
+    return 0
+
+
 def cmd_doctor(a) -> int:
     from .system import doctor
 
@@ -917,6 +948,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--json", action="store_true")
     s.add_argument("-y", "--yes", action="store_true")
     s.set_defaults(func=cmd_model)
+
+    s = sub.add_parser("logs", help="diagnostic logs: status, save (local), on/off sharing, send")
+    s.add_argument("action", nargs="?", default="status", choices=["status", "save", "on", "off", "send"])
+    s.set_defaults(func=cmd_logs)
 
     s = sub.add_parser("doctor", help="diagnose problems")
     s.add_argument("-v", "--verbose", action="store_true")

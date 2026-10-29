@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=@APP_NAME@
+GenericName=Writer and e-book reader
+Comment=Write documents, notes and books in MDXL; read EPUB books
+Exec=@APP_ID@ %F
+Icon=@APP_ID@
+Terminal=false
+Categories=Office;WordProcessor;TextEditor;Viewer;Qt;
+MimeType=text/x-mdxl;text/markdown;text/plain;application/epub+zip;
+Keywords=markdown;mdxl;notes;book;epub;writer;
+StartupWMClass=@APP_ID@

@@ -1,0 +1,39 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+#
+# @DISTRO_NAME@ Write (apps/write): documents, notes and books in MDXL with a
+# live preview from MDXL's own renderer, and an EPUB reader, in Qt Quick and
+# C++, coloured by the desktop's Halcyon theme. Built from the same source
+# tarball as the distribution's other packages.
+# Generated from packages/pkgbuild/write/PKGBUILD.in.
+
+pkgname=@DISTRO_ID@-write
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc="@DISTRO_NAME@ Write: documents, notes and books in MDXL, and an EPUB reader"
+arch=(x86_64)
+url="@DISTRO_HOME_URL@"
+license=(GPL-3.0-or-later)
+depends=(qt6-base qt6-declarative qt6-webengine syntax-highlighting libarchive python mdxl)
+makedepends=(cmake ninja)
+source=("@DISTRO_ID@-$pkgver.tar.gz")
+sha256sums=('@SOURCE_SHA256@')
+
+build() {
+  cmake -S "@DISTRO_ID@-$pkgver/apps/write" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DAPP_ID=@DISTRO_ID@-write \
+    -DAPP_NAME="@DISTRO_NAME@ Write"
+  cmake --build build
+}
+
+check() {
+  # The window, its QML and the EPUB reader load (headless).
+  QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 \
+    QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu" HOME="$srcdir/home" \
+    timeout 120 ./build/@DISTRO_ID@-write --self-test
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}
