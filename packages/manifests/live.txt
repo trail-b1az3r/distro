@@ -1,8 +1,9 @@
 # Nexora Linux: live ISO (packages.x86_64; generated, do not edit)
 # lists: base, desktop, browser, live + linux, amd-ucode, intel-ucode
-# 143 packages
+# 144 packages
 
 7zip
+alacritty
 alsa-firmware
 alsa-utils
 amd-ucode
