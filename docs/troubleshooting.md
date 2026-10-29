@@ -56,7 +56,7 @@ sudo nexora repair         # repairs what the doctor found, after showing the pl
 |---|---|
 | "unable to lock database" | `sudo nexora repair packages` removes a stale lock (only if no pacman is running) |
 | signature / keyring errors | `sudo nexora repair packages` refreshes the keyrings first |
-| "failed to synchronize … nexora" | the distribution repository could not be reached; retry later, or comment out `[nexora]` in `/etc/pacman.conf` temporarily |
+| "failed retrieving file 'nexora.db'", "file does not exist" or "failed to synchronize all databases" | the distribution repository is not published (yet), and pacman syncs nothing while one repository is missing. `sudo nexora repair packages` turns `[nexora]` off in `/etc/pacman.conf`, and on again once it is published. New installations only turn it on when it is there. If the server is just unreachable, retry later |
 | an AUR package fails to build | report it to the AUR package; the rest of the system is unaffected |
 
 ## AI

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from distrokit import hardware, util
+from distrokit import hardware, pacmanconf, util
 from distrokit.branding import load as load_branding
 from distrokit.installer import config as cfgmod
 from distrokit.installer.steps import Installation, dry_run_commands, summary
@@ -167,6 +167,7 @@ def test_configuration_files_written_to_target(machine, tmp_path, monkeypatch):
     chrooted = []
     inst = Installation(cfg, report, runner=util.Runner(), branding=b, target=target, online=True)
     monkeypatch.setattr(inst, "chroot", lambda cmd, **kw: chrooted.append(cmd) or util.Result(cmd, 0, "", ""))
+    monkeypatch.setattr(pacmanconf, "distro_repo_published", lambda branding: True)
     monkeypatch.setattr(inst, "uuid", lambda dev: f"UUID-{Path(dev).name}")
     for v in inst.disk_plan.volumes:
         v.device = v.device or f"/dev/fake-{v.role}"

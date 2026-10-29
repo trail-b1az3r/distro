@@ -159,6 +159,70 @@ def test_pacman_configs(kind):
         assert text.index(f"[{b.repo_name}-offline]") < text.index("[core]")
 
 
+def test_unpublished_distro_repo_is_switched_off_and_back_on(tmp_path):
+    """pacman syncs nothing while one repository's database is missing, so the
+    distribution repository is off until it is published, and the repair
+    plan switches it to match."""
+    b = load_branding()
+    name = b.repo_name
+    on = pacmanconf.render("target", b)
+    off = pacmanconf.render("target", b, distro_repo=False)
+    assert pacmanconf.distro_repo_enabled(on, b) and not pacmanconf.distro_repo_enabled(off, b)
+    assert f"#[{name}]" in off and "repair packages" in off
+    # Toggling rewrites only that section, in both directions and repeatedly.
+    assert pacmanconf.set_distro_repo(on, False, b) == off
+    assert pacmanconf.set_distro_repo(off, True, b) == on
+    assert pacmanconf.set_distro_repo(pacmanconf.set_distro_repo(off, False, b), False, b) == off
+    # A pacman.conf from before this, without the section, gets it before [endeavouros].
+    bare = on.replace(pacmanconf.distro_repo_block(b), "")
+    assert f"[{name}]" not in bare
+    assert pacmanconf.set_distro_repo(bare, True, b) == on
+
+    conf = tmp_path / "etc/pacman.conf"
+    conf.parent.mkdir(parents=True)
+    conf.write_text(on)
+    runner = util.Runner(dry_run=True)
+    assert repair.distro_repo_action(tmp_path, b, None) is None  # unknown (offline): left alone
+    assert repair.distro_repo_action(tmp_path, b, True) is None  # already right
+    plan = repair.packages_plan(tmp_path, runner, branding=b, distro_repo=False)
+    assert f"Turn off the {name} repository" in plan.describe()
+    plan.actions[0].run()
+    assert conf.read_text() == off
+    plan = repair.packages_plan(tmp_path, runner, branding=b, distro_repo=True)
+    assert f"Turn on the {name} repository" in plan.describe()
+    plan.actions[0].run()
+    assert conf.read_text() == on
+
+
+def test_distro_repo_published_reads_the_database_url(monkeypatch):
+    import urllib.error
+
+    b = load_branding()
+    seen = []
+
+    def fake(code):
+        def urlopen(req, timeout):
+            seen.append((req.get_method(), req.full_url))
+            if code == 200:
+                class R:
+                    def __enter__(self):
+                        return self
+
+                    def __exit__(self, *a):
+                        return False
+                return R()
+            if code is None:
+                raise urllib.error.URLError("offline")
+            raise urllib.error.HTTPError(req.full_url, code, "x", {}, None)
+        return urlopen
+
+    for code, want in ((200, True), (404, False), (503, None), (None, None)):
+        monkeypatch.setattr(pacmanconf.urllib.request, "urlopen", fake(code))
+        assert pacmanconf.distro_repo_published(b) is want
+    server = b.get("DISTRO_REPO_SERVER").rstrip("/")
+    assert seen[0] == ("HEAD", f"{server}/{b.repo_name}.db")
+
+
 def test_doctor_boot_directory_needs_mounting_only_when_it_is_a_partition(tmp_path):
     """BIOS + GRUB on ext4 keeps /boot on the root file system: not a mount
     point, and not a problem. An ESP or XBOOTLDR at /boot must be mounted."""

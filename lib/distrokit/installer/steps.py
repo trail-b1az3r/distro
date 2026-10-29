@@ -423,7 +423,10 @@ class Installation:
         self.write("/etc/hosts", "127.0.0.1\tlocalhost\n::1\tlocalhost\n"
                                  f"127.0.1.1\t{c.hostname}.localdomain\t{c.hostname}\n")
         # Package manager
-        self.write("/etc/pacman.conf", pacmanconf.render("target", b, multilib=c.multilib))
+        # The distribution repository only once it is published: pacman
+        # refuses to sync at all while one repository's database is missing.
+        published = pacmanconf.distro_repo_published(b) if not self.runner.dry_run else True
+        self.write("/etc/pacman.conf", pacmanconf.render("target", b, multilib=c.multilib, distro_repo=bool(published)))
         # Initramfs: systemd-based, LUKS prompt inside the splash screen.
         self.write(f"/etc/mkinitcpio.conf.d/10-{b.id}.conf",
                    f"# {b.pretty_name}: systemd-based initramfs with Plymouth.\nHOOKS=({MKINITCPIO_HOOKS})\n")
