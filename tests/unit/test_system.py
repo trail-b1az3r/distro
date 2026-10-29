@@ -239,6 +239,42 @@ def test_interactive_updates_get_the_terminal(monkeypatch):
     assert cmd == ["yay", "-Sua"] and not {"stdin", "stdout", "capture_output"} & set(kw)
 
 
+def test_logs_stay_local_unless_sharing_is_on(tmp_path, monkeypatch):
+    import io
+    import tarfile
+
+    from distrokit.system import logs
+
+    b = type(load_branding())(dict(load_branding().values))  # a copy: the loaded branding is shared
+    assert not logs.sharing_enabled(b, tmp_path)  # off by default
+    logs.set_sharing(True, b, tmp_path)
+    assert logs.sharing_enabled(b, tmp_path)
+    logs.set_sharing(False, b, tmp_path)
+    assert not logs.sharing_enabled(b, tmp_path)
+
+    bundle = tmp_path / "x-report.tar.gz"
+    with tarfile.open(bundle, "w:gz") as tar:
+        data = b'[{"name": "Kernel", "status": "ok"}]'
+        ti = tarfile.TarInfo("x-report/doctor.json")
+        ti.size = len(data)
+        tar.addfile(ti, io.BytesIO(data))
+    assert "### doctor.json" in logs.summary(bundle) and '"Kernel"' in logs.summary(bundle)
+
+    opened = []
+    b.values["DISTRO_LOG_REPO"] = "someone/logs"
+    monkeypatch.setattr(logs, "sharing_enabled", lambda branding=None, root="/": False)
+    with pytest.raises(RuntimeError, match="sharing is off"):
+        logs.send(bundle, b, open_browser=opened.append)
+    assert not opened  # nothing leaves the computer while sharing is off
+    monkeypatch.setattr(logs, "sharing_enabled", lambda branding=None, root="/": True)
+    monkeypatch.setattr(logs.util, "which", lambda name: None)  # no GitHub CLI: the browser
+    url = logs.send(bundle, b, open_browser=opened.append)
+    assert url.startswith("https://github.com/someone/logs/issues/new?") and opened == [url]
+    b.values["DISTRO_LOG_REPO"] = ""
+    with pytest.raises(RuntimeError, match="no log repository"):
+        logs.send(bundle, b, open_browser=opened.append)
+
+
 def test_distro_repo_published_reads_the_database_url(monkeypatch):
     import urllib.error
 
