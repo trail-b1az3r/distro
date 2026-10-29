@@ -154,7 +154,10 @@ def source_epoch(src: Path | None = None) -> int:
 
 
 def iso_version(b: Branding, epoch: int) -> str:
-    return time.strftime(b.get("ISO_VERSION_FORMAT", "%Y.%m"), time.gmtime(epoch))
+    """The build date in ISO_VERSION_FORMAT, then ISO_RELEASE when set."""
+    version = time.strftime(b.get("ISO_VERSION_FORMAT", "%Y.%m"), time.gmtime(epoch))
+    release = b.get("ISO_RELEASE")
+    return f"{version}.{release}" if release else version
 
 
 def iso_label(b: Branding, epoch: int) -> str:
@@ -293,6 +296,7 @@ def build_info(b: Branding, opts: Options, epoch: int) -> dict:
         "name": b.pretty_name,
         "id": b.id,
         "version": iso_version(b, epoch),
+        "codename": b.get("ISO_CODENAME"),
         "label": iso_label(b, epoch),
         "profile": opts.profile,
         "offline": opts.offline,

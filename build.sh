@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Build the live ISO: dist/<Name>-<YYYY.MM>-x86_64.iso (+ checksums/, metadata/).
+# Build the live ISO: dist/<Name>-<version>-x86_64.iso (+ checksums/, metadata/).
 #
 #   ./build.sh [--profile minimal|standard|developer|ai] [--offline minimal|full]
 #              [--clean] [--debug] [--container] [--skip-packages] [--dry-run]
-#              [--publish [--tag vYYYY.MM[.N]] [--no-repo]]
+#              [--publish [--tag vVERSION[.N]] [--no-repo]]
 #              [--py PYTHON] [--user-packages DIR]
 #
 # Runs on Arch Linux or EndeavourOS as root (after scripts/bootstrap.sh), or

@@ -57,8 +57,8 @@ def releng(tmp_path):
 def test_names_follow_distro_conf():
     b = load_branding()
     epoch = 1790393700  # 2026-09-26
-    assert iso.iso_version(b, epoch) == "2026.09"
-    assert iso.iso_filename(b, "2026.09") == f"{b.name}-2026.09-x86_64.iso"
+    assert iso.iso_version(b, epoch) == f"26.09.{b['ISO_RELEASE']}"
+    assert iso.iso_filename(b, iso.iso_version(b, epoch)) == f"{b.name}-26.09.{b['ISO_RELEASE']}-x86_64.iso"
     assert iso.iso_label(b, epoch) == f"{b['ISO_LABEL_PREFIX']}_202609"
 
 
@@ -92,7 +92,7 @@ def test_assemble_profile(tmp_path, releng):
     out = subprocess.run(["bash", "-c", 'declare -A file_permissions; source profiledef.sh; '
                           'echo "$iso_name|$iso_label|$iso_version|${bootmodes[*]}|${file_permissions[/etc/shadow]}"'],
                          cwd=prof, capture_output=True, text=True, check=True).stdout.strip()
-    assert out == f"{b.name}|{b['ISO_LABEL_PREFIX']}_202609|2026.09|bios.syslinux uefi.grub|0:0:400"
+    assert out == f"{b.name}|{b['ISO_LABEL_PREFIX']}_202609|26.09.{b['ISO_RELEASE']}|bios.syslinux uefi.grub|0:0:400"
 
     # Boot menus are branded and keep archiso's placeholders.
     grub = (prof / "grub/grub.cfg").read_text()
@@ -126,7 +126,7 @@ def test_assemble_profile(tmp_path, releng):
     assert (air / f"var/cache/{b.id}/repo/nexora-core-1-1-any.pkg.tar.zst").read_bytes() == b"pkg"
 
     info = json.loads((air / f"etc/{b.id}/iso-build.json").read_text())
-    assert info["profile"] == "ai" and info["offline"] == "full" and info["version"] == "2026.09"
+    assert info["profile"] == "ai" and info["offline"] == "full" and info["version"] == f"26.09.{b['ISO_RELEASE']}" and info["codename"] == b["ISO_CODENAME"]
     assert (air / f"etc/{b.id}/live").is_file()
 
     # Live session: greetd autologin, NetworkManager, the live user service.
@@ -224,7 +224,7 @@ def test_checksums_and_finish(tmp_path, releng, monkeypatch):
     monkeypatch.setattr(iso, "iso_files", lambda path: {"/arch/x86_64/airootfs.sfs": 3 * 2**30})
     info = iso.finish(opts, b, 1790393700, util.Runner(dry_run=True))
     assert info["largest_file"] == 3 * 2**30
-    name = f"{b.name}-2026.09-x86_64.iso"
+    name = f"{b.name}-26.09.{b['ISO_RELEASE']}-x86_64.iso"
     assert info["iso"] == name and (opts.dist / name).is_file()
     root = opts.dist.parent
     sha = (root / "checksums" / f"{name}.sha256").read_text().split()
@@ -254,7 +254,7 @@ def test_finish_reads_the_package_list_from_the_iso(tmp_path, releng, monkeypatc
 
     info = iso.finish(opts, b, 1790393700, util.Runner(dry_run=True))
     assert asked == ["/arch/pkglist.x86_64.txt"] and info["live_packages"] == 3
-    assert (opts.dist.parent / "metadata" / f"{b.name}-2026.09-x86_64.packages.txt").is_file()
+    assert (opts.dist.parent / "metadata" / f"{b.name}-26.09.{b['ISO_RELEASE']}-x86_64.packages.txt").is_file()
 
 
 def test_user_packages_join_the_repository(tmp_path):

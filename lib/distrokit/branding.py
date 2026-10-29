@@ -141,6 +141,7 @@ class Branding:
             "ID_LIKE": self.get("DISTRO_ID_LIKE", "arch"),
             "BUILD_ID": build_id or "rolling",
             "VERSION_ID": version,
+            "VERSION_CODENAME": self.get("ISO_CODENAME").lower(),
             "ANSI_COLOR": "38;2;124;108;255",
             "HOME_URL": self.get("DISTRO_HOME_URL"),
             "DOCUMENTATION_URL": self.get("DISTRO_DOC_URL"),

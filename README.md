@@ -41,7 +41,7 @@ cd distro
 sudo scripts/bootstrap.sh --builder && sudo ./build.sh --profile standard
 ```
 
-Results: `dist/Nexora-YYYY.MM-x86_64.iso`, `checksums/`, `metadata/`.
+Results: `dist/Nexora-26.10.0.1.0-x86_64.iso` (the version is `distro.conf`'s date format and `ISO_RELEASE`), `checksums/`, `metadata/`.
 → [docs/iso-building.md](docs/iso-building.md)
 
 **Develop:**
