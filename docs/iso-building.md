@@ -44,7 +44,9 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
 | `--config FILE` | settings from a file ([example](../iso/build.env.example)) |
 | `--dry-run` | print the build commands without running them (works on any Linux) |
 | `--publish` | after a successful build, publish it: a GitHub release with the ISO, its checksums and metadata, a tag on the commit it was built from, and the package repository (see [release-process.md](release-process.md#from-your-own-build)) |
-| `--tag vYYYY.MM[.N]` | the tag to publish as (implies `--publish`; default `v<version>`, or the next free `v<version>.N`) |
+| `--py PYTHON` | the Python that runs the build: a version (`3.13`), a command or a path (a venv's `bin/python`). It also sees your own packages (`pip install --user`), and needs Pillow and NumPy. Not with `--container`, which uses the container's Python |
+| `--user-packages DIR` | your own packages (`DIR/*.pkg.tar.zst`) go into the distribution repository and the ISO's offline repository, replacing any of the same name; install them with `pacman -S`, or name them in an unattended config's `extra_packages` |
+| `--tag vVERSION[.N]` | the tag to publish as (implies `--publish`; default `v<version>`, or the next free `v<version>.N`) |
 
 ## What happens
 

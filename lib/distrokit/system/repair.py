@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from .. import boot, pkg, util
+from .. import boot, pacmanconf, pkg, util
 from ..branding import Branding, load as load_branding
 
 
@@ -55,9 +55,34 @@ def _pacman_running() -> bool:
     return rc == 0
 
 
-def packages_plan(root: Path = Path("/"), runner: util.Runner | None = None, refresh: bool = True) -> Plan:
+def distro_repo_action(root: Path, branding: Branding, published: bool | None) -> Action | None:
+    """Switch the distribution repository in pacman.conf on when it is
+    published, and off when it is not (pacman syncs nothing while one
+    repository's database is missing). Nothing when it cannot be told."""
+    conf = root / "etc/pacman.conf"
+    if published is None or not conf.is_file():
+        return None
+    text = conf.read_text()
+    if pacmanconf.distro_repo_enabled(text, branding) == published:
+        return None
+    name = branding.repo_name
+    if published:
+        description = f"Turn on the {name} repository in /etc/pacman.conf (it is published now)"
+    else:
+        description = f"Turn off the {name} repository in /etc/pacman.conf (it is not published, so pacman cannot sync)"
+    return Action(description, lambda: conf.write_text(pacmanconf.set_distro_repo(text, published, branding)), True)
+
+
+def packages_plan(root: Path = Path("/"), runner: util.Runner | None = None, refresh: bool = True,
+                  branding: Branding | None = None, distro_repo: bool | None = None) -> Plan:
+    """``distro_repo``: whether the distribution repository is published
+    (:func:`pacmanconf.distro_repo_published`); None leaves it as it is."""
     runner = runner or util.Runner()
+    branding = branding or load_branding()
     plan = Plan("Repair the package manager")
+    repo = distro_repo_action(root, branding, distro_repo)
+    if repo:
+        plan.actions.append(repo)
     lock = root / "var/lib/pacman/db.lck"
     if lock.exists():
         if _pacman_running():

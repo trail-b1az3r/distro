@@ -390,8 +390,10 @@ def _lua_str(value: str) -> str:
 def default_apps(installed: set[str], editor_command: str = "") -> dict[str, str]:
     """Keybind applications, only for what is actually installed. The file
     manager is left to upstream, which opens the first one installed (Loaf,
-    then Dolphin, ...)."""
-    apps = {"terminal": "konsole"}
+    then Dolphin, ...). The terminal is Alacritty, as upstream's since
+    Halcyon 2.0.3 (Ctrl+C always interrupts there, which kitty's
+    copy-on-selection broke on touchscreens), with Konsole as the fallback."""
+    apps = {"terminal": "alacritty" if "alacritty" in installed else "konsole"}
     if "firefox" in installed:
         apps["browser"] = "firefox"
     if editor_command:

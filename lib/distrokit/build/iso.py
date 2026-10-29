@@ -119,6 +119,7 @@ class Options:
     sign_key: str = ""
     multilib: bool = True
     profile_out: Path | None = None
+    user_packages: Path | None = None  # your own *.pkg.tar.* to carry in the repository
 
     @property
     def repo(self) -> Path:
@@ -153,7 +154,10 @@ def source_epoch(src: Path | None = None) -> int:
 
 
 def iso_version(b: Branding, epoch: int) -> str:
-    return time.strftime(b.get("ISO_VERSION_FORMAT", "%Y.%m"), time.gmtime(epoch))
+    """The build date in ISO_VERSION_FORMAT, then ISO_RELEASE when set."""
+    version = time.strftime(b.get("ISO_VERSION_FORMAT", "%Y.%m"), time.gmtime(epoch))
+    release = b.get("ISO_RELEASE")
+    return f"{version}.{release}" if release else version
 
 
 def iso_label(b: Branding, epoch: int) -> str:
@@ -292,6 +296,7 @@ def build_info(b: Branding, opts: Options, epoch: int) -> dict:
         "name": b.pretty_name,
         "id": b.id,
         "version": iso_version(b, epoch),
+        "codename": b.get("ISO_CODENAME"),
         "label": iso_label(b, epoch),
         "profile": opts.profile,
         "offline": opts.offline,
@@ -386,6 +391,37 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
 # ---------------------------------------------------------------------------
 # Offline repository
 # ---------------------------------------------------------------------------
+
+
+def user_package_files(directory: Path) -> list[Path]:
+    """The package files (not signatures) in a directory of your own packages."""
+    return sorted(f for f in directory.glob("*.pkg.tar.*") if f.is_file() and not f.name.endswith(".sig"))
+
+
+def add_user_packages(opts: Options, b: Branding, runner: util.Runner) -> list[Path]:
+    """Copy your own packages into the distribution repository, and so onto the
+    ISO's offline repository. One with the name of a package built here replaces
+    it (repo-add --remove keeps the last one added)."""
+    pkgs = user_package_files(opts.user_packages)
+    added = []
+    for f in pkgs:
+        dest = opts.repo / f.name
+        if not runner.dry_run:
+            opts.repo.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(f, dest)
+            sig = f.with_name(f.name + ".sig")
+            if sig.is_file():
+                shutil.copyfile(sig, dest.with_name(dest.name + ".sig"))
+        if opts.sign_key and not f.with_name(f.name + ".sig").is_file():
+            runner.run(["gpg", "--batch", "--yes", "--local-user", opts.sign_key, "--detach-sign", "--no-armor", str(dest)])
+        added.append(dest)
+    add = ["repo-add", "--remove"]
+    if opts.sign_key:
+        add += ["--sign", "--key", opts.sign_key]
+    runner.run([*add, str(opts.repo / f"{b.repo_name}.db.tar.gz"), *map(str, added)])
+    for f in added:
+        print(f"    {f.name}")
+    return added
 
 
 DEBUG_PACKAGE = re.compile(r"-debug-[^-]+-[^-]+-[^-]+\.pkg\.tar\.")
@@ -530,6 +566,8 @@ def preflight(opts: Options) -> list[str]:
         problems.append(f"archiso's releng profile is missing ({opts.releng}).")
     if opts.profile not in load_profiles():
         problems.append(f"unknown profile {opts.profile!r}; choose from {', '.join(load_profiles())}.")
+    if opts.user_packages and not (opts.user_packages.is_dir() and user_package_files(opts.user_packages)):
+        problems.append(f"--user-packages: no *.pkg.tar.* files in {opts.user_packages}.")
     free = shutil.disk_usage(opts.build if opts.build.exists() else Path.cwd()).free
     want = (60 if opts.offline == "full" else 30) * 2**30
     if free < want:
@@ -574,6 +612,9 @@ def build(opts: Options, runner: util.Runner | None = None) -> dict:
             raise SystemExit("building the distribution repository failed")
     elif not any(opts.repo.glob("*.pkg.tar.*")) and not runner.dry_run:
         raise SystemExit(f"--skip-packages: no packages in {opts.repo}")
+    if opts.user_packages:
+        print(f"==> Your packages ({opts.user_packages})")
+        add_user_packages(opts, b, runner)
 
     print("==> Offline repository")
     conf = pkgbuild.build_conf(b, opts.repo, opts.build / "packages", multilib=opts.multilib)
@@ -615,12 +656,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--archive-date", default=os.environ.get("ARCHIVE_DATE", ""),
                    help="YYYY/MM/DD: install Arch packages from that day's Arch Linux Archive snapshot")
     p.add_argument("--sign", default=os.environ.get("GPGKEY", ""), help="GPG key for packages and checksums")
+    p.add_argument("--user-packages", default=os.environ.get("USER_PACKAGES", ""), metavar="DIR",
+                   help="your own packages (DIR/*.pkg.tar.*) to carry in the ISO's repository")
     p.add_argument("--out", help="profile: where to write the archiso profile")
     p.add_argument("--dry-run", action="store_true", help="print the commands instead of running them")
     a = p.parse_args(argv)
     opts = Options(profile=a.profile, offline=a.offline, clean=a.clean, debug=a.debug,
                    skip_packages=a.skip_packages, dist=Path(a.dist), build=Path(a.build_dir),
-                   releng=Path(a.releng), archive_date=a.archive_date, sign_key=a.sign, multilib=not a.no_multilib)
+                   releng=Path(a.releng), archive_date=a.archive_date, sign_key=a.sign, multilib=not a.no_multilib,
+                   user_packages=Path(a.user_packages).resolve() if a.user_packages else None)
     b = load_branding()
     if a.action == "info":
         epoch = source_epoch()

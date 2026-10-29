@@ -2,7 +2,7 @@
 # Publish the ISO built last as a GitHub release, tagged at the commit it was
 # built from (see docs/release-process.md).
 #
-#   scripts/publish-release.sh [--tag vYYYY.MM[.N]] [--no-repo] [--prerelease] [--dry-run]
+#   scripts/publish-release.sh [--tag vVERSION[.N]] [--no-repo] [--prerelease] [--dry-run]
 #
 # Takes the newest dist/*.iso with its checksums/ and metadata/ (as written by
 # ./build.sh, which runs this with --publish) and:
@@ -56,6 +56,8 @@ for sum in sha256 b2sum; do
 done
 field() { python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get(sys.argv[2]) or "")' "$meta" "$1"; }
 version="$(field version)"
+codename="$(field codename)"
+title="$(field name) $version${codename:+ \"$codename\"}"
 commit="$(field source_commit)"
 [[ -n "$commit" ]] || die "$meta does not name the commit the ISO was built from (built outside git?)"
 git cat-file -e "$commit^{commit}" 2>/dev/null || die "commit $commit (the ISO's source) is not in this repository"
@@ -99,7 +101,7 @@ python3 - "$meta" "$home/blob/$tag/docs" > "$work/notes.md" <<'PY'
 import json, sys
 m, docs = json.load(open(sys.argv[1])), sys.argv[2]
 size = m["size_bytes"] / 2**30
-print(f"## {m['name']} {m['version']}\n")
+print(f"## {m['name']} {m['version']}" + (f" “{m['codename']}”" if m.get("codename") else "") + "\n")
 print(f"* ISO: `{m['iso']}` ({size:.2f} GiB), SHA-256 `{m['sha256']}`")
 print(f"* Built from `{m['source_commit'][:12]}`, desktop `{m['desktop'][:12]}`, "
       f"{m.get('live_packages', '?')} live packages, offline repository: {m['offline']}")
@@ -130,13 +132,13 @@ if gh release view "$tag" >/dev/null 2>&1; then
     run gh release upload "$tag" "$work"/upload/* --clobber
     run gh release edit "$tag" --notes-file "$work/notes.md"
 else
-    run gh release create "$tag" --draft --target "$commit" --title "$(field name) $version" \
+    run gh release create "$tag" --draft --target "$commit" --title "$title" \
         --notes-file "$work/notes.md" "${prerelease[@]}" "$work"/upload/*
 fi
 if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null && [[ -z "$(remote_tag_commit "$tag")" ]]; then
     sign=(-a)
     [[ -n "${GPGKEY:-}" ]] && sign=(-s -u "$GPGKEY")
-    run git tag "${sign[@]}" -m "$(field name) $version" "$tag" "$commit"
+    run git tag "${sign[@]}" -m "$title" "$tag" "$commit"
 fi
 [[ -n "$(remote_tag_commit "$tag")" ]] || run git push origin "refs/tags/$tag"
 run gh release edit "$tag" --draft=false

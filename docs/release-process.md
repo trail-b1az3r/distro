@@ -1,6 +1,10 @@
 # Release process
 
-Releases are tagged `vYYYY.MM` (a second release in a month: `vYYYY.MM.1`).
+Releases are numbered `YY.MM.<release>` with a name, both set in `distro.conf`
+(`ISO_VERSION_FORMAT`, `ISO_RELEASE`, `ISO_CODENAME`): the first one is
+**26.10.0.1.0 "Origin"**, tagged `v26.10.0.1.0`. Bump `ISO_RELEASE` (and give
+it a new `ISO_CODENAME`) for each release; a second build of the same release
+is tagged `v<version>.1`.
 
 ## Before tagging
 
@@ -25,12 +29,12 @@ ISO and then publishes it with `scripts/publish-release.sh`:
 
 ```bash
 gh auth login                         # once: the GitHub CLI (pacman -S github-cli)
-./build.sh --container --publish      # or --tag v2026.10.1 to choose the tag
+./build.sh --container --publish      # or --tag v26.10.0.1.0.1 to choose the tag
 scripts/publish-release.sh            # publish the ISO already in dist/ (--dry-run to look first)
 ```
 
-1. The tag is `v<version>` from the ISO (`vYYYY.MM`), or the next free
-   `vYYYY.MM.N` when that one already marks another commit. It is put on the
+1. The tag is `v<version>` from the ISO (`v26.10.0.1.0`), or the next free
+   `v<version>.N` when that one already marks another commit. It is put on the
    commit the ISO was built from (recorded in its metadata), so commit before
    building: `--publish` refuses to start with uncommitted changes. With
    `GPGKEY` set the tag is signed.
@@ -49,8 +53,8 @@ Running it again for the same tag replaces the release's files.
 ## Tagging (CI builds the release)
 
 ```bash
-git tag -s v2026.09 -m "Nexora 2026.09"
-git push origin v2026.09
+git tag -s v26.10.0.1.0 -m 'Nexora Linux 26.10.0.1.0 "Origin"'
+git push origin v26.10.0.1.0
 ```
 
 `.github/workflows/release.yml` then:

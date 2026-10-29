@@ -14,7 +14,7 @@ The name, colours and every user-visible string come from
 | | |
 |---|---|
 | **Base** | Arch Linux + EndeavourOS repositories, `pacman` and `yay`, systemd, NetworkManager, PipeWire + WirePlumber, Bluetooth, Wayland and X11 (XWayland), Plymouth, zram |
-| **Desktop** | Hyprland with the [illogical-impulse / Halcyon shell](https://github.com/trail-b1az3r/dots) (pinned: Halcyon 2.0.2 "Oxidized Copper"), SDDM login theme, Loaf and Dolphin, Konsole, Fish (bash stays available), Material You colours from the wallpaper |
+| **Desktop** | [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus) 0.57.0.p1 (Hyprland with the Halcyon additions) with the [illogical-impulse / Halcyon shell](https://github.com/trail-b1az3r/dots) (pinned: Halcyon 2.0.3 "(Re)polished Copper"), SDDM login theme, Loaf and Dolphin, Alacritty, Fish (bash stays available), Material You colours from the wallpaper |
 | **Installer** | Graphical: UEFI and BIOS, erase / install alongside / manual partitioning, LUKS2 encryption, Btrfs (with snapshots) or ext4, swap (zram, partition, file, hibernation), separate `/home`, systemd-boot or GRUB, Secure Boot with your own keys (sbctl), profiles, GPU and AI choices. Also unattended from JSON. |
 | **Hardware** | Detection of CPU, GPUs (integrated/discrete/hybrid), RAM, disks, laptop/tablet, Wi-Fi, Bluetooth, touchscreen/pen/touchpad and displays (EDID, HiDPI scale) — shown before installing, with recommendations you can override |
 | **Graphics** | `sudo nexora-gpu detect \| configure \| status`: NVIDIA open/legacy/nouveau, AMD (+ROCm), Intel (incl. Arc), PRIME offload on hybrid laptops, early KMS, suspend support |
@@ -41,7 +41,7 @@ cd distro
 sudo scripts/bootstrap.sh --builder && sudo ./build.sh --profile standard
 ```
 
-Results: `dist/Nexora-YYYY.MM-x86_64.iso`, `checksums/`, `metadata/`.
+Results: `dist/Nexora-26.10.0.1.0-x86_64.iso` (the version is `distro.conf`'s date format and `ISO_RELEASE`), `checksums/`, `metadata/`.
 → [docs/iso-building.md](docs/iso-building.md)
 
 **Develop:**

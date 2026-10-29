@@ -91,6 +91,10 @@
       ],
       "version": "9.4.0-1"
     },
+    "python315": {
+      "commit": "d59e945fa0044b90f768559b8add87beba8b0e69",
+      "version": "3.15.2-1"
+    },
     "qt5-avif-image-plugin": {
       "commit": "97faecaf6050c738e23a2a37cbe4046bfccef4bb",
       "version": "0.10.1-1"

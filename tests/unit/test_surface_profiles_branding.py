@@ -101,6 +101,7 @@ def test_branding_values_and_render():
         b.render("@NOT_A_KEY@")
     assert 'ID="nexora"' in b.os_release("2026.09")
     assert 'ID_LIKE="endeavouros arch"' in b.os_release("2026.09")
+    assert 'VERSION_CODENAME="origin"' in b.os_release("2026.09")
 
 
 def test_branding_rename(tmp_path):

@@ -18,7 +18,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from .. import boot, pkg, util
+from .. import boot, pacmanconf, pkg, util
 from ..branding import Branding, load as load_branding
 
 OK, WARN, FAIL, SKIP = "ok", "warn", "fail", "skip"
@@ -208,6 +208,17 @@ class Doctor:
             if keyring not in installed:
                 return Check("Package manager", FAIL, f"{keyring} is not installed", fix=f"sudo pacman -S {keyring}")
         details = [f"{len(installed)} packages installed"]
+        conf = self.p("/etc/pacman.conf")
+        if self.live and conf.is_file() and self.b.get("DISTRO_REPO_SERVER"):
+            enabled = pacmanconf.distro_repo_enabled(conf.read_text(), self.b)
+            published = pacmanconf.distro_repo_published(self.b)
+            if enabled and published is False:
+                return Check("Package manager", FAIL,
+                             f"The {self.b.repo_name} repository is not published, so pacman cannot sync any repository",
+                             details, fix=f"sudo {self.b.cli} repair packages")
+            if not enabled and published:
+                return Check("Package manager", WARN, f"The {self.b.repo_name} repository is published but turned off",
+                             details, fix=f"sudo {self.b.cli} repair packages", critical=False)
         if self.live and util.which("pacman"):
             rc, out = util.run_quiet(["pacman", "-Dk"], timeout=60)
             if rc != 0:

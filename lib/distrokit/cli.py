@@ -17,7 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import __version__, paths, util
+from . import __version__, pacmanconf, paths, util
 from .branding import load as load_branding
 
 B = load_branding()
@@ -211,6 +211,11 @@ def cmd_update(a) -> int:
     wanted = [s for s in ("packages", "aur", "flatpak", "desktop", "gpu", "ai")
               if not getattr(a, f"no_{s}", False)]
     print(S.header("Checking for updates…"))
+    conf = Path("/etc/pacman.conf")
+    if ("packages" in wanted and conf.is_file() and pacmanconf.distro_repo_enabled(conf.read_text(), B)
+            and pacmanconf.distro_repo_published(B) is False):
+        print(S.warn(f"The {B.repo_name} repository is not published yet, so pacman cannot sync any repository. "
+                     f"Turn it off until it is: sudo {B.cli} repair packages"))
     news = update.arch_news(update.last_update_time())
     sources = update.check_all(B, wanted)
     total = 0
@@ -596,7 +601,8 @@ def cmd_repair(a) -> int:
             print(S.ok("Nothing to repair."))
             return 0
         if "Package manager" in failing:
-            plans.append(repair.packages_plan(root, runner, refresh=True))
+            plans.append(repair.packages_plan(root, runner, refresh=True, branding=B,
+                                              distro_repo=pacmanconf.distro_repo_published(B)))
         if "Bootloader" in failing or "Kernel" in failing:
             plans.append(repair.boot_plan(root, runner, B))
         if {"GPU", "Vulkan", "AI backend"} & failing:
@@ -604,11 +610,13 @@ def cmd_repair(a) -> int:
         if "Desktop" in failing:
             print(S.warn(f"Desktop problems: run `{B.cli} reset-desktop` as your user."))
     elif what == "packages":
-        plans.append(repair.packages_plan(root, runner, refresh=not a.no_update))
+        plans.append(repair.packages_plan(root, runner, refresh=not a.no_update, branding=B,
+                                          distro_repo=pacmanconf.distro_repo_published(B)))
     elif what == "boot":
         plans.append(repair.boot_plan(root, runner, B))
     elif what == "all":
-        plans += [repair.packages_plan(root, runner), repair.boot_plan(root, runner, B),
+        plans += [repair.packages_plan(root, runner, branding=B, distro_repo=pacmanconf.distro_repo_published(B)),
+                  repair.boot_plan(root, runner, B),
                   repair.gpu_plan(root, runner, B, user=os.environ.get("SUDO_USER"))]
     if not plans:
         return 0
@@ -687,7 +695,9 @@ def cmd_rescue(a) -> int:
             repair.unmount_installed(target, runner)
         return 0
     try:
-        plans = [repair.packages_plan(target, runner, refresh=False), repair.boot_plan(target, runner, B)]
+        plans = [repair.packages_plan(target, runner, refresh=False, branding=B,
+                                      distro_repo=pacmanconf.distro_repo_published(B)),
+                 repair.boot_plan(target, runner, B)]
         _confirm_or_exit("\n\n".join(p.describe() for p in plans), a.yes, "Repair the installed system?")
         for p in plans:
             p.execute()
