@@ -1,0 +1,41 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+#
+# MDXL (Markdown Extended Logic): the mdxl-cli terminal renderer, the
+# mdxl-preview browser preview, Kate's syntax definition and the text/x-mdxl
+# file type. What the upstream install.sh puts in a home directory, system-wide
+# and with the preview's Python modules from the repositories instead of a
+# private virtual environment. Pinned by commit.
+# Generated from packages/pkgbuild/mdxl/PKGBUILD.in.
+
+pkgname=mdxl
+_commit=2c3f7154a1c7e20883d323999e01e933f218c660
+pkgver=r1.2c3f715
+pkgrel=1
+pkgdesc="Markdown Extended Logic: a terminal renderer, a browser preview and Kate syntax for .mdxl files"
+arch=(any)
+url="https://github.com/trail-b1az3r/mdxl"
+license=(MIT)
+depends=(python python-markdown python-pymdown-extensions python-bleach python-tinycss2 shared-mime-info)
+makedepends=(git)
+source=("mdxl::git+https://github.com/trail-b1az3r/mdxl.git#commit=${_commit}")
+sha256sums=('SKIP')
+
+check() {
+  cd mdxl
+  python -m unittest tests.test_mdxl_cli tests.test_mdxl_kate tests.test_mdxl_preview
+}
+
+package() {
+  cd mdxl
+  install -Dm644 mdxl_cli.py mdxl_preview.py -t "$pkgdir/usr/lib/mdxl"
+  python -m compileall -q -d /usr/lib/mdxl "$pkgdir/usr/lib/mdxl"
+  install -d "$pkgdir/usr/bin"
+  printf '#!/bin/sh\nexec /usr/bin/python /usr/lib/mdxl/%s "$@"\n' mdxl_cli.py > "$pkgdir/usr/bin/mdxl-cli"
+  printf '#!/bin/sh\nexec /usr/bin/python /usr/lib/mdxl/%s "$@"\n' mdxl_preview.py > "$pkgdir/usr/bin/mdxl-preview"
+  chmod 755 "$pkgdir/usr/bin/mdxl-cli" "$pkgdir/usr/bin/mdxl-preview"
+  install -Dm644 mdxl.xml "$pkgdir/usr/share/org.kde.syntax-highlighting/syntax/mdxl.xml"
+  install -Dm644 data/mime/packages/mdxl.xml "$pkgdir/usr/share/mime/packages/mdxl.xml"
+  install -Dm644 demo.mdxl "$pkgdir/usr/share/doc/$pkgname/demo.mdxl"
+  install -Dm644 README.md docs/*.md -t "$pkgdir/usr/share/doc/$pkgname"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

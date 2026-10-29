@@ -1,0 +1,29 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+#
+# pip for Python 3.15 (the AUR python315, which is built without ensurepip).
+# Installs pip3.15 and python3.15 -m pip; pip and pip3 stay with python-pip,
+# which is Python 3.14's. The wheel is pinned by version and checksum: keep it
+# at python-pip's version. Generated from packages/pkgbuild/python315-pip/PKGBUILD.in.
+
+pkgname=python315-pip
+pkgver=26.2.2
+pkgrel=1
+pkgdesc="The PyPA recommended tool for installing Python packages, for Python 3.15"
+arch=(any)
+url="https://pip.pypa.io/"
+license=(MIT)
+depends=(python315)
+source=("https://files.pythonhosted.org/packages/py3/p/pip/pip-${pkgver}-py3-none-any.whl")
+noextract=("pip-${pkgver}-py3-none-any.whl")
+sha256sums=('fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70')
+
+package() {
+  # pip installs itself from its own wheel.
+  python3.15 "pip-${pkgver}-py3-none-any.whl/pip" install --no-deps --no-index --no-compile \
+    --no-warn-script-location --disable-pip-version-check \
+    --root "$pkgdir" --prefix /usr "pip-${pkgver}-py3-none-any.whl"
+  rm "$pkgdir/usr/bin/pip" "$pkgdir/usr/bin/pip3"
+  python3.15 -m compileall -q -d /usr/lib/python3.15 "$pkgdir/usr/lib/python3.15"
+  install -Dm644 "$pkgdir"/usr/lib/python3.15/site-packages/pip-${pkgver}.dist-info/licenses/LICENSE.txt \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

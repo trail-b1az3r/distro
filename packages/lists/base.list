@@ -34,7 +34,7 @@ wget
 jq
 unzip
 zip
-p7zip
+7zip
 rsync
 htop
 btop
@@ -45,6 +45,15 @@ pciutils
 hwdata
 smartmontools
 nvme-cli
+
+# Python: 3.14 (Arch's python) and 3.15, each with pip (pip3.14 / pip3.15)
+python
+python-pip
+python315
+python315-pip
+
+# Markdown Extended Logic: mdxl-cli, mdxl-preview and Kate syntax for .mdxl
+mdxl
 
 # Storage, encryption and boot
 btrfs-progs

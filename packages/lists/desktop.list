@@ -2,6 +2,11 @@
 # desktop/dots. The illogical-impulse-* packages are built from the dots'
 # own PKGBUILDs (desktop/dots/sdata/dist-arch), so their dependency lists
 # track upstream exactly.
+#
+# hyprland-plus is the compositor: the Hyprland fork Halcyon is made for
+# (packages/pkgbuild/hyprland-plus). It provides hyprland, so it takes the
+# place of the stock package illogical-impulse-hyprland asks for.
+hyprland-plus
 illogical-impulse-audio
 illogical-impulse-backlight
 illogical-impulse-basic

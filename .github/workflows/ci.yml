@@ -78,6 +78,9 @@ jobs:
           PYTHONPATH=lib python -m distrokit.build.packages render --out build/pkgbuild
           chown -R builder build
           for dir in build/pkgbuild/*/; do
+            # python315-pip needs python315, an AUR package: the chroot build
+            # (the ISO workflow) builds the two together.
+            case "$dir" in */python315-pip/) continue ;; esac
             (cd "$dir" && runuser -u builder -- makepkg --syncdeps --noconfirm --cleanbuild)
           done
           pacman -S --noconfirm --needed namcap

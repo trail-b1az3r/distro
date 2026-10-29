@@ -175,3 +175,4 @@ def test_reset_backs_up_custom_and_restores_defaults(deployer):
 def test_default_apps_only_lists_installed_software():
     apps = deploy.default_apps({"kate"})
     assert apps == {"terminal": "konsole", "textEditor": "kate"}
+    assert deploy.default_apps({"alacritty"})["terminal"] == "alacritty"

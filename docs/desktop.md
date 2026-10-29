@@ -1,6 +1,8 @@
 # The desktop
 
-The desktop is [Hyprland](https://hyprland.org) with the
+The desktop is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus),
+the Hyprland fork Halcyon is made for (mini, superposition and Plus Tiles
+windows, and the battery saver's frame cap), with the
 illogical-impulse / Halcyon shell from
 [trail-b1az3r/dots](https://github.com/trail-b1az3r/dots): a bar, sidebars
 (AI chat, notifications, quick settings), an overview, a launcher, an
@@ -11,7 +13,7 @@ submodule) and deployed unchanged, so upstream's documentation applies.
 ## First steps
 
 * **Super** opens the search/launcher; **Super + /** shows every keybind.
-* **Super + Enter** terminal (Konsole), **Super + E** files (Dolphin),
+* **Super + Enter** terminal (Alacritty), **Super + E** files (Dolphin),
   **Super + W** browser, **Super + Q** close a window.
 * The Welcome wizard: **Super + F1**. The updater: **Super + Shift + U**.
   The AI launcher: **Ctrl + Super + A**.
@@ -42,7 +44,7 @@ changed outside `custom/` is backed up before it is replaced
 
 ## Default applications
 
-Konsole (terminal), Dolphin (files), Firefox (browser, if installed), Okular
+Alacritty (terminal; Konsole stays installed), Dolphin (files), Firefox (browser, if installed), Okular
 (PDF), Gwenview (images), Haruna/mpv (media), Ark (archives), OnlyOffice
 (documents), Kate (text), and the code editor from `CODE_EDITOR` in
 `distro.conf` (Code - OSS by default). Change them in

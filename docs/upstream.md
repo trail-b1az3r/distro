@@ -15,7 +15,9 @@ Order of preference for everything the distribution needs:
 | archiso | Arch Linux | builds the ISO; its `releng` profile is the base of `iso/` | no (profile files are overlaid: boot menus, live session, networking) | GPL-3.0 |
 | dots (illogical-impulse / Halcyon) | [trail-b1az3r/dots](https://github.com/trail-b1az3r/dots), from end-4's dots-hyprland | the desktop configuration, pinned submodule; its `illogical-impulse-*` PKGBUILDs build the desktop's dependencies | **not modified.** Deploy-time changes to the user's copy only: the first-run greeting names the distribution, and the default wallpaper is the distribution's. Halcyon's own git updater (`halcyon-update.timer`) is not deployed: the desktop is updated with the distribution's packages. The distribution layer is a separate file loaded after upstream's. | GPL-3.0 |
 | Google Sans Flex | [end-4/google-sans-flex](https://github.com/end-4/google-sans-flex) | packaged (pinned commit + SHA-256) instead of being fetched into each home | no | OFL-1.1 |
-| Hyprland, Quickshell | hyprland.org, quickshell.org | compositor and shell (via the dots' packages) | no | BSD-3 / LGPL-3.0 |
+| hyprland-plus | [trail-b1az3r/hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus), from Hyprland | the compositor, built from `packages/pkgbuild/hyprland-plus` (pinned commit); it provides `hyprland`, so it replaces the stock package | no | BSD-3-Clause |
+| MDXL | [trail-b1az3r/mdxl](https://github.com/trail-b1az3r/mdxl) | `mdxl-cli`, `mdxl-preview` and Kate syntax for `.mdxl`, from `packages/pkgbuild/mdxl` (pinned commit) | no | MIT |
+| Quickshell | quickshell.org | the shell (via the dots' packages) | no | LGPL-3.0 |
 | HyperNix | [trail-b1az3r/HyperNix-pip](https://github.com/trail-b1az3r/HyperNix-pip) | PyPI package in a per-user uv environment | no | see upstream |
 | Hermes Agent ("Hermis") | [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) | `uv tool install hermes-agent` (instead of the upstream curl-pipe-bash installer) | no | MIT |
 | OpenClaw | [openclaw/openclaw](https://github.com/openclaw/openclaw) | npm package into `~/.local` | no | MIT |
