@@ -257,6 +257,24 @@ def test_finish_reads_the_package_list_from_the_iso(tmp_path, releng, monkeypatc
     assert (opts.dist.parent / "metadata" / f"{b.name}-2026.09-x86_64.packages.txt").is_file()
 
 
+def test_user_packages_join_the_repository(tmp_path):
+    b = load_branding()
+    mine = tmp_path / "mine"
+    mine.mkdir()
+    (mine / "mytool-1.0-1-x86_64.pkg.tar.zst").write_bytes(b"pkg")
+    (mine / "mytool-1.0-1-x86_64.pkg.tar.zst.sig").write_bytes(b"sig")
+    (mine / "notes.txt").write_text("not a package")
+    opts = iso.Options(build=tmp_path / "build", user_packages=mine)
+    runner = iso.util.Runner(dry_run=True)
+    added = iso.add_user_packages(opts, b, runner)
+    assert [p.name for p in added] == ["mytool-1.0-1-x86_64.pkg.tar.zst"]
+    cmd = runner.recorded[-1]
+    assert cmd[:2] == ["repo-add", "--remove"] and cmd[2].endswith(f"{b.repo_name}.db.tar.gz")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    assert iso.user_package_files(empty) == []
+
+
 def test_finish_refuses_a_file_too_big_for_fat32(tmp_path, releng, monkeypatch):
     b = load_branding()
     opts = iso.Options(build=tmp_path / "build", dist=tmp_path / "out" / "dist", releng=releng)
