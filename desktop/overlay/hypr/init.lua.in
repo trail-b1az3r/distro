@@ -41,6 +41,15 @@ hl.config({
     }
 })
 
+-- The live ISO runs from a USB stick: no animations, blur or shadows there,
+-- so the desktop and the installer stay responsive. Installed systems keep them.
+if io.open("/etc/@DISTRO_ID@/live", "r") then
+    hl.config({
+        animations = { enabled = false },
+        decoration = { blur = { enabled = false }, shadow = { enabled = false } },
+    })
+end
+
 -- First-login setup, pending setup tasks and the welcome wizard.
 hl.on("hyprland.start", function()
     hl.exec_cmd("/usr/lib/@DISTRO_ID@/bin/@DISTRO_ID@-session-start")

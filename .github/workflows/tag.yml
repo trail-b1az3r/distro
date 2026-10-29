@@ -1,0 +1,36 @@
+# Tag a commit without releasing it: Actions > Tag > Run workflow, with a tag
+# such as v26.10.0.1.1. The tag goes on the commit the run is for (the branch
+# chosen there). A tag pushed by a workflow starts no other workflow, so no
+# release is built; publish it later with Actions > Release and the same tag.
+name: Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create, e.g. v26.10.0.1.1"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create and push the tag
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          [[ "$TAG" == v* ]] || TAG="v$TAG"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "::error::$TAG already exists"; exit 1
+          fi
+          name="$(. ./distro.conf && echo "$DISTRO_PRETTY_NAME")"
+          codename="$(. ./distro.conf && echo "${ISO_CODENAME:-}")"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$name ${TAG#v}${codename:+ \"$codename\"}"
+          git push origin "refs/tags/$TAG"
+          echo "Tagged $(git rev-parse --short HEAD) as $TAG"
