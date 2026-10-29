@@ -2,7 +2,7 @@
 
 Releases are numbered `YY.MM.<release>` with a name, both set in `distro.conf`
 (`ISO_VERSION_FORMAT`, `ISO_RELEASE`, `ISO_CODENAME`): the first one is
-**26.10.0.1.0 "Origin"**, tagged `v26.10.0.1.0`. Bump `ISO_RELEASE` (and give
+**26.10.0.1.0 "Origin"**, tagged `v26.10.0.1.0`. Actions > Tag puts a tag on a commit without releasing it. Bump `ISO_RELEASE` (and give
 it a new `ISO_CODENAME`) for each release; a second build of the same release
 is tagged `v<version>.1`.
 

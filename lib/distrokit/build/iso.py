@@ -100,7 +100,9 @@ RELENG_REMOVE = [
 FAT32_MAX_FILE = 2**32 - 1
 
 SQUASHFS = {
-    "release": "'-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M'",
+    # 256K blocks: every first read from the stick decompresses a whole block,
+    # and 1M xz blocks made the live desktop lag on slow CPUs until cached.
+    "release": "'-comp' 'xz' '-Xbcj' 'x86' '-b' '256K' '-Xdict-size' '256K'",
     "debug": "'-comp' 'zstd' '-Xcompression-level' '3' '-b' '1M'",
 }
 
