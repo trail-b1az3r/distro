@@ -124,6 +124,8 @@ class Stage:
         self.python_entry(f"/usr/bin/{b.cli}", "distrokit.cli", comment=f"{b.pretty_name} system tool")
         self.link(f"/usr/bin/{b.id}-gpu", b.cli)
         self.link("/usr/bin/distro-gpu", b.cli)
+        # micro is the text editor; `nano` opens it too (the package provides nano).
+        self.link("/usr/bin/nano", "micro")
         self.python_entry(f"{lib}/bin/{b.id}-privileged", "distrokit.privileged",
                           comment="Privileged actions of the graphical apps (through pkexec)")
         self.python_entry(f"{lib}/bin/{b.id}-update-boot", "distrokit.hooks", "update_boot_main",

@@ -52,8 +52,11 @@ package_@DISTRO_ID@-core() {
   pkgdesc="@DISTRO_PRETTY_NAME@ system tools: @DISTRO_CLI@ CLI, hardware detection, GPU manager, doctor and repair"
   depends=(
     python pacman pacman-contrib sudo polkit systemd util-linux kmod
-    pciutils usbutils hwdata curl git
+    pciutils usbutils hwdata curl git micro
   )
+  # micro is the text editor, and /usr/bin/nano starts it.
+  provides=(nano)
+  conflicts=(nano)
   optdepends=(
     'vulkan-tools: Vulkan checks in the doctor'
     'mesa-utils: OpenGL renderer checks in the doctor'

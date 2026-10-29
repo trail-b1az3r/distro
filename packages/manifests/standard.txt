@@ -45,8 +45,8 @@ lvm2
 man-db
 man-pages
 mdxl
+micro
 mkinitcpio
-nano
 networkmanager
 nexora-branding
 nexora-core
