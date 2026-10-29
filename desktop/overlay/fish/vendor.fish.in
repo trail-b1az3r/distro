@@ -7,6 +7,10 @@ if not contains -- $HOME/.local/bin $PATH
     set -gx PATH $HOME/.local/bin $PATH
 end
 
+# The text editor (nano starts it too); set EDITOR yourself to use another.
+set -q EDITOR; or set -gx EDITOR micro
+set -q VISUAL; or set -gx VISUAL micro
+
 # Local AI environment (acceleration backend settings).
 if test -r $HOME/.config/@DISTRO_ID@/ai.env
     for line in (string match -rv '^\s*(#|$)' < $HOME/.config/@DISTRO_ID@/ai.env)

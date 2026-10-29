@@ -4,6 +4,9 @@ case ":${PATH}:" in
     *":${HOME}/.local/bin:"*) ;;
     *) PATH="${HOME}/.local/bin:${PATH}"; export PATH ;;
 esac
+# The text editor (nano starts it too); set EDITOR yourself to use another.
+: "${EDITOR:=micro}" "${VISUAL:=micro}"
+export EDITOR VISUAL
 if [ -r "${HOME}/.config/@DISTRO_ID@/ai.env" ]; then
     set -a
     # shellcheck source=/dev/null

@@ -12,7 +12,7 @@ bash-completion
 man-db
 man-pages
 texinfo
-nano
+micro
 vim
 less
 which

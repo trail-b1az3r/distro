@@ -76,10 +76,10 @@ man-pages
 mdxl
 memtest86+
 memtest86+-efi
+micro
 mkinitcpio
 mkinitcpio-archiso
 mkinitcpio-nfs-utils
-nano
 nbd
 networkmanager
 nexora-branding
