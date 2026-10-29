@@ -618,6 +618,13 @@ CHROOT_USER = "builder"
 CHROOT_PATH = "/usr/local/sbin:/usr/local/bin:/usr/bin"
 
 
+def _has_verify(pkgbuild: Path) -> bool:
+    try:
+        return re.search(r"(?m)^\s*verify\s*\(\s*\)", pkgbuild.read_text(errors="replace")) is not None
+    except OSError:
+        return False
+
+
 class Builder:
     """Builds package bases with makepkg in a build chroot, ``<workdir>/chroot``.
 
@@ -777,7 +784,11 @@ class Builder:
         try:
             self.install_deps(node)
             self.import_keys(node)
-            env = ["env", f"PKGDEST={out}", f"SRCDEST={self.workdir / 'sources'}",
+            # makepkg runs a PKGBUILD's verify() in the PKGBUILD's directory,
+            # and verify() functions (cosign, minisign...) open the downloaded
+            # files there: such packages download into their own directory.
+            srcdest = work if _has_verify(work / "PKGBUILD") else self.workdir / "sources"
+            env = ["env", f"PKGDEST={out}", f"SRCDEST={srcdest}",
                    f"BUILDDIR={self.workdir / 'makepkg'}", f"GNUPGHOME={self.gnupg}",
                    f"MAKEFLAGS=-j{os.cpu_count() or 2}", f"CMAKE_BUILD_PARALLEL_LEVEL={os.cpu_count() or 2}"]
             if "SOURCE_DATE_EPOCH" in os.environ:
