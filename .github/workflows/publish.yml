@@ -1,0 +1,52 @@
+# Publish an ISO an earlier Release or ISO run built and tested, without
+# building it again: Actions > Publish > Run workflow, with that run's ID and
+# the tag. Uses the RELEASE_TOKEN secret (see docs/release-process.md): the
+# workflow's own token may not create releases here.
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "ID of the run that built the ISO (from its URL)"
+        required: true
+      tag:
+        description: "Tag to publish it as, e.g. v26.10.0.1.0"
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    container: archlinux:base
+    steps:
+      - name: Tools
+        run: pacman -Syu --noconfirm --needed git github-cli pacman-contrib python
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: iso
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: repo
+          path: build/repo
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Publish the release and the package repository
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          case "$TAG" in v*) ;; *) TAG="v$TAG" ;; esac
+          git fetch --depth=1 origin "refs/tags/$TAG:refs/tags/$TAG" || true
+          scripts/publish-release.sh --tag "$TAG"
