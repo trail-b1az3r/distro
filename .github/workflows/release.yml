@@ -1,5 +1,7 @@
-# Tag vYYYY.MM[.N] -> build and test the ISO, publish it as a GitHub release,
+# Tag v<version>[.N] -> build and test the ISO, publish it as a GitHub release,
 # and update the package repository installed systems use (release "repo").
+# Or run it by hand (Actions > Release > Run workflow) with a tag name: the
+# same, and the tag is created on the commit it ran on once the ISO passes.
 # A tag pushed by `./build.sh --publish` (scripts/publish-release.sh) comes
 # with its release and ISO already uploaded: nothing is rebuilt then.
 # See docs/release-process.md.
@@ -8,6 +10,11 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create and publish, e.g. v26.10.0.1.0 (on the commit this runs on)"
+        required: true
 
 permissions:
   contents: write
@@ -18,17 +25,21 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       published: ${{ steps.release.outputs.published }}
+      tag: ${{ steps.release.outputs.tag }}
     steps:
       - name: Is the release already published (from build.sh --publish)?
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
+          [[ "$TAG" == v* ]] || { echo "::error::the tag must start with v: $TAG"; exit 1; }
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           # Drafts too: build.sh uploads to a draft, pushes the tag, then publishes it.
           assets="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
-            --jq ".[] | select(.tag_name == \"$GITHUB_REF_NAME\") | .assets[].name")"
+            --jq ".[] | select(.tag_name == \"$TAG\") | .assets[].name")"
           if grep -qE '\.iso(\.part-00)?$' <<<"$assets"; then
-            echo "Release $GITHUB_REF_NAME already carries an ISO: not rebuilding it."
+            echo "Release $TAG already carries an ISO: not rebuilding it."
             echo "published=true" >> "$GITHUB_OUTPUT"
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
@@ -45,7 +56,7 @@ jobs:
     secrets: inherit
 
   publish:
-    needs: iso
+    needs: [check, iso]
     runs-on: ubuntu-24.04
     container: archlinux:base
     steps:
@@ -62,6 +73,10 @@ jobs:
       - name: Publish the release and the package repository
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.check.outputs.tag }}
         run: |
           git config --global --add safe.directory "$PWD"
-          scripts/publish-release.sh --tag "$GITHUB_REF_NAME"
+          # A run by hand creates the tag (publish-release.sh pushes it).
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          scripts/publish-release.sh --tag "$TAG"
