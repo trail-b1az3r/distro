@@ -33,7 +33,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          [[ "$TAG" == v* ]] || { echo "::error::the tag must start with v: $TAG"; exit 1; }
+          [[ "$TAG" == v* ]] || TAG="v$TAG"  # 26.10.0.1.0 -> v26.10.0.1.0
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           # Drafts too: build.sh uploads to a draft, pushes the tag, then publishes it.
           assets="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
