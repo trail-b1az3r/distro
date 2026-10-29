@@ -56,3 +56,4 @@ nm-connection-editor
 
 @DISTRO_ID@-desktop
 @DISTRO_ID@-welcome
+@DISTRO_ID@-write

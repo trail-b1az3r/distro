@@ -362,7 +362,8 @@ def render(out: Path, b: Branding | None = None, src: Path | None = None) -> lis
             shutil.rmtree(target)
         target.mkdir(parents=True)
         extra = {"PKGVER": pkgver, "SOURCE_DATE_EPOCH": str(epoch)}
-        if tdir == "distro":
+        # Templates built from the distribution's own source get its tarball.
+        if tdir == "distro" or "@SOURCE_SHA256@" in (tsrc / "PKGBUILD.in").read_text():
             tarball = source_tarball(src, target / f"{b.id}-{pkgver}.tar.gz", f"{b.id}-{pkgver}", epoch)
             extra["SOURCE_SHA256"] = hashlib.sha256(tarball.read_bytes()).hexdigest()
         for f in sorted(tsrc.iterdir()):

@@ -10,7 +10,7 @@
 
 [local]
 # Rendered from packages/pkgbuild/<dir>/PKGBUILD.in with distro.conf values.
-templates = ["distro", "fonts-google-sans-flex", "hyprland-plus", "mdxl", "python315-pip"]
+templates = ["distro", "fonts-google-sans-flex", "hyprland-plus", "mdxl", "python315-pip", "write"]
 # PKGBUILD directories used as they are (globs, relative to the repository).
 dirs = ["desktop/dots/sdata/dist-arch/illogical-impulse-*"]
 

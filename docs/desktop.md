@@ -44,7 +44,7 @@ changed outside `custom/` is backed up before it is replaced
 
 ## Default applications
 
-Alacritty (terminal; Konsole stays installed), Dolphin (files), Firefox (browser, if installed), Okular
+Alacritty (terminal; Konsole stays installed), Nexora Write (MDXL documents, notes and books, and EPUB reading; see `apps/write`), Dolphin (files), Firefox (browser, if installed), Okular
 (PDF), Gwenview (images), Haruna/mpv (media), Ark (archives), OnlyOffice
 (documents), Kate (text), and the code editor from `CODE_EDITOR` in
 `distro.conf` (Code - OSS by default). Change them in
