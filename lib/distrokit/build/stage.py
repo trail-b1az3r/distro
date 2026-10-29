@@ -158,6 +158,41 @@ class Stage:
             "match-device=driver:mwifiex_pcie,driver:mwifiex_sdio,driver:mwifiex_usb\n"
             "wifi.powersave=2\n"
         ))
+        # ...and does not come back from suspend: the card stays dead until a
+        # reboot. Unloading the driver before sleep and loading it after is
+        # the known remedy; only machines with the driver loaded are touched.
+        self.text(f"/usr/lib/systemd/system-sleep/{b.id}-mwifiex", (
+            "#!/bin/sh\n"
+            f"# {b.pretty_name}: Marvell mwifiex Wi-Fi (Surface) does not survive suspend;\n"
+            "# unload the driver before sleeping and load it again on waking.\n"
+            f"mark=/run/{b.id}-mwifiex-unloaded\n"
+            'case "$1" in\n'
+            "    pre)\n"
+            "        if grep -q '^mwifiex_pcie ' /proc/modules; then\n"
+            '            modprobe -r mwifiex_pcie && touch "$mark"\n'
+            "        fi ;;\n"
+            "    post)\n"
+            '        if [ -e "$mark" ]; then\n'
+            '            rm -f "$mark"\n'
+            "            modprobe mwifiex_pcie\n"
+            "        fi ;;\n"
+            "esac\n"
+            "exit 0\n"
+        ), 0o755)
+        # Wi-Fi passwords: NetworkManager keeps the ones a desktop password
+        # agent (Halcyon's UwU agent) hands it only when that user may change
+        # system connections without being asked, so without this they were
+        # asked for after every reboot and only nmtui could connect.
+        self.text(f"/usr/share/polkit-1/rules.d/50-{b.id}-networkmanager.rules", (
+            f"// {b.pretty_name}: administrators (wheel) in their own active local session manage\n"
+            "// networks without a password prompt, so saved Wi-Fi passwords stick.\n"
+            "polkit.addRule(function (action, subject) {\n"
+            '    if (action.id.indexOf("org.freedesktop.NetworkManager.") === 0 &&\n'
+            '            subject.isInGroup("wheel") && subject.local && subject.active) {\n'
+            "        return polkit.Result.YES;\n"
+            "    }\n"
+            "});\n"
+        ))
 
         self.text(f"/usr/share/polkit-1/actions/org.{b.id}.privileged.policy", polkit_policy(b, lib))
         self.text(f"/usr/lib/systemd/user/{runtime.service_name(b)}", runtime.unit_text(b))

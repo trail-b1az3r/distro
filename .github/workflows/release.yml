@@ -63,6 +63,8 @@ jobs:
       - name: Tools
         run: pacman -Syu --noconfirm --needed git github-cli pacman-contrib python
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
       - uses: actions/download-artifact@v4
         with:
           name: iso
@@ -72,7 +74,9 @@ jobs:
           path: build/repo
       - name: Publish the release and the package repository
         env:
-          GH_TOKEN: ${{ github.token }}
+          # RELEASE_TOKEN (see docs/release-process.md): the workflow's own token
+          # may not create releases or tag commits whose workflows differ from main.
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
           TAG: ${{ needs.check.outputs.tag }}
         run: |
           git config --global --add safe.directory "$PWD"

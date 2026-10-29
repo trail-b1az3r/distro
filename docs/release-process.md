@@ -80,3 +80,20 @@ repository is used with `DISTRO_REPO_SIGLEVEL_UNSIGNED`.
 
 * Announce with the release notes, the checksums, and known issues.
 * Watch for bug reports with `nexora doctor --report` bundles.
+
+## The RELEASE_TOKEN secret
+
+The workflows' own token (`GITHUB_TOKEN`) may not create releases in this
+repository, nor tag a commit whose workflow files differ from `main`'s
+(GitHub: "Resource not accessible by integration", "without `workflows`
+permission"). Give the workflows a token of yours instead:
+
+1. GitHub > Settings > Developer settings > Fine-grained tokens > Generate:
+   only this repository, permissions **Contents: Read and write** and
+   **Workflows: Read and write**.
+2. This repository > Settings > Secrets and variables > Actions > New
+   repository secret: name `RELEASE_TOKEN`, the token as its value.
+
+Release and Publish use it whenever it is set. **Actions > Publish** publishes
+the ISO an earlier run built and tested (its run ID and the tag), without
+building it again.

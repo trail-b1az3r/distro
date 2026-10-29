@@ -177,6 +177,11 @@ def test_stage_core_layout_and_entry_point(tmp_path):
     assert (tmp_path / f"usr/lib/systemd/user/{b.id}-llm.service").is_file()
     wifi = (tmp_path / f"usr/lib/NetworkManager/conf.d/50-{b.id}-mwifiex.conf").read_text()
     assert "match-device=driver:mwifiex_pcie" in wifi and "wifi.powersave=2" in wifi
+    sleep = tmp_path / f"usr/lib/systemd/system-sleep/{b.id}-mwifiex"
+    assert os.access(sleep, os.X_OK) and "modprobe -r mwifiex_pcie" in sleep.read_text()
+    subprocess.run(["sh", "-n", str(sleep)], check=True)
+    rules = (tmp_path / f"usr/share/polkit-1/rules.d/50-{b.id}-networkmanager.rules").read_text()
+    assert 'subject.isInGroup("wheel")' in rules and "org.freedesktop.NetworkManager." in rules
 
     # The staged CLI runs from the installed layout (code in /usr/lib/<id>,
     # data in /usr/share/<id>).

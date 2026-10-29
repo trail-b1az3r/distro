@@ -54,7 +54,13 @@ recognised by its firmware SKU and shown as *Surface Pro (5th Gen)*. Notes:
   it is on the live ISO, and the installer adds it whenever a Marvell card is
   found, with or without the Surface kernel. Wi-Fi power saving is off for
   these cards (`/usr/lib/NetworkManager/conf.d/50-nexora-mwifiex.conf`): with
-  it on, they drop the connection.
+  it on, they drop the connection. The card also does not come back from
+  suspend, so the driver is unloaded before sleeping and loaded again on
+  waking (`/usr/lib/systemd/system-sleep/nexora-mwifiex`).
+* **Saved Wi-Fi passwords**: members of `wheel` manage networks without a
+  password prompt (`/usr/share/polkit-1/rules.d/50-nexora-networkmanager.rules`),
+  which NetworkManager needs to keep the passwords the desktop gives it. On a
+  system installed before this, connect once with `nmtui` to save a network.
 * **Display**: 2736 × 1824 at 12.3"; the installer suggests a scale of 2
   (a 1368 × 912 desktop, like Windows' 200 %). Change it in
   `~/.config/hypr/custom/general.lua` (1.6 or 1.75 fit more on screen).

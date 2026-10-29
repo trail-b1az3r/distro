@@ -132,7 +132,9 @@ if gh release view "$tag" >/dev/null 2>&1; then
     run gh release upload "$tag" "$work"/upload/* --clobber
     run gh release edit "$tag" --notes-file "$work/notes.md"
 else
-    run gh release create "$tag" --draft --target "$commit" --title "$title" \
+    target=(--target "$commit")
+    [[ -n "$(tag_commit "$tag")" ]] && target=()
+    run gh release create "$tag" --draft "${target[@]}" --title "$title" \
         --notes-file "$work/notes.md" "${prerelease[@]}" "$work"/upload/*
 fi
 if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null && [[ -z "$(remote_tag_commit "$tag")" ]]; then
