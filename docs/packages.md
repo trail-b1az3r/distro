@@ -44,6 +44,36 @@ The desktop configuration is updated separately from packages, only when the
 pinned dots version or the distribution layer changes, and never touches
 `~/.config/hypr/custom/`.
 
+## Automatic updates
+
+Every installed system checks for updates once a day. What happens next is
+the mode, in `/etc/nexora/auto-update.conf`:
+
+| Mode | What it does |
+|---|---|
+| `notify` (default) | A notification says what is waiting; clicking it opens the updater. Nothing is installed without you. |
+| `apply` | Repository updates (Arch, EndeavourOS and the distribution's own, which carries the desktop) are installed unattended, then each user's desktop configuration is refreshed. AUR, Flatpak, GPU and AI updates still wait for you. |
+| `off` | Nothing runs. |
+
+```bash
+nexora auto-update                 # the mode and the last run
+sudo nexora auto-update mode apply # or notify, or off
+```
+
+An unattended install holds back, and notifies instead, when the computer is
+on battery, when there is Arch Linux news since the last update (it often
+announces a manual step), or when another pacman is running. Two timers do
+the work: `nexora-auto-update.timer` (system, installs in apply mode) and
+`nexora-update-notify.timer` (per user: checks, notifies, refreshes the
+desktop). The installer enables both.
+
+New Halcyon releases reach the distribution the same way: the *Halcyon
+update* workflow (`.github/workflows/halcyon-bump.yml`) checks
+[trail-b1az3r/dots](https://github.com/trail-b1az3r/dots/releases) every
+week, moves the `desktop/dots` submodule to a new release, tests the desktop
+deploy and packaging on it, and opens a pull request. Once merged and
+released, installed systems pick it up with the next update.
+
 ## Pacman hooks the distribution adds
 
 | Hook | Does |

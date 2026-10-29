@@ -259,6 +259,28 @@ def cmd_update(a) -> int:
     return 0
 
 
+def cmd_auto_update(a) -> int:
+    from .system import autoupdate
+
+    if a.action == "status":
+        for line in autoupdate.status(B):
+            print(line)
+        return 0
+    if a.action == "mode":
+        if not a.value:
+            print(autoupdate.read_mode(B))
+            return 0
+        if os.geteuid() != 0:
+            print(S.fail(f"Changing the mode needs root: sudo {B.cli} auto-update mode {a.value}"), file=sys.stderr)
+            return 1
+        path = autoupdate.write_mode(a.value, B)
+        print(S.ok(f"Automatic updates: {a.value} ({path})"))
+        return 0
+    if a.action == "run":
+        return autoupdate.run_user(B) if a.user else autoupdate.run_system(B)
+    return 2
+
+
 # ---------------------------------------------------------------------------
 # install (features and tools by name)
 # ---------------------------------------------------------------------------
@@ -796,6 +818,14 @@ def build_parser() -> argparse.ArgumentParser:
     for src in ("aur", "flatpak", "desktop", "gpu", "ai"):
         s.add_argument(f"--no-{src}", action="store_true")
     s.set_defaults(func=cmd_update)
+
+    s = sub.add_parser("auto-update", help="automatic updates: notify (default), apply or off")
+    s.add_argument("action", choices=["status", "mode", "run"], nargs="?", default="status")
+    s.add_argument("value", nargs="?", choices=["notify", "apply", "off"], help="mode: the new mode")
+    g = s.add_mutually_exclusive_group()
+    g.add_argument("--system", action="store_true", help="run: the system timer's part (root)")
+    g.add_argument("--user", action="store_true", help="run: the user timer's part (notify, desktop)")
+    s.set_defaults(func=cmd_auto_update)
 
     s = sub.add_parser("install", help="install features (office, docker, plasma, claude-code, ...) or packages")
     s.add_argument("names", nargs="+")

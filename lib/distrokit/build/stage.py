@@ -159,6 +159,10 @@ class Stage:
 
         self.text(f"/usr/share/polkit-1/actions/org.{b.id}.privileged.policy", polkit_policy(b, lib))
         self.text(f"/usr/lib/systemd/user/{runtime.service_name(b)}", runtime.unit_text(b))
+        # Automatic updates (system/autoupdate.py): enabled by the installer and the package's install script.
+        from ..system import autoupdate
+        for unit, text in autoupdate.system_units(b).items():
+            self.text(f"/usr/lib/systemd/{unit}", text)
 
         parser = _parser()
         self.text(f"/usr/share/bash-completion/completions/{b.cli}", completions.bash(b, parser))
