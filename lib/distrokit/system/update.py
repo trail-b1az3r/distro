@@ -288,11 +288,14 @@ def apply_packages(runner: util.Runner, interactive: bool = True) -> None:
     cmd = ["pacman", "-Syu"] + ([] if interactive else ["--noconfirm"])
     if os.geteuid() != 0:
         cmd = ["sudo", *cmd]
-    runner.run(cmd)
+    runner.run(cmd, terminal=interactive)
 
 
 def apply_aur(runner: util.Runner, interactive: bool = True) -> None:
-    runner.run(["yay", "-Sua"] + ([] if interactive else ["--noconfirm", "--answerdiff", "None", "--answerclean", "None"]))
+    # Interactive: pacman's and yay's questions need the terminal; without it
+    # they read end-of-file and give up.
+    runner.run(["yay", "-Sua"] + ([] if interactive else ["--noconfirm", "--answerdiff", "None", "--answerclean", "None"]),
+               terminal=interactive)
 
 
 def apply_flatpak(runner: util.Runner) -> None:

@@ -194,6 +194,51 @@ def test_unpublished_distro_repo_is_switched_off_and_back_on(tmp_path):
     assert conf.read_text() == on
 
 
+def test_repo_command_switches_the_section(tmp_path, monkeypatch, capsys):
+    from distrokit import cli
+
+    b = load_branding()
+    conf = tmp_path / "etc/pacman.conf"
+    conf.parent.mkdir(parents=True)
+    conf.write_text(pacmanconf.render("target", b))
+    monkeypatch.setattr(util, "escalate", lambda reason, argv=None: None)
+    published = {"now": False}
+    monkeypatch.setattr(pacmanconf, "distro_repo_published", lambda branding=None, timeout=8.0: published["now"])
+
+    def repo(*args):
+        return cli.main(["repo", *args, "--root", str(tmp_path)])
+
+    assert repo() == 0 and "not published" in capsys.readouterr().out
+    assert repo("auto") == 0 and not pacmanconf.distro_repo_enabled(conf.read_text(), b)
+    assert repo("on") == 1 and not pacmanconf.distro_repo_enabled(conf.read_text(), b)  # would break pacman
+    assert repo("on", "--force") == 0 and pacmanconf.distro_repo_enabled(conf.read_text(), b)
+    assert repo("off") == 0 and not pacmanconf.distro_repo_enabled(conf.read_text(), b)
+    published["now"] = None  # unreachable: left as it is
+    assert repo("auto") == 1 and not pacmanconf.distro_repo_enabled(conf.read_text(), b)
+    published["now"] = True
+    assert repo("auto") == 0 and conf.read_text() == pacmanconf.render("target", b)
+
+
+def test_interactive_updates_get_the_terminal(monkeypatch):
+    """pacman's and yay's questions read the terminal: run without it, they
+    read end-of-file and give up ("Packages to exclude: -> EOF")."""
+    calls = []
+    monkeypatch.setattr(util.shutil, "which", lambda exe, path=None: "/usr/bin/" + exe)
+
+    def fake_run(cmd, **kw):
+        calls.append((cmd, kw))
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    def no_pipes(*a, **kw):
+        raise AssertionError("an interactive update must not run behind pipes")
+
+    monkeypatch.setattr(util.subprocess, "run", fake_run)
+    monkeypatch.setattr(util.subprocess, "Popen", no_pipes)
+    update.apply_aur(util.Runner(), interactive=True)
+    cmd, kw = calls[-1]
+    assert cmd == ["yay", "-Sua"] and not {"stdin", "stdout", "capture_output"} & set(kw)
+
+
 def test_distro_repo_published_reads_the_database_url(monkeypatch):
     import urllib.error
 

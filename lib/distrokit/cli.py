@@ -212,10 +212,14 @@ def cmd_update(a) -> int:
               if not getattr(a, f"no_{s}", False)]
     print(S.header("Checking for updates…"))
     conf = Path("/etc/pacman.conf")
-    if ("packages" in wanted and conf.is_file() and pacmanconf.distro_repo_enabled(conf.read_text(), B)
-            and pacmanconf.distro_repo_published(B) is False):
-        print(S.warn(f"The {B.repo_name} repository is not published yet, so pacman cannot sync any repository. "
-                     f"Turn it off until it is: sudo {B.cli} repair packages"))
+    if ("packages" in wanted and not a.check and conf.is_file()
+            and pacmanconf.distro_repo_enabled(conf.read_text(), B) and pacmanconf.distro_repo_published(B) is False):
+        # pacman syncs nothing while one repository is missing: turn it off
+        # first (it comes back on with `repo auto` once it is published).
+        print(S.warn(f"The {B.repo_name} repository is not published yet, so pacman cannot sync; "
+                     "turning it off until it is."))
+        repo_cmd = [B.cli, "repo", "off"]
+        util.Runner(log=print).run(repo_cmd if os.geteuid() == 0 else ["sudo", *repo_cmd], terminal=True, check=False)
     news = update.arch_news(update.last_update_time())
     sources = update.check_all(B, wanted)
     total = 0
@@ -284,6 +288,44 @@ def cmd_auto_update(a) -> int:
     if a.action == "run":
         return autoupdate.run_user(B) if a.user else autoupdate.run_system(B)
     return 2
+
+
+def cmd_repo(a) -> int:
+    """The distribution repository in pacman.conf: status, or switch it on,
+    off, or to match whether it is published (auto)."""
+    name, server = B.repo_name, B.get("DISTRO_REPO_SERVER")
+    conf = Path(a.root) / "etc/pacman.conf"
+    if not server:
+        print(S.info(f"This build has no {name} repository (DISTRO_REPO_SERVER is empty)."))
+        return 0
+    if not conf.is_file():
+        print(S.fail(f"{conf} does not exist."))
+        return 1
+    text = conf.read_text()
+    enabled = pacmanconf.distro_repo_enabled(text, B)
+    published = pacmanconf.distro_repo_published(B)
+    if a.action == "status":
+        state = {True: "published", False: "not published", None: "could not be reached"}[published]
+        print(f"[{name}] is {'on' if enabled else 'off'} in {conf}; {server}/{name}.db: {state}")
+        if enabled and published is False:
+            print(S.warn(f"pacman cannot sync while it is on: sudo {B.cli} repo off"))
+        elif not enabled and published:
+            print(S.info(f"It can be turned on: sudo {B.cli} repo on"))
+        return 0
+    want = {"on": True, "off": False, "auto": published}[a.action]
+    if want is None:
+        print(S.warn(f"{server} could not be reached, so [{name}] is left {'on' if enabled else 'off'}."))
+        return 1
+    if want and published is False and not a.force:
+        print(S.fail(f"{server} has no {name}.db: with [{name}] on, pacman cannot sync. --force turns it on anyway."))
+        return 1
+    if want == enabled:
+        print(S.ok(f"[{name}] is already {'on' if want else 'off'}."))
+        return 0
+    _need_root(f"turn the {name} repository {'on' if want else 'off'} in {conf}")
+    conf.write_text(pacmanconf.set_distro_repo(conf.read_text(), want, B))
+    print(S.ok(f"[{name}] is now {'on' if want else 'off'} in {conf}."))
+    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -828,6 +870,13 @@ def build_parser() -> argparse.ArgumentParser:
     for src in ("aur", "flatpak", "desktop", "gpu", "ai"):
         s.add_argument(f"--no-{src}", action="store_true")
     s.set_defaults(func=cmd_update)
+
+    s = sub.add_parser("repo", help="the distribution's package repository in pacman.conf: status, on, off, auto")
+    s.add_argument("action", nargs="?", default="status", choices=["status", "on", "off", "auto"],
+                   help="auto: on when it is published, off when it is not")
+    s.add_argument("--force", action="store_true", help="on: even when it is not published")
+    s.add_argument("--root", default="/", help="a mounted system")
+    s.set_defaults(func=cmd_repo)
 
     s = sub.add_parser("auto-update", help="automatic updates: notify (default), apply or off")
     s.add_argument("action", choices=["status", "mode", "run"], nargs="?", default="status")
