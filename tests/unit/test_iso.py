@@ -228,6 +228,46 @@ def test_iso_files_and_the_fat32_limit(tmp_path, monkeypatch):
     assert iso.too_big_for_fat32({"/arch/x86_64/airootfs.sfs": 2**32 - 1}) == []
 
 
+def test_nano_offline_repository_keeps_only_live_and_profile_dependencies(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    b = load_branding()
+    opts = iso.Options(edition="nano", profile="minimal", offline="minimal",
+                       build=tmp_path / "build")
+    opts.repo.mkdir(parents=True)
+    names = [
+        "nexora-installer-1-1-any.pkg.tar.zst",
+        "nexora-core-1-1-any.pkg.tar.zst",
+        "nexora-desktop-1-1-any.pkg.tar.zst",
+        "illogical-shell-1-1-any.pkg.tar.zst",
+        "required-dep-1-1-any.pkg.tar.zst",
+        "nexora-ai-1-1-any.pkg.tar.zst",
+        "llama.cpp-vulkan-1-1-x86_64.pkg.tar.zst",
+    ]
+    for name in names:
+        (opts.repo / name).write_bytes(b"pkg")
+
+    metadata = {
+        names[0]: ("nexora-installer", ["nexora-core"]),
+        names[1]: ("nexora-core", []),
+        names[2]: ("nexora-desktop", ["illogical-shell"]),
+        names[3]: ("illogical-shell", ["required-dep"]),
+        names[4]: ("required-dep", []),
+        names[5]: ("nexora-ai", []),
+        names[6]: ("llama.cpp-vulkan", []),
+    }
+    monkeypatch.setattr(iso, "package_metadata", lambda path: metadata[path.name])
+    monkeypatch.setattr(iso, "live_packages", lambda _b, _edition: ["nexora-installer"])
+    monkeypatch.setattr(iso, "select_packages",
+                        lambda _profile, branding=None: SimpleNamespace(packages=["nexora-desktop"]))
+
+    out = iso.offline_repository(opts, b, iso.util.Runner(dry_run=True), tmp_path / "pacman.conf")
+    included = {p.name for p in out.glob("*.pkg.tar.*")}
+    assert included == set(names[:5])
+    assert "nexora-ai-1-1-any.pkg.tar.zst" not in included
+    assert "llama.cpp-vulkan-1-1-x86_64.pkg.tar.zst" not in included
+
+
 def test_offline_sets_keep_conflicting_stacks_apart():
     b = load_branding()
     for profile in ("minimal", "standard", "developer", "ai"):
