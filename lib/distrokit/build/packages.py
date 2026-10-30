@@ -51,6 +51,7 @@ from .. import __version__, pacmanconf, paths, util
 from ..branding import Branding, load as load_branding
 from ..profiles import load_profiles, read_list, select_packages
 from . import stage
+from .editions import nano_live_packages
 
 AUR = "https://aur.archlinux.org"
 # Arch Linux's read-only GitHub mirror of the AUR's git data: one branch per
@@ -276,9 +277,7 @@ def wanted_packages(b: Branding, root: Path | None = None, *, edition: str = "st
     root = root or paths.DATA_ROOT
     if edition == "nano":
         names = list(select_packages(load_profiles(root)[profile], branding=b).packages)
-        for list_name in ("base", "nano-desktop", "live"):
-            names += read_list(list_name, b, data_root=root)
-        names += ["linux", "amd-ucode", "intel-ucode"]
+        names += nano_live_packages(b)
         return list(dict.fromkeys(names))
     if edition != "standard":
         raise ValueError(f"unknown ISO edition {edition!r}")
