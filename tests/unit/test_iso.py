@@ -155,7 +155,8 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
 
     assert {"lxqt-session", "lxqt-panel", "pcmanfm-qt", "qterminal",
             "mate-session-manager", "mate-panel", "marco", "caja",
-            "mate-terminal", "sddm"} <= packages
+            "mate-terminal", "sddm", "network-manager-applet",
+            "nm-connection-editor", "udisks2", "gvfs"} <= packages
     assert {f"{b.id}-installer", f"{b.id}-branding", f"{b.id}-core",
             f"{b.id}-welcome", f"{b.id}-write"} <= packages
     assert "hyprland-plus" not in packages
