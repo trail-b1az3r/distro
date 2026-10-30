@@ -11,6 +11,9 @@ git clone --recursive https://github.com/trail-b1az3r/distro && cd distro
 # On Arch Linux or EndeavourOS:
 sudo scripts/bootstrap.sh --builder     # once: archiso, tools, EndeavourOS keyring
 sudo ./build.sh --profile standard
+
+# Compact Nano ISO for Nexora 26.10.0.1.3 (network-enabled installer):
+sudo ./build.sh --edition nano --profile standard --offline minimal
 ```
 
 Output:
@@ -76,9 +79,17 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
    `-debug` packages stay out of it (they remain in `build/repo`).
 4. **archiso profile** (`build/iso-profile`): archiso's `releng` profile with
    `iso/` laid over it — branded boot menus, the live session, NetworkManager
-   instead of systemd-networkd, no root autologin or SSH, the package list
-   (`base`, `desktop`, `browser`, `live` lists), pacman configurations, build
-   information.
+   instead of systemd-networkd, no root autologin or SSH, pacman configurations
+   and build information. Standard uses `base`, `desktop`, `browser`, `live`;
+   Nano uses `base`, `nano-desktop`, `live`. Nano's SDDM login manager exposes
+   LXQt and MATE as the only installed desktop sessions; it does not install
+   the Halcyon desktop meta-package or Plasma. Its live user starts in LXQt by
+   default and can switch to MATE at the SDDM session chooser after logging out.
+   Nano also enforces a strict final ISO size below 1,990,000,000 bytes and
+   prints the measured byte/GB size plus remaining budget. A build at or above
+   the limit fails and reports the largest ISO members. The Nano size budget
+   applies only to the live ISO package set; installed-system profiles are not
+   reduced.
    UEFI machines boot it with GRUB (`iso/grub`, themed), BIOS machines with
    syslinux.
 5. **mkarchiso**, then the ISO, checksums and metadata are moved into place.
@@ -134,6 +145,7 @@ qemu-system-x86_64 -enable-kvm -m 4G -smp 2 -cdrom dist/*.iso \
 | `Not found anywhere: X` | a package in `packages/lists` does not exist (renamed or removed upstream): fix the list |
 | an AUR package fails to build | pin an older commit in `aur.lock.json` or remove it from the lists; see `build/packages/src/<pkg>` |
 | `could not fetch the AUR package X` | both the AUR and its mirror failed; the message shows git's error for each. Check the network and [status.archlinux.org](https://status.archlinux.org), then build again. "Commit … is gone": run `scripts/build-packages.sh --update-lock` |
+| `Nano ISO exceeds the strict 1,990,000,000-byte limit` | review the largest ISO members in the error; reduce only Nano live packages or tune the Nano compression preset. Do not trim installed-system profiles. |
 | `… exceeds FAT32's 4 GiB file size limit` | the live system's image (`airootfs.sfs`, which also carries the offline repository) grew past 4 GiB: drop packages from `packages/lists/live.list` or the distribution repository, or build with `--offline minimal` |
 | `No space left on device` | free space or point `--build-dir` elsewhere; `--clean` removes old work directories |
 | mkarchiso: `umount: …/airootfs/proc: target is busy`, then `find: …/proc/…: Invalid argument` | something on the host (a file indexer, say) held the live system's `/proc`. mkarchiso now runs in a mount namespace of its own, and the next build unmounts whatever an earlier one left mounted under `build/` |
