@@ -112,13 +112,13 @@ jobs:
 
   qemu:
     needs: build
-    if: ${{ !cancelled() && inputs.qemu != false && (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.iso_run)) && (inputs.edition != 'nano' || matrix.scenario != 'uefi-offline-developer') }}
+    if: ${{ !cancelled() && inputs.qemu != false && (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.iso_run)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
-        scenario: [uefi-btrfs-encrypted, bios-ext4-grub, uefi-offline-developer, live-uefi-usb, live-uefi-cdrom]
+        scenario: ${{ inputs.edition == 'nano' && fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "live-uefi-usb", "live-uefi-cdrom"]') || fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "uefi-offline-developer", "live-uefi-usb", "live-uefi-cdrom"]') }}
     steps:
       - uses: actions/checkout@v4
       - name: KVM and QEMU
