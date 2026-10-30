@@ -10,6 +10,9 @@ name: Release
 on:
   push:
     tags: ["v*"]
+    # One-off branch trigger used for the v26.10.0.1.2 maintenance release.
+    # The workflow creates the actual v26.10.0.1.2 tag after its ISO passes QEMU.
+    branches: ["v26.10.0.1.2"]
   workflow_dispatch:
     inputs:
       tag:
@@ -19,6 +22,13 @@ on:
 permissions:
   contents: write
   actions: read  # iso.yml's QEMU job downloads artifacts through the API
+
+# A branch-triggered release also pushes its tag. Serialize the resulting tag
+# event behind the branch run so it sees the completed release and does not
+# start a second ISO build.
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   check:
@@ -94,3 +104,9 @@ jobs:
           fi
           git fetch --depth=1 origin "refs/tags/$TAG:refs/tags/$TAG"
           scripts/publish-release.sh --tag "$TAG"
+      - name: Remove the one-off release trigger branch
+        if: success() && github.ref_type == 'branch' && github.ref_name == 'v26.10.0.1.2'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          TAG: ${{ needs.check.outputs.tag }}
+        run: gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$TAG"
