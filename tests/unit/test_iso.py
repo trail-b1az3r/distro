@@ -130,7 +130,7 @@ def test_assemble_profile(tmp_path, releng):
     assert (air / f"etc/{b.id}/live").is_file()
 
     # Live session: greetd autologin, NetworkManager, the live user service.
-    live_setup_unit = air / f"usr/lib/systemd/system/{b.id}-live-setup.service"
+    live_setup_unit = air / f"etc/systemd/system/{b.id}-live-setup.service"
     assert "Wants=NetworkManager.service" in live_setup_unit.read_text()
     assert "After=systemd-sysusers.service systemd-tmpfiles-setup.service NetworkManager.service" in live_setup_unit.read_text()
     systemd = air / "etc/systemd/system"
