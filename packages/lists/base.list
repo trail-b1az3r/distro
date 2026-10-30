@@ -17,7 +17,10 @@ vim
 less
 which
 
-# Package management: pacman stays the package manager; yay handles the AUR.
+# Package management: keep the Arch keyring in every installed system. Offline installs
+# must have the current signing keys available before the first online sync.
+archlinux-keyring
+# pacman stays the package manager; yay handles the AUR.
 pacman-contrib
 reflector
 endeavouros-keyring
