@@ -21,5 +21,20 @@ if [[ ! -e "/etc/@DISTRO_ID@/nano" && ! -e "/home/$user/.config/hypr/@DISTRO_ID@
     fi
 fi
 
+# Nano's SDDM session directories contain exactly the two supported
+# desktops. Openbox is LXQt's window manager, not an extra offered session.
+if [[ -e "/etc/@DISTRO_ID@/nano" ]]; then
+    session_dir="/etc/@DISTRO_ID@/xsessions"
+    install -d -m 0755 "$session_dir" "/etc/@DISTRO_ID@/wayland-sessions"
+    for session in lxqt mate; do
+        source="/usr/share/xsessions/$session.desktop"
+        if [[ ! -f "$source" ]]; then
+            echo "Nano desktop session is missing: $source" >&2
+            exit 1
+        fi
+        ln -sfn "$source" "$session_dir/$session.desktop"
+    done
+fi
+
 # Keep the installer's log readable for bug reports.
 install -d -m 0755 /var/log/@DISTRO_ID@
