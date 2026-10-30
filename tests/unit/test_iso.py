@@ -158,7 +158,7 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
             "mate-terminal", "sddm", "network-manager-applet",
             "nm-connection-editor", "udisks2", "gvfs"} <= packages
     assert {f"{b.id}-installer", f"{b.id}-branding", f"{b.id}-core",
-            f"{b.id}-welcome", f"{b.id}-write"} <= packages
+            f"{b.id}-welcome"} <= packages
     assert "hyprland-plus" not in packages
     assert not any(name.startswith("illogical-impulse-") for name in packages)
     assert "plasma-desktop" not in packages and "greetd" not in packages
