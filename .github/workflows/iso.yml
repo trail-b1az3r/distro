@@ -124,6 +124,8 @@ jobs:
     if: ${{ !cancelled() && (inputs.qemu != false || github.event_name == 'pull_request') && (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.iso_run)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
+    env:
+      EDITION: ${{ inputs.edition || (github.event_name == 'pull_request' && 'nano' || 'standard') }}
     strategy:
       fail-fast: false
       matrix:
@@ -143,7 +145,7 @@ jobs:
           run-id: ${{ inputs.iso_run || github.run_id }}
           github-token: ${{ github.token }}
       - name: Install and check (${{ matrix.scenario }})
-        run: python3 tests/qemu/qemu_test.py --iso dist/*.iso --scenario "${{ matrix.scenario }}"
+        run: python3 tests/qemu/qemu_test.py --iso dist/*.iso --edition "$EDITION" --scenario "${{ matrix.scenario }}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
