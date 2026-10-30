@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the live ISO: dist/<Name>-<version>-x86_64.iso (+ checksums/, metadata/).
 #
-#   ./build.sh [--profile minimal|standard|developer|ai] [--offline minimal|full]
+#   ./build.sh [--edition standard|nano] [--profile minimal|standard|developer|ai] [--offline minimal|full]
 #              [--clean] [--debug] [--container] [--skip-packages] [--dry-run]
 #              [--publish [--tag vVERSION[.N]] [--no-repo]]
 #              [--py PYTHON] [--user-packages DIR]
@@ -16,7 +16,9 @@ usage() {
     cat <<'TXT'
 
 Options:
+  --edition E      ISO edition: standard (default) or nano (compact live environment)
   --profile P      installation profile offered by default and carried offline (default: standard)
+  --compression C  SquashFS preset: auto (default), release or nano
   --offline MODE   minimal: distribution packages on the ISO, the rest is downloaded while installing
                    full:    every package an installation can need (larger ISO, installs with no network)
   --clean          remove previous work directories first
@@ -59,7 +61,7 @@ while (($#)); do
             source "$2"
             set +a
             shift ;;
-        --profile | --offline | --archive-date | --sign)
+        --edition | --profile | --offline | --compression | --archive-date | --sign)
             (($# >= 2)) || die "$1 needs a value"
             args+=("$1" "$2"); shift ;;
         --clean | --skip-packages | --no-multilib) args+=("$1") ;;
@@ -135,7 +137,7 @@ if ((container)); then
             "reboot if the container fails to start" >&2
     fi
     envs=()
-    for v in SOURCE_DATE_EPOCH ARCHIVE_DATE GPGKEY ISO_PROFILE ISO_OFFLINE AUR_GIT_MIRROR; do
+    for v in SOURCE_DATE_EPOCH ARCHIVE_DATE GPGKEY ISO_PROFILE ISO_OFFLINE ISO_EDITION ISO_COMPRESSION AUR_GIT_MIRROR; do
         if [[ -v $v ]]; then envs+=(-e "$v=${!v}"); fi
     done
     mounts=()
@@ -189,7 +191,7 @@ PY
 fi
 
 if ((EUID != 0)) && [[ " ${args[*]} " != *" --dry-run "* ]]; then
-    sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,ISO_PROFILE,ISO_OFFLINE,AUR_GIT_MIRROR,BUILD_PYTHON,BUILD_PYTHONPATH,BUILD_PYTHON_CHECKED,USER_PACKAGES "$0" "${args[@]}"
+    sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,ISO_PROFILE,ISO_OFFLINE,ISO_EDITION,ISO_COMPRESSION,AUR_GIT_MIRROR,BUILD_PYTHON,BUILD_PYTHONPATH,BUILD_PYTHON_CHECKED,USER_PACKAGES "$0" "${args[@]}"
     publish_release
     exit
 fi
