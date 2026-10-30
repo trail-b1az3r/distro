@@ -78,6 +78,8 @@ RELENG_REMOVE = [
     "airootfs/etc/systemd/system/dbus-org.freedesktop.resolve1.service",
     "airootfs/etc/systemd/system/multi-user.target.wants/iwd.service",
     "airootfs/etc/systemd/system/multi-user.target.wants/sshd.service",
+    "airootfs/etc/systemd/system/pacman-init.service",
+    "airootfs/etc/systemd/system/multi-user.target.wants/pacman-init.service",
     "airootfs/etc/systemd/system/multi-user.target.wants/systemd-networkd.service",
     "airootfs/etc/systemd/system/multi-user.target.wants/systemd-resolved.service",
     "airootfs/etc/systemd/system/multi-user.target.wants/livecd-talk.service",
@@ -659,6 +661,22 @@ def finish(opts: Options, b: Branding, epoch: int, runner: util.Runner) -> dict:
     return info
 
 
+def prepare_live_keyring(profile: Path, runner: util.Runner) -> Path:
+    """Create and populate the live ISO's Pacman trust database at build time.
+
+    The resulting GnuPG database is baked into the ISO (and therefore onto a
+    USB written from it), so first boot and offline installation do not need
+    network access or a delayed pacman-init.service.
+    """
+    gpgdir = profile / "airootfs/etc/pacman.d/gnupg"
+    gpgdir.mkdir(parents=True, exist_ok=True)
+    gpgdir.chmod(0o700)
+    runner.run(["pacman-key", "--gpgdir", str(gpgdir), "--init"])
+    runner.run(["pacman-key", "--gpgdir", str(gpgdir), "--populate", "archlinux", "endeavouros"])
+    runner.run(["pacman-key", "--gpgdir", str(gpgdir), "--updatedb"])
+    return gpgdir
+
+
 # ---------------------------------------------------------------------------
 # The build
 # ---------------------------------------------------------------------------
@@ -668,7 +686,7 @@ def preflight(opts: Options) -> list[str]:
     problems = []
     if os.geteuid() != 0:
         problems.append("mkarchiso needs root: run `sudo ./build.sh`, or `./build.sh --container`.")
-    need = ["mkarchiso", "pacman", "repo-add", "unshare"]
+    need = ["mkarchiso", "pacman", "pacman-key", "repo-add", "unshare"]
     need += [] if opts.skip_packages else ["makepkg", "git", "pacstrap", "arch-chroot"]
     for exe in need:
         if not shutil.which(exe):
@@ -745,6 +763,8 @@ def build(opts: Options, runner: util.Runner | None = None) -> dict:
 
     print("==> archiso profile")
     prof = assemble(opts, b, epoch)
+    print("==> Preparing the live Pacman keyring for the ISO/USB")
+    prepare_live_keyring(prof, runner)
 
     print("==> mkarchiso")
     _remove(opts.out)
