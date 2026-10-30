@@ -18,6 +18,11 @@ NANO_EXCLUDE = {
     "open-vm-tools", "qemu-guest-agent", "rsync", "spice-vdagent",
     # Not needed in the live session; keep the standard Python runtime for the installer.
     "python-pip", "python315", "python315-pip",
+    # Keep Nano within its strict size budget. The default firmware set covers
+    # common consumer hardware; optional server, switch, and SoC firmware stays
+    # available on the standard ISO.
+    "linux-firmware-liquidio", "linux-firmware-marvell", "linux-firmware-mellanox",
+    "linux-firmware-nfp", "linux-firmware-qcom", "linux-firmware-qlogic",
     # Optional SMB file sharing pulls in Samba and its large dependency set.
     "gvfs-smb",
     "testdisk", "texinfo", "unzip", "vim", "virtualbox-guest-utils",

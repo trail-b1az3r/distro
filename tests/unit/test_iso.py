@@ -160,15 +160,15 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
             "mate-terminal", "sddm", "network-manager-applet",
             "nm-connection-editor", "udisks2", "gvfs", "modemmanager",
             "networkmanager", "wpa_supplicant",
-            "linux-firmware-liquidio", "linux-firmware-marvell", "linux-firmware-mellanox",
-            "linux-firmware-nfp", "linux-firmware-qcom", "linux-firmware-qlogic",
             "mkinitcpio-nfs-utils", "nbd"} <= packages
     assert {f"{b.id}-installer", f"{b.id}-branding", f"{b.id}-core",
             f"{b.id}-welcome"} <= packages
     assert "hyprland-plus" not in packages
     assert not any(name.startswith("illogical-impulse-") for name in packages)
     assert "plasma-desktop" not in packages and "greetd" not in packages
-    assert not {"noto-fonts", "python-pip", "python315", "python315-pip", "gvfs-smb"} & packages
+    assert not {"noto-fonts", "python-pip", "python315", "python315-pip", "gvfs-smb",
+                "linux-firmware-liquidio", "linux-firmware-marvell", "linux-firmware-mellanox",
+                "linux-firmware-nfp", "linux-firmware-qcom", "linux-firmware-qlogic"} & packages
 
     air = prof / "airootfs"
     systemd = air / "etc/systemd/system"
