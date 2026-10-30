@@ -5,6 +5,7 @@ from __future__ import annotations
 from ..branding import Branding
 from ..profiles import read_list
 
+NANO_SIZE_LIMIT = 1_990_000_000  # strict: the ISO must be smaller than this
 NANO_LIVE_LISTS = ("base", "nano-desktop", "live")
 NANO_LIVE_EXTRA = ("linux", "amd-ucode", "intel-ucode")
 NANO_EXCLUDE = {
