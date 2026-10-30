@@ -415,7 +415,7 @@ def test_finish_warns_but_keeps_a_valid_iso_with_a_file_too_big_for_fat32(tmp_pa
 
     info = iso.finish(opts, b, 1790393700, util.Runner(dry_run=True))
     assert info["fat32_file_copy_compatible"] is False
-    assert info["fat32_oversized_files"] == ["/arch/x86_64/airootfs.sfs"]
+    assert info["fat32_oversized_files"] == ["/arch/x86_64/airootfs.sfs (4 GiB)"]
     assert "raw-image mode" in capsys.readouterr().out
     metadata = opts.dist.parent / "metadata" / f"{Path(info['iso']).stem}.json"
     assert json.loads(metadata.read_text())["fat32_file_copy_compatible"] is False
