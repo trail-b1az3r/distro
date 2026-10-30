@@ -59,6 +59,10 @@ xorg-xwayland
 qt5-wayland
 qt6-wayland
 gtk3
+noto-fonts
+noto-fonts-emoji
+ttf-dejavu
+ttf-liberation
 gnome-keyring
 polkit
 network-manager-applet
