@@ -282,6 +282,20 @@ def test_checksums_and_finish(tmp_path, releng, monkeypatch):
     assert meta["live_packages"] == 2 and meta["sha256"] == sha[0]
 
 
+def test_nano_size_limit_fails_at_the_exact_boundary(tmp_path, releng, monkeypatch):
+    b = load_branding()
+    opts = iso.Options(edition="nano", build=tmp_path / "build",
+                       dist=tmp_path / "out" / "dist", releng=releng)
+    opts.out.mkdir(parents=True)
+    (opts.out / "nano.iso").write_bytes(b"12345678")
+    monkeypatch.setattr(iso, "NANO_SIZE_LIMIT", 8)
+    monkeypatch.setattr(iso, "iso_files", lambda _path: {"/arch/x86_64/airootfs.sfs": 7})
+    from distrokit import util
+
+    with pytest.raises(SystemExit, match="exceeds the strict 8-byte limit by 0 bytes"):
+        iso.finish(opts, b, 1790393700, util.Runner(dry_run=True))
+
+
 def test_finish_reads_the_package_list_from_the_iso(tmp_path, releng, monkeypatch):
     # mkarchiso -r removes its work directory, list and all: the ISO has a copy.
     b = load_branding()
