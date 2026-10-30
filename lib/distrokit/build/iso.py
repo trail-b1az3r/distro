@@ -43,20 +43,11 @@ from ..branding import Branding, load as load_branding
 from ..profiles import load_editors, load_profiles, read_list, select_packages
 from . import packages as pkgbuild
 from . import stage
+from .editions import NANO_SIZE_LIMIT, nano_live_packages
 
 RELENG = Path("/usr/share/archiso/configs/releng")
 LIVE_LISTS = ["base", "desktop", "browser", "live"]
-LIVE_NANO_LISTS = ["base", "nano-desktop", "live"]
 LIVE_EXTRA = ["linux", "amd-ucode", "intel-ucode"]
-NANO_EXCLUDE = {
-    "7zip", "archinstall", "base-devel", "btop", "ddrescue", "ffmpegthumbs",
-    "gparted", "greetd", "htop", "kdegraphics-thumbnailers", "kate", "kio-extras",
-    "lsof", "man-db", "man-pages", "mdxl", "mkinitcpio-nfs-utils", "nbd",
-    "noto-fonts-cjk", "openssh", "open-vm-tools", "qemu-guest-agent",
-    "rsync", "spice-vdagent", "testdisk", "texinfo", "unzip", "vim",
-    "virtualbox-guest-utils", "hyperv", "zip",
-}
-NANO_SIZE_LIMIT = 1_990_000_000  # strict: the ISO must be smaller than this
 
 # releng pieces the distribution replaces or does not want: its boot menus,
 # the root autologin with Arch's install script, systemd-networkd/iwd/resolved
@@ -201,11 +192,11 @@ def live_packages(b: Branding, edition: str = "standard") -> list[str]:
     """Direct live package selection, independent of the installed-system profile."""
     if edition not in ("standard", "nano"):
         raise ValueError(f"unknown ISO edition {edition!r}")
-    pk: list[str] = []
-    for name in (LIVE_NANO_LISTS if edition == "nano" else LIVE_LISTS):
-        pk += read_list(name, b)
     if edition == "nano":
-        pk = [name for name in pk if name not in NANO_EXCLUDE]
+        return nano_live_packages(b)
+    pk: list[str] = []
+    for name in LIVE_LISTS:
+        pk += read_list(name, b)
     return list(dict.fromkeys(pk + LIVE_EXTRA))
 
 
