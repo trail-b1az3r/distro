@@ -1,0 +1,66 @@
+# Nano live desktop environments: the only supported sessions in the Nano ISO.
+# Both sessions are installed side-by-side and exposed by SDDM at login.
+# LXQt (Qt desktop; lightweight X11 session).
+lxqt-about
+lxqt-admin
+lxqt-archiver
+lxqt-config
+lxqt-globalkeys
+lxqt-notificationd
+lxqt-openssh-askpass
+lxqt-panel
+lxqt-policykit
+lxqt-powermanagement
+lxqt-qtplugin
+lxqt-runner
+lxqt-session
+lxqt-sudo
+lxqt-themes
+pcmanfm-qt
+qterminal
+obconf-qt
+pavucontrol-qt
+lximage-qt
+screengrab
+qps
+
+# MATE (traditional GTK desktop).
+caja
+caja-image-converter
+caja-share
+engrampa
+eom
+mate-control-center
+mate-desktop
+mate-icon-theme
+mate-media
+mate-menus
+mate-notification-daemon
+mate-panel
+mate-polkit
+mate-power-manager
+mate-screensaver
+mate-session-manager
+mate-settings-daemon
+mate-terminal
+marco
+mozo
+atril
+pluma
+
+# Shared display manager, X11 compatibility, Qt and GTK integration.
+sddm
+xorg-server
+xorg-xwayland
+qt5-wayland
+qt6-wayland
+gtk3
+gnome-keyring
+polkit
+xdg-user-dirs
+xdg-utils
+
+# Nexora live welcome/installer branding and tools.
+@nexora@-desktop
+@nexora@-welcome
+@nexora@-write
