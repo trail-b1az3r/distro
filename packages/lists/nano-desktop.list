@@ -17,6 +17,10 @@ lxqt-session
 lxqt-sudo
 lxqt-themes
 pcmanfm-qt
+udisks2
+gvfs
+gvfs-mtp
+gvfs-smb
 qterminal
 obconf-qt
 pavucontrol-qt
@@ -57,6 +61,8 @@ qt6-wayland
 gtk3
 gnome-keyring
 polkit
+network-manager-applet
+nm-connection-editor
 xdg-user-dirs
 xdg-utils
 
