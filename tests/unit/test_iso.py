@@ -167,6 +167,7 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
     assert "hyprland-plus" not in packages
     assert not any(name.startswith("illogical-impulse-") for name in packages)
     assert "plasma-desktop" not in packages and "greetd" not in packages
+    assert not {"noto-fonts", "python-pip", "python315", "python315-pip", "gvfs-smb"} & packages
 
     air = prof / "airootfs"
     systemd = air / "etc/systemd/system"
