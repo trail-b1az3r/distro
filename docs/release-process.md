@@ -15,7 +15,7 @@ rather than moving a tag that already has a published release.
    with networking disabled. Do not publish unless those checks pass.
 3. Test the ISO on at least one real machine, including a Wi-Fi connection
    through Halcyon's NetworkManager password agent.
-3. Update pinned inputs if needed, each in its own reviewed commit:
+4. Update pinned inputs if needed, each in its own reviewed commit:
    * `git -C desktop/dots pull` (the desktop), then `make test` (keybind collisions);
    * `scripts/build-packages.sh --update-lock` (AUR commits: read the diffs of
      changed PKGBUILDs);
