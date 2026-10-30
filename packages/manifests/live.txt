@@ -9,7 +9,6 @@ alsa-utils
 amd-ucode
 arch-install-scripts
 archlinux-keyring
-arch-install-scripts
 archinstall
 base
 base-devel
