@@ -159,6 +159,7 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
             "mate-session-manager", "mate-panel", "marco", "caja",
             "mate-terminal", "sddm", "network-manager-applet",
             "nm-connection-editor", "udisks2", "gvfs", "modemmanager",
+            "networkmanager", "wpa_supplicant",
             "linux-firmware-liquidio", "linux-firmware-marvell", "linux-firmware-mellanox",
             "linux-firmware-nfp", "linux-firmware-qcom", "linux-firmware-qlogic",
             "mkinitcpio-nfs-utils", "nbd"} <= packages
@@ -172,7 +173,9 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
     air = prof / "airootfs"
     systemd = air / "etc/systemd/system"
     assert os.readlink(systemd / "display-manager.service") == "/usr/lib/systemd/system/sddm.service"
-    assert (systemd / "multi-user.target.wants" / "ModemManager.service").is_symlink()
+    for unit in ("NetworkManager.service", "ModemManager.service", "NetworkManager-wait-online.service"):
+        assert (systemd / "multi-user.target.wants" / unit).is_symlink()
+    assert (systemd / "dbus-org.freedesktop.NetworkManager.service").is_symlink()
     assert (air / f"etc/{b.id}/nano").is_file()
     sddm = (air / "etc/sddm.conf.d/10-nexora-nano.conf").read_text()
     assert f"User={b['LIVE_USER']}" in sddm
