@@ -50,7 +50,7 @@ LIVE_NANO_LISTS = ["base", "nano-desktop", "live"]
 LIVE_EXTRA = ["linux", "amd-ucode", "intel-ucode"]
 NANO_EXCLUDE = {
     "7zip", "archinstall", "base-devel", "btop", "ddrescue", "ffmpegthumbs",
-    "gparted", "htop", "kdegraphics-thumbnailers", "kate", "kio-extras",
+    "gparted", "greetd", "htop", "kdegraphics-thumbnailers", "kate", "kio-extras",
     "lsof", "man-db", "man-pages", "mdxl", "mkinitcpio-nfs-utils", "nbd",
     "noto-fonts-cjk", "openssh", "open-vm-tools", "qemu-guest-agent",
     "rsync", "spice-vdagent", "testdisk", "texinfo", "unzip", "vim",
@@ -391,11 +391,24 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
     (sysconf / "pacman-offline.conf").write_text(
         pacmanconf.render("offline", b, offline_repo=offline_dir, multilib=opts.multilib))
     (sysconf / "live").write_text("This is the live ISO.\n")
+    if opts.edition == "nano":
+        # SDDM exposes the two installed sessions so users can choose LXQt or MATE.
+        (sysconf / "nano").write_text("Nano live edition: LXQt and MATE sessions.\n")
+        sddm = air / "etc" / "sddm.conf.d"
+        sddm.mkdir(parents=True, exist_ok=True)
+        (sddm / "10-nexora-nano.conf").write_text(
+            "[Autologin]\n"
+            f"User={b['LIVE_USER']}\n"
+            "Session=lxqt.desktop\n"
+            "Relogin=false\n"
+            "RememberLastSession=false\n"
+        )
     (sysconf / "iso-build.json").write_text(json.dumps(build_info(b, opts, epoch), indent=2) + "\n")
 
     systemd = air / "etc" / "systemd" / "system"
     units = "/usr/lib/systemd/system"
-    _link(systemd / "display-manager.service", f"{units}/greetd.service")
+    display_manager = "sddm.service" if opts.edition == "nano" else "greetd.service"
+    _link(systemd / "display-manager.service", f"{units}/{display_manager})
     ours = (f"{b.id}-live-setup.service", f"{b.id}-autoinstall.service")
     for unit in ("NetworkManager.service", "bluetooth.service", *ours):
         target = f"/etc/systemd/system/{unit}" if unit in ours else f"{units}/{unit}"
