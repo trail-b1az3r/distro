@@ -153,7 +153,7 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
     prof = iso.assemble(opts, b, epoch=1790393700)
     packages = set((prof / "packages.x86_64").read_text().split())
 
-    assert {"lxqt-session", "lxqt-panel", "pcmanfm-qt", "qterminal",
+    assert {"lxqt-session", "lxqt-panel", "pcmanfm-qt", "qterminal", "openbox",
             "mate-session-manager", "mate-panel", "marco", "caja",
             "mate-terminal", "sddm", "network-manager-applet",
             "nm-connection-editor", "udisks2", "gvfs"} <= packages
@@ -170,8 +170,12 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
     sddm = (air / "etc/sddm.conf.d/10-nexora-nano.conf").read_text()
     assert f"User={b['LIVE_USER']}" in sddm
     assert "Session=lxqt.desktop" in sddm
+    assert "SessionDir=/etc/nexora/xsessions" in sddm
+    assert "WaylandSessionDir=/etc/nexora/wayland-sessions" in sddm
     live_setup = (air / f"usr/lib/{b.id}/bin/{b.id}-live-setup").read_text()
     assert f"/etc/{b.id}/nano" in live_setup
+    assert 'for session in lxqt mate' in live_setup
+    assert 'source="/usr/share/xsessions/$session.desktop"' in live_setup
     assert "reset-desktop --yes" in live_setup
 
 
