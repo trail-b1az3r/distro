@@ -3,6 +3,15 @@
 name: ISO
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/iso.yml"
+      - "build.sh"
+      - "iso/**"
+      - "lib/distrokit/build/iso.py"
+      - "packages/**"
+      - "tests/unit/test_iso.py"
   workflow_dispatch:
     inputs:
       edition:
@@ -66,7 +75,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
-      EDITION: ${{ inputs.edition || 'standard' }}
+      EDITION: ${{ inputs.edition || (github.event_name == 'pull_request' && 'nano' || 'standard') }}
       COMPRESSION: ${{ inputs.compression || 'auto' }}
       PROFILE: ${{ inputs.profile || 'standard' }}
       OFFLINE: ${{ inputs.offline || 'minimal' }}
@@ -118,7 +127,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: ${{ inputs.edition == 'nano' && fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "live-uefi-usb", "live-uefi-cdrom"]') || fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "uefi-offline-developer", "live-uefi-usb", "live-uefi-cdrom"]') }}
+        scenario: ${{ (inputs.edition == 'nano' || github.event_name == 'pull_request') && fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "live-uefi-usb", "live-uefi-cdrom"]') || fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "uefi-offline-developer", "live-uefi-usb", "live-uefi-cdrom"]') }}
     steps:
       - uses: actions/checkout@v4
       - name: KVM and QEMU
