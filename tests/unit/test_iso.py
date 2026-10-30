@@ -405,7 +405,7 @@ def test_user_packages_join_the_repository(tmp_path):
     assert iso.user_package_files(empty) == []
 
 
-def test_finish_refuses_a_file_too_big_for_fat32(tmp_path, releng, monkeypatch):
+def test_finish_warns_but_keeps_a_valid_iso_with_a_file_too_big_for_fat32(tmp_path, releng, monkeypatch, capsys):
     b = load_branding()
     opts = iso.Options(build=tmp_path / "build", dist=tmp_path / "out" / "dist", releng=releng)
     opts.out.mkdir(parents=True)
@@ -413,8 +413,12 @@ def test_finish_refuses_a_file_too_big_for_fat32(tmp_path, releng, monkeypatch):
     monkeypatch.setattr(iso, "iso_files", lambda path: {"/arch/x86_64/airootfs.sfs": 2**32})
     from distrokit import util
 
-    with pytest.raises(SystemExit, match="airootfs.sfs .* FAT32"):
-        iso.finish(opts, b, 1790393700, util.Runner(dry_run=True))
+    info = iso.finish(opts, b, 1790393700, util.Runner(dry_run=True))
+    assert info["fat32_file_copy_compatible"] is False
+    assert info["fat32_oversized_files"] == ["/arch/x86_64/airootfs.sfs"]
+    assert "raw-image mode" in capsys.readouterr().out
+    metadata = opts.dist.parent / "metadata" / f"{Path(info['iso']).stem}.json"
+    assert json.loads(metadata.read_text())["fat32_file_copy_compatible"] is False
 
 
 def test_mounts_left_under_the_build_directory(tmp_path):
