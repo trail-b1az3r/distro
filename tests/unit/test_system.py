@@ -146,7 +146,10 @@ def test_pacman_configs(kind):
     if kind == "offline":
         assert has == {"core": False, "extra": False, "multilib": False, "endeavouros": False,
                        b.repo_name: False, f"{b.repo_name}-offline": True}
-        assert f"[{b.repo_name}-offline]\nSigLevel = Optional TrustAll\nServer = file:///var/cache/x/repo" in text
+        offline_lines = text.splitlines()
+        offline_section = offline_lines.index(f"[{b.repo_name}-offline]")
+        assert offline_lines[offline_section + 1] == "SigLevel = Optional TrustAll"
+        assert offline_lines[offline_section + 2] == "Server = file:///var/cache/x/repo"
         # Full-offline installation must never try to contact a remote repo or
         # verify local package signatures against a keyring it has not populated yet.
         assert "https://" not in text and "Include = /etc/pacman.d/" not in text
