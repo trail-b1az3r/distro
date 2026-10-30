@@ -277,7 +277,7 @@ def wanted_packages(b: Branding, root: Path | None = None, *, edition: str = "st
     root = root or paths.DATA_ROOT
     if edition == "nano":
         names = list(select_packages(load_profiles(root)[profile], branding=b).packages)
-        names += nano_live_packages(b)
+        names += nano_live_packages(b, data_root=root)
         return list(dict.fromkeys(names))
     if edition != "standard":
         raise ValueError(f"unknown ISO edition {edition!r}")
