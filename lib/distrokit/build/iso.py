@@ -43,7 +43,7 @@ from ..branding import Branding, load as load_branding
 from ..profiles import load_editors, load_profiles, read_list, select_packages
 from . import packages as pkgbuild
 from . import stage
-from .editions import NANO_SIZE_LIMIT, nano_live_packages
+from .editions import NANO_LIVE_LISTS, NANO_SIZE_LIMIT, nano_live_packages
 
 RELENG = Path("/usr/share/archiso/configs/releng")
 LIVE_LISTS = ["base", "desktop", "browser", "live"]
@@ -362,7 +362,7 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
     if (generated / "grub" / "theme.txt").is_file():
         shutil.copytree(generated / "grub", prof / "grub" / "themes" / b.id, dirs_exist_ok=True)
 
-    selected_lists = LIVE_NANO_LISTS if opts.edition == "nano" else LIVE_LISTS
+    selected_lists = NANO_LIVE_LISTS if opts.edition == "nano" else LIVE_LISTS
     (prof / "packages.x86_64").write_text(
         f"# {b.pretty_name} {opts.edition} live system, generated from packages/lists/{{{','.join(selected_lists)}}}.list\n"
         + "\n".join(sorted(live_packages(b, opts.edition))) + "\n")
