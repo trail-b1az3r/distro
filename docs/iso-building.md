@@ -93,9 +93,11 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
    UEFI machines boot it with GRUB (`iso/grub`, themed), BIOS machines with
    syslinux.
 5. **Prepare the live Pacman keyring** with `pacman-key --init`, `--populate archlinux endeavouros` and `--updatedb`; this happens while creating the ISO, so the trust database is already on the USB media.\n6. **mkarchiso**, then the ISO, checksums and metadata are moved into place.
-   The build fails if any file on the ISO is over 4 GiB: such an ISO could only
-   be written as an image, not with tools that copy its files to a FAT32 stick
-   (Rufus's default mode). The largest file's size is in the metadata.
+   If any file on the ISO is over 4 GiB, the build prints a compatibility
+   warning but still succeeds and publishes the valid ISO. Such an ISO must be
+   written as a raw image (dd, Etcher, or Rufus DD mode), not with tools that
+   copy its files to a FAT32 stick. Metadata records the compatibility flag
+   and oversized file paths.
 
 Build the repository alone with `scripts/build-packages.sh` (`--plan` shows
 the order without building).
@@ -146,7 +148,7 @@ qemu-system-x86_64 -enable-kvm -m 4G -smp 2 -cdrom dist/*.iso \
 | an AUR package fails to build | pin an older commit in `aur.lock.json` or remove it from the lists; see `build/packages/src/<pkg>` |
 | `could not fetch the AUR package X` | both the AUR and its mirror failed; the message shows git's error for each. Check the network and [status.archlinux.org](https://status.archlinux.org), then build again. "Commit … is gone": run `scripts/build-packages.sh --update-lock` |
 | `Nano ISO exceeds the strict 2,617,000,000-byte limit` | review the largest ISO members in the error; reduce only Nano live packages or tune the Nano compression preset. Do not trim installed-system profiles. |
-| `… exceeds FAT32's 4 GiB file size limit` | the live system's image (`airootfs.sfs`, which also carries the offline repository) grew past 4 GiB: drop packages from `packages/lists/live.list` or the distribution repository, or build with `--offline minimal` |
+| FAT32 compatibility warning | the ISO is still valid; write it in raw-image mode (dd, Etcher, or Rufus DD mode), or reduce the live system/offline repository if file-copy USB creation is required |
 | `No space left on device` | free space or point `--build-dir` elsewhere; `--clean` removes old work directories |
 | mkarchiso: `umount: …/airootfs/proc: target is busy`, then `find: …/proc/…: Invalid argument` | something on the host (a file indexer, say) held the live system's `/proc`. mkarchiso now runs in a mount namespace of its own, and the next build unmounts whatever an earlier one left mounted under `build/` |
 | mkarchiso: `must be run as root` | `sudo ./build.sh`, or `--container` |
