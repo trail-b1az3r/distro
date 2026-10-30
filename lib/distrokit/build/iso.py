@@ -46,7 +46,7 @@ from . import stage
 
 RELENG = Path("/usr/share/archiso/configs/releng")
 LIVE_LISTS = ["base", "desktop", "browser", "live"]
-LIVE_NANO_LISTS = ["base", "desktop", "live"]
+LIVE_NANO_LISTS = ["base", "nano-desktop", "live"]
 LIVE_EXTRA = ["linux", "amd-ucode", "intel-ucode"]
 NANO_EXCLUDE = {
     "7zip", "archinstall", "base-devel", "btop", "ddrescue", "ffmpegthumbs",
