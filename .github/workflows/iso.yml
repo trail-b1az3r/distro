@@ -77,7 +77,7 @@ jobs:
     env:
       EDITION: ${{ inputs.edition || (github.event_name == 'pull_request' && 'nano' || 'standard') }}
       COMPRESSION: ${{ inputs.compression || 'auto' }}
-      PROFILE: ${{ inputs.profile || 'standard' }}
+      PROFILE: ${{ (inputs.edition == 'nano' || github.event_name == 'pull_request') && 'minimal' || (inputs.profile || 'standard') }}
       OFFLINE: ${{ inputs.offline || 'minimal' }}
     steps:
       - name: Free disk space (the full offline build needs ~60 GB)
