@@ -405,7 +405,7 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
     display_manager = "sddm.service" if opts.edition == "nano" else "greetd.service"
     _link(systemd / "display-manager.service", f"{units}/{display_manager}")
     ours = (f"{b.id}-live-setup.service", f"{b.id}-autoinstall.service")
-    for unit in ("NetworkManager.service", "bluetooth.service", *ours):
+    for unit in ("NetworkManager.service", "ModemManager.service", "bluetooth.service", *ours):
         target = f"/etc/systemd/system/{unit}" if unit in ours else f"{units}/{unit}"
         _link(systemd / "multi-user.target.wants" / unit, target)
     _link(systemd / "network-online.target.wants" / "NetworkManager-wait-online.service",
