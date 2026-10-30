@@ -651,13 +651,15 @@ def finish(opts: Options, b: Branding, epoch: int, runner: util.Runner) -> dict:
         shutil.copyfile(lock, meta_dir / f"{iso.stem}.aur.lock.json")
     files = iso_files(iso)
     info["largest_file"] = max(files.values(), default=0)
-    (meta_dir / f"{iso.stem}.json").write_text(json.dumps(info, indent=2) + "\n")
     big = too_big_for_fat32(files)
+    info["fat32_file_copy_compatible"] = not bool(big)
+    info["fat32_oversized_files"] = big
+    (meta_dir / f"{iso.stem}.json").write_text(json.dumps(info, indent=2) + "\n")
     if big:
-        raise SystemExit(f"{iso.name}: {', '.join(big)} exceeds FAT32's 4 GiB file size limit, so the ISO could "
-                         "only be written to a USB stick as an image (dd, Etcher, Rufus in DD mode), not with tools "
-                         "that copy its files. Make the live system smaller (packages/lists/live.list) or carry "
-                         "fewer packages offline.")
+        print(f"WARNING: {iso.name}: {', '.join(big)} exceeds FAT32's 4 GiB per-file limit. "
+              "The ISO is valid and can be written in raw-image mode (dd, Etcher, or Rufus DD mode), "
+              "but not by USB tools that copy its files onto FAT32. This compatibility warning does not "
+              "fail the ISO build.")
     return info
 
 
