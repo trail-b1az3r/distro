@@ -1,0 +1,76 @@
+# Nano live desktop environments: the only supported sessions in the Nano ISO.
+# Both sessions are installed side-by-side and exposed by SDDM at login.
+# LXQt (Qt desktop; lightweight X11 session).
+lxqt-about
+lxqt-admin
+lxqt-archiver
+lxqt-config
+lxqt-globalkeys
+lxqt-notificationd
+lxqt-openssh-askpass
+lxqt-panel
+lxqt-policykit
+lxqt-powermanagement
+lxqt-qtplugin
+lxqt-runner
+lxqt-session
+lxqt-sudo
+lxqt-themes
+pcmanfm-qt
+udisks2
+gvfs
+gvfs-mtp
+gvfs-smb
+qterminal
+openbox
+pavucontrol-qt
+lximage-qt
+screengrab
+qps
+
+# MATE (traditional GTK desktop).
+caja
+caja-image-converter
+caja-share
+engrampa
+eom
+mate-control-center
+mate-desktop
+mate-icon-theme
+mate-media
+mate-menus
+mate-notification-daemon
+mate-panel
+mate-polkit
+mate-power-manager
+mate-screensaver
+mate-session-manager
+mate-settings-daemon
+mate-terminal
+marco
+mozo
+atril
+pluma
+
+# Shared display manager, X11 compatibility, Qt and GTK integration.
+sddm
+xorg-server
+xorg-xwayland
+qt5-wayland
+qt6-wayland
+gtk3
+noto-fonts
+noto-fonts-emoji
+ttf-dejavu
+ttf-liberation
+gnome-keyring
+polkit
+network-manager-applet
+nm-connection-editor
+xdg-user-dirs
+xdg-utils
+
+# Nexora welcome and installer branding. Omit nexora-desktop (it pulls in
+# Halcyon) and nexora-write (it pulls in Qt WebEngine) from the compact live ISO.
+# Nano's only desktop sessions are LXQt and MATE.
+@DISTRO_ID@-welcome

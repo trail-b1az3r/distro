@@ -49,8 +49,9 @@ from typing import Callable, Iterable
 
 from .. import __version__, pacmanconf, paths, util
 from ..branding import Branding, load as load_branding
-from ..profiles import read_list
+from ..profiles import load_profiles, read_list, select_packages
 from . import stage
+from .editions import nano_live_packages
 
 AUR = "https://aur.archlinux.org"
 # Arch Linux's read-only GitHub mirror of the AUR's git data: one branch per
@@ -265,9 +266,21 @@ def load_manifest(root: Path | None = None) -> dict:
         return tomllib.load(fh)
 
 
-def wanted_packages(b: Branding, root: Path | None = None) -> list[str]:
-    """Every package name the repository must be able to provide."""
+def wanted_packages(b: Branding, root: Path | None = None, *, edition: str = "standard",
+                    profile: str = "standard") -> list[str]:
+    """Package names the distribution repository must provide.
+
+    Standard builds retain the complete repository. Nano builds resolve only
+    the selected install profile plus the Nano live package set; dependency
+    resolution still adds every required local/AUR dependency.
+    """
     root = root or paths.DATA_ROOT
+    if edition == "nano":
+        names = list(select_packages(load_profiles(root)[profile], branding=b).packages)
+        names += nano_live_packages(b, data_root=root)
+        return list(dict.fromkeys(names))
+    if edition != "standard":
+        raise ValueError(f"unknown ISO edition {edition!r}")
     m = load_manifest(root)
     names: list[str] = []
     lists = sorted(p.stem for p in (root / "packages" / "lists").glob("*.list"))
@@ -851,6 +864,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--repo", default="build/repo", help="pacman repository to build into")
     p.add_argument("--user", default=os.environ.get("BUILD_USER", "builder"), help="unprivileged build user")
     p.add_argument("--only", nargs="*", default=[], help="build only these package bases")
+    p.add_argument("--edition", choices=("standard", "nano"), default="standard",
+                   help="package set to build (Nano builds only its live/profile dependency closure)")
+    p.add_argument("--profile", default="standard", help="installation profile used by the Nano package set")
     p.add_argument("--force", action="store_true", help="rebuild packages already in the repository")
     p.add_argument("--no-multilib", action="store_true")
     p.add_argument("--sign", default=os.environ.get("GPGKEY", ""), help="GPG key to sign packages and the database")
@@ -880,14 +896,14 @@ def main(argv: list[str] | None = None) -> int:
         if a.action != "lock":
             print(f"No {LOCK_FILE} yet: resolving the AUR packages and pinning them to their current commits. "
                   "Commit the new file so later builds use exactly these versions.")
-        plan = resolve(wanted_packages(b, src), local, in_repos, aur_rpc_lookup, exclude=exclude)
+        plan = resolve(wanted_packages(b, src, edition=a.edition, profile=a.profile), local, in_repos, aur_rpc_lookup, exclude=exclude)
         print(plan.describe())
         write_lock(plan, src / LOCK_FILE)
         if a.action == "lock" or plan.unresolved:
             return 1 if plan.unresolved else 0
 
     lookup = locked_lookup(_load_lock(src), work)
-    plan = resolve(wanted_packages(b, src), local, in_repos, lookup, exclude=exclude)
+    plan = resolve(wanted_packages(b, src, edition=a.edition, profile=a.profile), local, in_repos, lookup, exclude=exclude)
     print(plan.describe())
     if plan.unresolved:
         print(f"\nSome packages are neither in the repositories nor in {LOCK_FILE}. "

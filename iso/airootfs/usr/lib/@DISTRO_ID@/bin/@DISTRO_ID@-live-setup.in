@@ -11,12 +11,29 @@ if ! id "$user" &>/dev/null; then
     passwd -d "$user" >/dev/null
 fi
 
-if [[ ! -e "/home/$user/.config/hypr/@DISTRO_ID@/init.lua" ]]; then
+# Nano has its own LXQt and MATE sessions. Do not deploy the standard
+# Halcyon configuration (or require the Halcyon packages) in that edition.
+if [[ ! -e "/etc/@DISTRO_ID@/nano" && ! -e "/home/$user/.config/hypr/@DISTRO_ID@/init.lua" ]]; then
     log="/var/log/@DISTRO_ID@/live-desktop.log"
     mkdir -p "${log%/*}"
     if ! runuser -u "$user" -- env HOME="/home/$user" @DISTRO_CLI@ reset-desktop --yes >"$log" 2>&1; then
         echo "The live desktop could not be set up; see $log" >&2
     fi
+fi
+
+# Nano's SDDM session directories contain exactly the two supported
+# desktops. Openbox is LXQt's window manager, not an extra offered session.
+if [[ -e "/etc/@DISTRO_ID@/nano" ]]; then
+    session_dir="/etc/@DISTRO_ID@/xsessions"
+    install -d -m 0755 "$session_dir" "/etc/@DISTRO_ID@/wayland-sessions"
+    for session in lxqt mate; do
+        source="/usr/share/xsessions/$session.desktop"
+        if [[ ! -f "$source" ]]; then
+            echo "Nano desktop session is missing: $source" >&2
+            exit 1
+        fi
+        ln -sfn "$source" "$session_dir/$session.desktop"
+    done
 fi
 
 # Keep the installer's log readable for bug reports.

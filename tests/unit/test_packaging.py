@@ -129,6 +129,19 @@ def test_wanted_packages_cover_lists_gpu_and_llama():
     assert "visual-studio-code-bin" not in wanted
 
 
+def test_wanted_packages_nano_limits_build_to_minimal_profile_and_live_desktops():
+    b = load_branding()
+    wanted = packages.wanted_packages(b, edition="nano", profile="minimal")
+    assert {"lxqt-session", "mate-session-manager", "sddm", "network-manager-applet",
+            f"{b.id}-installer", f"{b.id}-core", f"{b.id}-branding",
+            f"{b.id}-desktop"} <= set(wanted)
+    assert "firefox" not in wanted
+    assert "onlyoffice-bin" not in wanted
+    assert "greetd" not in wanted and "cage" not in wanted
+    assert "nvidia-580xx-dkms" not in wanted
+    assert "llama.cpp-vulkan" not in wanted and "llama.cpp-cuda" not in wanted
+
+
 def test_source_tarball_is_reproducible(tmp_path):
     src = paths.DATA_ROOT
     a = packages.source_tarball(src, tmp_path / "a.tar.gz", "x-1", 1700000000)

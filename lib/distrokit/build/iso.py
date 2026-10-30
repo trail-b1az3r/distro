@@ -43,6 +43,7 @@ from ..branding import Branding, load as load_branding
 from ..profiles import load_editors, load_profiles, read_list, select_packages
 from . import packages as pkgbuild
 from . import stage
+from .editions import NANO_LIVE_LISTS, NANO_SIZE_LIMIT, nano_live_packages
 
 RELENG = Path("/usr/share/archiso/configs/releng")
 LIVE_LISTS = ["base", "desktop", "browser", "live"]
@@ -100,9 +101,11 @@ RELENG_REMOVE = [
 FAT32_MAX_FILE = 2**32 - 1
 
 SQUASHFS = {
-    # 256K blocks: every first read from the stick decompresses a whole block,
-    # and 1M xz blocks made the live desktop lag on slow CPUs until cached.
+    # Standard release: small blocks keep first-read latency low on slow USB media.
     "release": "'-comp' 'xz' '-Xbcj' 'x86' '-b' '256K' '-Xdict-size' '256K'",
+    # Nano candidate: larger blocks/dictionary target a better compression ratio.
+    # The CI build records actual ISO size and elapsed build time for comparison.
+    "nano": "'-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '512K'",
     "debug": "'-comp' 'zstd' '-Xcompression-level' '3' '-b' '1M'",
 }
 
@@ -110,6 +113,8 @@ SQUASHFS = {
 @dataclass
 class Options:
     profile: str = "standard"
+    edition: str = "standard"  # standard | nano; independent of install profile
+    compression: str = "auto"  # auto | release | nano
     offline: str = "minimal"  # minimal | full
     clean: bool = False
     debug: bool = False
@@ -166,8 +171,9 @@ def iso_label(b: Branding, epoch: int) -> str:
     return f"{b['ISO_LABEL_PREFIX']}_{time.strftime('%Y%m', time.gmtime(epoch))}"[:32]
 
 
-def iso_filename(b: Branding, version: str) -> str:
-    return f"{b.name}-{version}-x86_64.iso"
+def iso_filename(b: Branding, version: str, edition: str = "standard") -> str:
+    suffix = "-Nano" if edition == "nano" else ""
+    return f"{b.name}{suffix}-{version}-x86_64.iso"
 
 
 def git_commit(path: Path) -> str:
@@ -182,7 +188,12 @@ def git_commit(path: Path) -> str:
 # ---------------------------------------------------------------------------
 
 
-def live_packages(b: Branding) -> list[str]:
+def live_packages(b: Branding, edition: str = "standard") -> list[str]:
+    """Direct live package selection, independent of the installed-system profile."""
+    if edition not in ("standard", "nano"):
+        raise ValueError(f"unknown ISO edition {edition!r}")
+    if edition == "nano":
+        return nano_live_packages(b)
     pk: list[str] = []
     for name in LIVE_LISTS:
         pk += read_list(name, b)
@@ -306,6 +317,8 @@ def build_info(b: Branding, opts: Options, epoch: int) -> dict:
         "codename": b.get("ISO_CODENAME"),
         "label": iso_label(b, epoch),
         "profile": opts.profile,
+        "edition": opts.edition,
+        "compression": ("debug" if opts.debug else (opts.compression if opts.compression != "auto" else ("nano" if opts.edition == "nano" else "release"))),
         "offline": opts.offline,
         "source_date_epoch": epoch,
         "built": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(epoch)),
@@ -335,7 +348,7 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
     extra = colour_tokens(b) | {
         "ISO_LABEL": iso_label(b, epoch),
         "ISO_VERSION": iso_version(b, epoch),
-        "SQUASHFS_OPTIONS": SQUASHFS["debug" if opts.debug else "release"],
+        "SQUASHFS_OPTIONS": SQUASHFS["debug" if opts.debug else (opts.compression if opts.compression != "auto" else ("nano" if opts.edition == "nano" else "release"))],
     }
     render_tree(src / "iso", prof, b, extra)
     (prof / "sources.conf").unlink(missing_ok=True)
@@ -349,9 +362,10 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
     if (generated / "grub" / "theme.txt").is_file():
         shutil.copytree(generated / "grub", prof / "grub" / "themes" / b.id, dirs_exist_ok=True)
 
+    selected_lists = NANO_LIVE_LISTS if opts.edition == "nano" else LIVE_LISTS
     (prof / "packages.x86_64").write_text(
-        f"# {b.pretty_name} live system, generated from packages/lists/{{{','.join(LIVE_LISTS)}}}.list\n"
-        + "\n".join(sorted(live_packages(b))) + "\n")
+        f"# {b.pretty_name} {opts.edition} live system, generated from packages/lists/{{{','.join(selected_lists)}}}.list\n"
+        + "\n".join(sorted(live_packages(b, opts.edition))) + "\n")
 
     # pacman.conf for mkarchiso: the freshly built distribution repository first.
     (prof / "pacman.conf").write_text(
@@ -368,11 +382,28 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
     (sysconf / "pacman-offline.conf").write_text(
         pacmanconf.render("offline", b, offline_repo=offline_dir, multilib=opts.multilib))
     (sysconf / "live").write_text("This is the live ISO.\n")
+    if opts.edition == "nano":
+        # SDDM exposes the two installed sessions so users can choose LXQt or MATE.
+        (sysconf / "nano").write_text("Nano live edition: LXQt and MATE sessions.\n")
+        sddm = air / "etc" / "sddm.conf.d"
+        sddm.mkdir(parents=True, exist_ok=True)
+        (sddm / "10-nexora-nano.conf").write_text(
+            "[General]\n"
+            "SessionDir=/etc/nexora/xsessions\n"
+            "WaylandSessionDir=/etc/nexora/wayland-sessions\n"
+            "\\n"
+            "[Autologin]\n"
+            f"User={b['LIVE_USER']}\n"
+            "Session=lxqt.desktop\n"
+            "Relogin=false\n"
+            "RememberLastSession=false\n"
+        )
     (sysconf / "iso-build.json").write_text(json.dumps(build_info(b, opts, epoch), indent=2) + "\n")
 
     systemd = air / "etc" / "systemd" / "system"
     units = "/usr/lib/systemd/system"
-    _link(systemd / "display-manager.service", f"{units}/greetd.service")
+    display_manager = "sddm.service" if opts.edition == "nano" else "greetd.service"
+    _link(systemd / "display-manager.service", f"{units}/{display_manager}")
     ours = (f"{b.id}-live-setup.service", f"{b.id}-autoinstall.service")
     for unit in ("NetworkManager.service", "bluetooth.service", *ours):
         target = f"/etc/systemd/system/{unit}" if unit in ours else f"{units}/{unit}"
@@ -434,16 +465,74 @@ def add_user_packages(opts: Options, b: Branding, runner: util.Runner) -> list[P
 DEBUG_PACKAGE = re.compile(r"-debug-[^-]+-[^-]+-[^-]+\.pkg\.tar\.")
 
 
+def package_metadata(path: Path) -> tuple[str, list[str]]:
+    """Read a built package's name and runtime dependencies from .PKGINFO."""
+    result = subprocess.run(["bsdtar", "-xOf", str(path), ".PKGINFO"],
+                            capture_output=True, text=True, check=True)
+    name = ""
+    dependencies: list[str] = []
+    for line in result.stdout.splitlines():
+        if line.startswith("pkgname = "):
+            name = line.split(" = ", 1)[1].strip()
+        elif line.startswith("depend = "):
+            dependency = line.split(" = ", 1)[1].strip()
+            dependencies.append(re.split(r"[<>=]", dependency, maxsplit=1)[0])
+    if not name:
+        raise ValueError(f"{path}: .PKGINFO has no pkgname")
+    return name, dependencies
+
+
+def nano_offline_packages(opts: Options, b: Branding) -> set[str]:
+    """Custom/AUR packages needed by Nano's live environment and install profile.
+
+    Nano is network-enabled. Carry the selected profile's custom/AUR dependency
+    closure, not every optional AI/GPU/developer package in the repository.
+    Official Arch/EndeavourOS dependencies are downloaded normally.
+    """
+    required = set(live_packages(b, "nano"))
+    profile = load_profiles()[opts.profile]
+    required.update(select_packages(profile, branding=b).packages)
+
+    archives = [p for p in sorted(opts.repo.glob("*.pkg.tar.*"))
+                if not p.name.endswith(".sig") and not DEBUG_PACKAGE.search(p.name)]
+    by_name: dict[str, Path] = {}
+    dependencies: dict[str, list[str]] = {}
+    for archive in archives:
+        name, deps = package_metadata(archive)
+        by_name[name] = archive
+        dependencies[name] = deps
+
+    selected: set[str] = set()
+    pending = list(required)
+    while pending:
+        name = pending.pop()
+        if name in selected or name not in by_name:
+            continue
+        selected.add(name)
+        pending.extend(dependencies.get(name, ()))
+    return selected
+
+
 def offline_repository(opts: Options, b: Branding, runner: util.Runner, conf: Path) -> Path:
-    """Fill ``opts.offline_repo`` and index it as ``<repo>-offline``. The
-    debug symbol packages makepkg splits off stay in the distribution
-    repository: nothing installs them from the ISO."""
+    """Fill the offline repository. Nano carries only its live and selected-
+    profile dependency closure; standard editions keep the complete repository."""
     out = opts.offline_repo
     _remove(out)
     out.mkdir(parents=True)
+    if opts.edition == "nano":
+        selected = nano_offline_packages(opts, b)
+        print(f"==> Nano offline repository: {len(selected)} custom/AUR packages "
+              f"for the {opts.profile} install profile and live environment")
+    else:
+        selected = None
     for f in sorted(opts.repo.glob("*.pkg.tar.*")):
-        if not DEBUG_PACKAGE.search(f.name):
-            shutil.copyfile(f, out / f.name)
+        if f.name.endswith(".sig") or DEBUG_PACKAGE.search(f.name):
+            continue
+        if selected is not None:
+            name, _deps = package_metadata(f)
+            if name not in selected:
+                continue
+        shutil.copyfile(f, out / f.name)
     if opts.offline == "full":
         db = opts.build / "offline-db"
         _remove(db)
@@ -510,13 +599,25 @@ def too_big_for_fat32(files: dict[str, int]) -> list[str]:
 def finish(opts: Options, b: Branding, epoch: int, runner: util.Runner) -> dict:
     """Move the ISO to dist/ and write checksums and metadata."""
     version = iso_version(b, epoch)
-    name = iso_filename(b, version)
+    name = iso_filename(b, version, opts.edition)
     built = sorted(opts.out.glob("*.iso"))
     if not built:
         raise SystemExit(f"mkarchiso produced no ISO in {opts.out}")
     opts.dist.mkdir(parents=True, exist_ok=True)
     iso = opts.dist / name
     shutil.move(str(built[-1]), iso)
+    size_bytes = iso.stat().st_size
+    if opts.edition == "nano":
+        remaining = NANO_SIZE_LIMIT - size_bytes
+        print(f"==> Nano ISO size: {size_bytes:,} bytes ({size_bytes / 1_000_000_000:.3f} GB); "
+              f"{remaining:,} bytes remaining before the {NANO_SIZE_LIMIT:,}-byte limit")
+        if size_bytes >= NANO_SIZE_LIMIT:
+            components = sorted(iso_files(iso).items(), key=lambda item: item[1], reverse=True)[:8]
+            detail = "; ".join(f"{path}={amount:,} bytes" for path, amount in components) or "component listing unavailable"
+            raise SystemExit(f"Nano ISO exceeds the strict {NANO_SIZE_LIMIT:,}-byte limit by "
+                             f"{size_bytes - NANO_SIZE_LIMIT:,} bytes. Largest ISO files: {detail}. "
+                             "Reduce Nano-only live packages or tune the Nano SquashFS preset; "
+                             "do not remove packages from installed Nexora profiles.")
     root = opts.dist.parent
     sums = checksum_files(iso, root / "checksums")
     if opts.sign_key:
@@ -526,7 +627,11 @@ def finish(opts: Options, b: Branding, epoch: int, runner: util.Runner) -> dict:
     meta_dir.mkdir(parents=True, exist_ok=True)
     info = build_info(b, opts, epoch)
     info["iso"] = name
-    info["size_bytes"] = iso.stat().st_size
+    info["size_bytes"] = size_bytes
+    info["size_gb_decimal"] = round(size_bytes / 1_000_000_000, 6)
+    if opts.edition == "nano":
+        info["nano_size_limit_bytes"] = NANO_SIZE_LIMIT
+        info["nano_remaining_bytes"] = NANO_SIZE_LIMIT - size_bytes
     info["sha256"] = sums[0].read_text().split()[0]
     packages = meta_dir / f"{iso.stem}.packages.txt"
     pkglist = next(opts.work.glob("iso/arch/pkglist.*.txt"), None) if opts.work.is_dir() else None
@@ -573,6 +678,12 @@ def preflight(opts: Options) -> list[str]:
         problems.append(f"archiso's releng profile is missing ({opts.releng}).")
     if opts.profile not in load_profiles():
         problems.append(f"unknown profile {opts.profile!r}; choose from {', '.join(load_profiles())}.")
+    if opts.edition not in ("standard", "nano"):
+        problems.append("unknown ISO edition; choose from standard, nano.")
+    if opts.compression not in ("auto", "release", "nano"):
+        problems.append("unknown compression preset; choose from auto, release, nano.")
+    if opts.edition == "nano" and opts.offline != "minimal":
+        problems.append("Nano requires --offline minimal to remain within its strict ISO size budget.")
     if opts.user_packages and not (opts.user_packages.is_dir() and user_package_files(opts.user_packages)):
         problems.append(f"--user-packages: no *.pkg.tar.* files in {opts.user_packages}.")
     free = shutil.disk_usage(opts.build if opts.build.exists() else Path.cwd()).free
@@ -583,7 +694,10 @@ def preflight(opts: Options) -> list[str]:
 
 
 def build(opts: Options, runner: util.Runner | None = None) -> dict:
+    started = time.monotonic()
     b = load_branding()
+    if opts.edition == "nano" and opts.offline != "minimal":
+        raise SystemExit("Nano requires --offline minimal to remain within its strict ISO size budget.")
     runner = runner or util.Runner(log=print)
     epoch = source_epoch()
     env = {"SOURCE_DATE_EPOCH": str(epoch)}
@@ -609,6 +723,8 @@ def build(opts: Options, runner: util.Runner | None = None) -> dict:
     if not opts.skip_packages:
         args = ["build", "--out", str(opts.build / "pkgbuild"), "--work", str(opts.build / "packages"),
                 "--repo", str(opts.repo)]
+        if opts.edition == "nano":
+            args += ["--edition", "nano", "--profile", opts.profile]
         if not opts.multilib:
             args.append("--no-multilib")
         if opts.sign_key:
@@ -642,15 +758,23 @@ def build(opts: Options, runner: util.Runner | None = None) -> dict:
     if runner.dry_run:
         return {"dry_run": True, "commands": [" ".join(c) for c in runner.recorded]}
     info = finish(opts, b, epoch, runner)
-    print(f"==> {opts.dist / info['iso']} ({util.human_bytes(info['size_bytes'])}), sha256 {info['sha256']}")
+    info["build_duration_seconds"] = round(time.monotonic() - started, 2)
+    metadata = opts.dist.parent / "metadata" / f"{Path(info['iso']).stem}.json"
+    metadata.write_text(json.dumps(info, indent=2) + "\n")
+    print(f"==> {opts.dist / info['iso']} ({info['size_bytes']:,} bytes / {info['size_gb_decimal']:.3f} GB), "
+          f"build time {info['build_duration_seconds']:.1f}s, sha256 {info['sha256']}")
     return info
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="distrokit.build.iso", description=__doc__.splitlines()[0])
     p.add_argument("action", choices=["build", "profile", "info"], nargs="?", default="build")
-    p.add_argument("--profile", default=os.environ.get("ISO_PROFILE", "standard"),
-                   help="installation profile the ISO offers by default (and carries offline)")
+    p.add_argument("--profile", default=os.environ.get("ISO_PROFILE"),
+                   help="installation profile the ISO offers by default (Nano defaults to minimal)")
+    p.add_argument("--edition", choices=["standard", "nano"], default=os.environ.get("ISO_EDITION", "standard"),
+                   help="ISO edition: standard (unchanged) or nano (compact live package set)")
+    p.add_argument("--compression", choices=["auto", "release", "nano"], default=os.environ.get("ISO_COMPRESSION", "auto"),
+                   help="SquashFS preset; auto selects Nano compression for the Nano edition")
     p.add_argument("--offline", choices=["minimal", "full"], default=os.environ.get("ISO_OFFLINE", "minimal"),
                    help="minimal: distribution packages only; full: everything for installs with no network")
     p.add_argument("--clean", action="store_true", help="start from a clean work directory")
@@ -668,15 +792,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", help="profile: where to write the archiso profile")
     p.add_argument("--dry-run", action="store_true", help="print the commands instead of running them")
     a = p.parse_args(argv)
-    opts = Options(profile=a.profile, offline=a.offline, clean=a.clean, debug=a.debug,
+    opts = Options(profile=a.profile or ("minimal" if a.edition == "nano" else "standard"),
+                   edition=a.edition, compression=a.compression, offline=a.offline, clean=a.clean, debug=a.debug,
                    skip_packages=a.skip_packages, dist=Path(a.dist), build=Path(a.build_dir),
                    releng=Path(a.releng), archive_date=a.archive_date, sign_key=a.sign, multilib=not a.no_multilib,
                    user_packages=Path(a.user_packages).resolve() if a.user_packages else None)
     b = load_branding()
     if a.action == "info":
         epoch = source_epoch()
-        info = build_info(b, opts, epoch) | {"iso": iso_filename(b, iso_version(b, epoch)),
-                                             "live_packages": len(live_packages(b))}
+        info = build_info(b, opts, epoch) | {"iso": iso_filename(b, iso_version(b, epoch), opts.edition),
+                                             "live_packages": len(live_packages(b, opts.edition))}
         print(json.dumps(info, indent=2))
         return 0
     if a.action == "profile":

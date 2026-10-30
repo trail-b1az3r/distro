@@ -3,8 +3,27 @@
 name: ISO
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/iso.yml"
+      - "build.sh"
+      - "iso/**"
+      - "lib/distrokit/build/iso.py"
+      - "packages/**"
+      - "tests/unit/test_iso.py"
   workflow_dispatch:
     inputs:
+      edition:
+        description: ISO edition
+        type: choice
+        options: [standard, nano]
+        default: standard
+      compression:
+        description: SquashFS preset (auto selects by edition)
+        type: choice
+        options: [auto, release, nano]
+        default: auto
       profile:
         description: Default installation profile
         type: choice
@@ -25,6 +44,12 @@ on:
         default: ""
   workflow_call:
     inputs:
+      edition:
+        type: string
+        default: standard
+      compression:
+        type: string
+        default: auto
       profile:
         type: string
         default: standard
@@ -50,7 +75,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
-      PROFILE: ${{ inputs.profile || 'standard' }}
+      EDITION: ${{ inputs.edition || (github.event_name == 'pull_request' && 'nano' || 'standard') }}
+      COMPRESSION: ${{ inputs.compression || 'auto' }}
+      PROFILE: ${{ (inputs.edition == 'nano' || github.event_name == 'pull_request') && 'minimal' || (inputs.profile || 'standard') }}
       OFFLINE: ${{ inputs.offline || 'minimal' }}
     steps:
       - name: Free disk space (the full offline build needs ~60 GB)
@@ -71,7 +98,7 @@ jobs:
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import
           echo "GPGKEY=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')" >> "$GITHUB_ENV"
       - name: Build
-        run: ./build.sh --container --profile "$PROFILE" --offline "$OFFLINE"
+        run: ./build.sh --container --edition "$EDITION" --compression "$COMPRESSION" --profile "$PROFILE" --offline "$OFFLINE"
       - uses: actions/upload-artifact@v4
         with:
           name: iso
@@ -94,13 +121,15 @@ jobs:
 
   qemu:
     needs: build
-    if: ${{ !cancelled() && inputs.qemu != false && (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.iso_run)) }}
+    if: ${{ !cancelled() && (inputs.qemu != false || github.event_name == 'pull_request') && (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.iso_run)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
+    env:
+      EDITION: ${{ inputs.edition || (github.event_name == 'pull_request' && 'nano' || 'standard') }}
     strategy:
       fail-fast: false
       matrix:
-        scenario: [uefi-btrfs-encrypted, bios-ext4-grub, uefi-offline-developer, live-uefi-usb, live-uefi-cdrom]
+        scenario: ${{ (inputs.edition == 'nano' || github.event_name == 'pull_request') && fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "live-uefi-usb", "live-uefi-cdrom"]') || fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "uefi-offline-developer", "live-uefi-usb", "live-uefi-cdrom"]') }}
     steps:
       - uses: actions/checkout@v4
       - name: KVM and QEMU
@@ -116,7 +145,7 @@ jobs:
           run-id: ${{ inputs.iso_run || github.run_id }}
           github-token: ${{ github.token }}
       - name: Install and check (${{ matrix.scenario }})
-        run: python3 tests/qemu/qemu_test.py --iso dist/*.iso --scenario "${{ matrix.scenario }}"
+        run: python3 tests/qemu/qemu_test.py --iso dist/*.iso --edition "$EDITION" --scenario "${{ matrix.scenario }}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

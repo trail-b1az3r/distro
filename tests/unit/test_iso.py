@@ -146,6 +146,50 @@ def test_assemble_profile(tmp_path, releng):
         subprocess.run(["bash", "-n", str(air / f"usr/lib/{b.id}/bin/{script}")], check=True)
 
 
+def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
+    b = load_branding()
+    opts = iso.Options(edition="nano", profile="standard", offline="minimal",
+                       build=tmp_path / "build", releng=releng)
+    prof = iso.assemble(opts, b, epoch=1790393700)
+    packages = set((prof / "packages.x86_64").read_text().split())
+
+    assert {"lxqt-session", "lxqt-panel", "pcmanfm-qt", "qterminal", "openbox",
+            "mate-session-manager", "mate-panel", "marco", "caja",
+            "mate-terminal", "sddm", "network-manager-applet",
+            "nm-connection-editor", "udisks2", "gvfs"} <= packages
+    assert {f"{b.id}-installer", f"{b.id}-branding", f"{b.id}-core",
+            f"{b.id}-welcome"} <= packages
+    assert "hyprland-plus" not in packages
+    assert not any(name.startswith("illogical-impulse-") for name in packages)
+    assert "plasma-desktop" not in packages and "greetd" not in packages
+
+    air = prof / "airootfs"
+    systemd = air / "etc/systemd/system"
+    assert os.readlink(systemd / "display-manager.service") == "/usr/lib/systemd/system/sddm.service"
+    assert (air / f"etc/{b.id}/nano").is_file()
+    sddm = (air / "etc/sddm.conf.d/10-nexora-nano.conf").read_text()
+    assert f"User={b['LIVE_USER']}" in sddm
+    assert "Session=lxqt.desktop" in sddm
+    assert "SessionDir=/etc/nexora/xsessions" in sddm
+    assert "WaylandSessionDir=/etc/nexora/wayland-sessions" in sddm
+    live_setup = (air / f"usr/lib/{b.id}/bin/{b.id}-live-setup").read_text()
+    assert f"/etc/{b.id}/nano" in live_setup
+    assert 'for session in lxqt mate' in live_setup
+    assert 'source="/usr/share/xsessions/$session.desktop"' in live_setup
+    assert "reset-desktop --yes" in live_setup
+
+
+def test_standard_edition_keeps_greetd_and_halcyon(tmp_path, releng):
+    b = load_branding()
+    opts = iso.Options(edition="standard", build=tmp_path / "build", releng=releng)
+    prof = iso.assemble(opts, b, epoch=1790393700)
+    packages = set((prof / "packages.x86_64").read_text().split())
+    assert "hyprland-plus" in packages and "illogical-impulse-hyprland" in packages
+    assert "lxqt-session" not in packages and "mate-session-manager" not in packages
+    systemd = prof / "airootfs/etc/systemd/system"
+    assert os.readlink(systemd / "display-manager.service") == "/usr/lib/systemd/system/greetd.service"
+
+
 def test_boot_menu_theme_goes_onto_the_iso(tmp_path, releng, monkeypatch):
     b = load_branding()
     src = tmp_path / "src"
@@ -182,6 +226,46 @@ def test_iso_files_and_the_fat32_limit(tmp_path, monkeypatch):
     assert files == {"/arch/x86_64/airootfs.sfs": 2**32, "/boot/1234.uuid": 37}
     assert [f.split()[0] for f in iso.too_big_for_fat32(files)] == ["/arch/x86_64/airootfs.sfs"]
     assert iso.too_big_for_fat32({"/arch/x86_64/airootfs.sfs": 2**32 - 1}) == []
+
+
+def test_nano_offline_repository_keeps_only_live_and_profile_dependencies(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    b = load_branding()
+    opts = iso.Options(edition="nano", profile="minimal", offline="minimal",
+                       build=tmp_path / "build")
+    opts.repo.mkdir(parents=True)
+    names = [
+        "nexora-installer-1-1-any.pkg.tar.zst",
+        "nexora-core-1-1-any.pkg.tar.zst",
+        "nexora-desktop-1-1-any.pkg.tar.zst",
+        "illogical-shell-1-1-any.pkg.tar.zst",
+        "required-dep-1-1-any.pkg.tar.zst",
+        "nexora-ai-1-1-any.pkg.tar.zst",
+        "llama.cpp-vulkan-1-1-x86_64.pkg.tar.zst",
+    ]
+    for name in names:
+        (opts.repo / name).write_bytes(b"pkg")
+
+    metadata = {
+        names[0]: ("nexora-installer", ["nexora-core"]),
+        names[1]: ("nexora-core", []),
+        names[2]: ("nexora-desktop", ["illogical-shell"]),
+        names[3]: ("illogical-shell", ["required-dep"]),
+        names[4]: ("required-dep", []),
+        names[5]: ("nexora-ai", []),
+        names[6]: ("llama.cpp-vulkan", []),
+    }
+    monkeypatch.setattr(iso, "package_metadata", lambda path: metadata[path.name])
+    monkeypatch.setattr(iso, "live_packages", lambda _b, _edition: ["nexora-installer"])
+    monkeypatch.setattr(iso, "select_packages",
+                        lambda _profile, branding=None: SimpleNamespace(packages=["nexora-desktop"]))
+
+    out = iso.offline_repository(opts, b, iso.util.Runner(dry_run=True), tmp_path / "pacman.conf")
+    included = {p.name for p in out.glob("*.pkg.tar.*")}
+    assert included == set(names[:5])
+    assert "nexora-ai-1-1-any.pkg.tar.zst" not in included
+    assert "llama.cpp-vulkan-1-1-x86_64.pkg.tar.zst" not in included
 
 
 def test_offline_sets_keep_conflicting_stacks_apart():
@@ -240,6 +324,20 @@ def test_checksums_and_finish(tmp_path, releng, monkeypatch):
                    capture_output=True)
     meta = json.loads((root / "metadata" / f"{Path(name).stem}.json").read_text())
     assert meta["live_packages"] == 2 and meta["sha256"] == sha[0]
+
+
+def test_nano_size_limit_fails_at_the_exact_boundary(tmp_path, releng, monkeypatch):
+    b = load_branding()
+    opts = iso.Options(edition="nano", build=tmp_path / "build",
+                       dist=tmp_path / "out" / "dist", releng=releng)
+    opts.out.mkdir(parents=True)
+    (opts.out / "nano.iso").write_bytes(b"12345678")
+    monkeypatch.setattr(iso, "NANO_SIZE_LIMIT", 8)
+    monkeypatch.setattr(iso, "iso_files", lambda _path: {"/arch/x86_64/airootfs.sfs": 7})
+    from distrokit import util
+
+    with pytest.raises(SystemExit, match="exceeds the strict 8-byte limit by 0 bytes"):
+        iso.finish(opts, b, 1790393700, util.Runner(dry_run=True))
 
 
 def test_finish_reads_the_package_list_from_the_iso(tmp_path, releng, monkeypatch):
