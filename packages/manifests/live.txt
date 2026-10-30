@@ -1,6 +1,6 @@
 # Nexora Linux: live ISO (packages.x86_64; generated, do not edit)
 # lists: base, desktop, browser, live + linux, amd-ucode, intel-ucode
-# 146 packages
+# 152 packages
 
 7zip
 alacritty
@@ -69,7 +69,12 @@ konsole
 less
 linux
 linux-firmware
+linux-firmware-liquidio
 linux-firmware-marvell
+linux-firmware-mellanox
+linux-firmware-nfp
+linux-firmware-qcom
+linux-firmware-qlogic
 lsof
 lvm2
 man-db
@@ -81,6 +86,7 @@ micro
 mkinitcpio
 mkinitcpio-archiso
 mkinitcpio-nfs-utils
+modemmanager
 nbd
 networkmanager
 nexora-branding
