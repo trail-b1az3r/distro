@@ -113,7 +113,9 @@ def test_assemble_profile(tmp_path, releng):
 
     packages = (prof / "packages.x86_64").read_text().split()
     for name in (f"{b.id}-installer", f"{b.id}-desktop", "linux", "greetd", "cage", "mkinitcpio-archiso",
-                 "illogical-impulse-hyprland", "memtest86+-efi", "edk2-shell"):
+                 "illogical-impulse-hyprland", "memtest86+-efi", "edk2-shell", "modemmanager",
+                 "linux-firmware-liquidio", "linux-firmware-marvell", "linux-firmware-mellanox",
+                 "linux-firmware-nfp", "linux-firmware-qcom", "linux-firmware-qlogic"):
         assert name in packages, name
 
     # mkarchiso installs from the freshly built repository.
@@ -135,7 +137,7 @@ def test_assemble_profile(tmp_path, releng):
     assert "After=systemd-sysusers.service systemd-tmpfiles-setup.service NetworkManager.service" in live_setup_unit.read_text()
     systemd = air / "etc/systemd/system"
     assert os.readlink(systemd / "display-manager.service").endswith("/greetd.service")
-    for unit in ("NetworkManager.service", "bluetooth.service", f"{b.id}-live-setup.service"):
+    for unit in ("NetworkManager.service", "ModemManager.service", "bluetooth.service", f"{b.id}-live-setup.service"):
         assert (systemd / "multi-user.target.wants" / unit).is_symlink()
     greetd = (air / "etc/greetd/config.toml").read_text()
     assert f'user = "{b["LIVE_USER"]}"' in greetd and f"{b.id}-live-session" in greetd
@@ -156,7 +158,9 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
     assert {"lxqt-session", "lxqt-panel", "pcmanfm-qt", "qterminal", "openbox",
             "mate-session-manager", "mate-panel", "marco", "caja",
             "mate-terminal", "sddm", "network-manager-applet",
-            "nm-connection-editor", "udisks2", "gvfs"} <= packages
+            "nm-connection-editor", "udisks2", "gvfs", "modemmanager",
+            "linux-firmware-liquidio", "linux-firmware-marvell", "linux-firmware-mellanox",
+            "linux-firmware-nfp", "linux-firmware-qcom", "linux-firmware-qlogic"} <= packages
     assert {f"{b.id}-installer", f"{b.id}-branding", f"{b.id}-core",
             f"{b.id}-welcome"} <= packages
     assert "hyprland-plus" not in packages
@@ -166,6 +170,7 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
     air = prof / "airootfs"
     systemd = air / "etc/systemd/system"
     assert os.readlink(systemd / "display-manager.service") == "/usr/lib/systemd/system/sddm.service"
+    assert (systemd / "multi-user.target.wants" / "ModemManager.service").is_symlink()
     assert (air / f"etc/{b.id}/nano").is_file()
     sddm = (air / "etc/sddm.conf.d/10-nexora-nano.conf").read_text()
     assert f"User={b['LIVE_USER']}" in sddm
