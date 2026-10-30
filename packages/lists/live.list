@@ -27,6 +27,12 @@ cage
 mkinitcpio-nfs-utils
 nbd
 terminus-font
+# The live session needs its own NetworkManager secret agent. Halcyon's installed
+# desktop replaces plasma-nm with halcyon.UwU-agent, but that user service is not
+# available early enough in the live installer session to enter Wi-Fi passwords.
+# Keep plasma-nm live-only; installed systems use the Halcyon agent.
+plasma-nm
+
 # Wi-Fi firmware outside Arch's linux-firmware set: Marvell (mwifiex) in Surface
 # Pro 3-6, Surface Book/Laptop 1-2 and others. Without it there is no Wi-Fi in
 # the live system, and the installer needs the internet.
