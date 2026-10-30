@@ -152,8 +152,9 @@ def test_offline_pacstrap_populates_arch_and_endeavouros_keyrings(machine):
     assert "archlinux-keyring" in pacstrap and "endeavouros-keyring" in pacstrap
     assert any(command == "pacman-key --populate archlinux endeavouros" for command in commands)
     assert any(command == "pacman-key --updatedb" for command in commands)
-    assert commands.count("pacman-key --populate archlinux endeavouros") == 2
-    assert commands.count("pacman-key --updatedb") == 2
+    assert sum("pacman-key --populate archlinux endeavouros" in command for command in commands) == 2
+    assert sum("pacman-key --updatedb" in command for command in commands) == 2
+    assert commands.index("pacman-key --init") < commands.index(pacstrap)
 
 
 def test_offline_install_queues_downloads_but_copies_local_model(machine, tmp_path):
