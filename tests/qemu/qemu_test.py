@@ -514,8 +514,8 @@ def run_live_boot(name: str, scn: dict, iso: Path, out: Path, timeout_min: float
                          " && test -L /etc/nexora/xsessions/mate.desktop"
                          " && test \"$(find /etc/nexora/xsessions -maxdepth 1 -name '*.desktop' | wc -l)\" -eq 2"
                          " && test -z \"$(find /etc/nexora/wayland-sessions -maxdepth 1 -name '*.desktop' -print -quit)\""
-                         " && systemctl is-active --quiet sddm ) >/dev/null 2>&1; echo \"@@NANO_SESSIONS $?\"\\n")
-                _i, sm = con.expect([r"^@@NANO_SESSIONS (\\d+)[ \\t]*\\n"], 60)
+                         " && systemctl is-active --quiet sddm ) >/dev/null 2>&1; echo \"@@NANO_SESSIONS $?\"\n")
+                _i, sm = con.expect([r"^@@NANO_SESSIONS (\d+)[ \t]*\n"], 60)
                 ok = sm.group(1) == "0"
                 result["checks"].append({"name": "nano-desktop-sessions",
                                          "status": "pass" if ok else "fail",
