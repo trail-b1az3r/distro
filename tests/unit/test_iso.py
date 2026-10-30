@@ -160,7 +160,8 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
             "mate-terminal", "sddm", "network-manager-applet",
             "nm-connection-editor", "udisks2", "gvfs", "modemmanager",
             "linux-firmware-liquidio", "linux-firmware-marvell", "linux-firmware-mellanox",
-            "linux-firmware-nfp", "linux-firmware-qcom", "linux-firmware-qlogic"} <= packages
+            "linux-firmware-nfp", "linux-firmware-qcom", "linux-firmware-qlogic",
+            "mkinitcpio-nfs-utils", "nbd"} <= packages
     assert {f"{b.id}-installer", f"{b.id}-branding", f"{b.id}-core",
             f"{b.id}-welcome"} <= packages
     assert "hyprland-plus" not in packages
