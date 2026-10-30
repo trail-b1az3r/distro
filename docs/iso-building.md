@@ -81,8 +81,8 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
    `iso/` laid over it — branded boot menus, the live session, NetworkManager
    instead of systemd-networkd, no root autologin or SSH, pacman configurations
    and build information. Standard uses `base`, `desktop`, `browser`, `live`;
-   Nano uses `base`, `nano-desktop`, `live` and defaults to the Minimal install profile to keep its offline custom-package closure small. Nano's SDDM login manager exposes
-   LXQt and MATE as the only installed desktop sessions; it does not install
+   Nano uses `base`, `nano-desktop`, `live` and defaults to the existing Minimal install profile to keep its offline custom-package closure small. LXQt and MATE are only the live desktop sessions; the installer remains unchanged and installs the selected existing Nexora profile (whose desktop remains Halcyon). Nano's SDDM login manager exposes
+   LXQt and MATE as the only installed live sessions; it does not install
    the Halcyon desktop meta-package or Plasma. Its live user starts in LXQt by
    default and can switch to MATE at the SDDM session chooser after logging out.
    Nano also enforces a strict final ISO size below 1,990,000,000 bytes and
