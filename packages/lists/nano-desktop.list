@@ -70,7 +70,7 @@ nm-connection-editor
 xdg-user-dirs
 xdg-utils
 
-# Nexora welcome and document tools; omit nexora-desktop because its meta-package
-# pulls in Halcyon. Nano's only desktop sessions are LXQt and MATE.
+# Nexora welcome and installer branding. Omit nexora-desktop (it pulls in
+# Halcyon) and nexora-write (it pulls in Qt WebEngine) from the compact live ISO.
+# Nano's only desktop sessions are LXQt and MATE.
 @DISTRO_ID@-welcome
-@DISTRO_ID@-write
