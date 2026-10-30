@@ -732,6 +732,8 @@ def build(opts: Options, runner: util.Runner | None = None) -> dict:
     if not opts.skip_packages:
         args = ["build", "--out", str(opts.build / "pkgbuild"), "--work", str(opts.build / "packages"),
                 "--repo", str(opts.repo)]
+        if opts.edition == "nano":
+            args += ["--edition", "nano", "--profile", opts.profile]
         if not opts.multilib:
             args.append("--no-multilib")
         if opts.sign_key:
