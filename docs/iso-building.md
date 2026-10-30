@@ -92,7 +92,7 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
    reduced.
    UEFI machines boot it with GRUB (`iso/grub`, themed), BIOS machines with
    syslinux.
-5. **mkarchiso**, then the ISO, checksums and metadata are moved into place.
+5. **Prepare the live Pacman keyring** with `pacman-key --init`, `--populate archlinux endeavouros` and `--updatedb`; this happens while creating the ISO, so the trust database is already on the USB media.\n6. **mkarchiso**, then the ISO, checksums and metadata are moved into place.
    The build fails if any file on the ISO is over 4 GiB: such an ISO could only
    be written as an image, not with tools that copy its files to a FAT32 stick
    (Rufus's default mode). The largest file's size is in the metadata.
