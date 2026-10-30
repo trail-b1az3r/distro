@@ -363,13 +363,8 @@ class Installation:
         return [p for p in packages if p not in missing], missing
 
     def pacstrap(self) -> None:
-        # A live ISO may be booted without NTP or a network. Initialize and
-        # populate its trust database explicitly before pacstrap verifies any
-        # packages; otherwise an uninitialized/stale live keyring can prevent
-        # even a complete local repository from being used.
-        self.run(["pacman-key", "--init"])
-        self.run(["pacman-key", "--populate", "archlinux", "endeavouros"])
-        self.run(["pacman-key", "--updatedb"])
+        # The live ISO's trust database is initialized during ISO/USB creation.
+        # pacstrap -K creates a separate empty keyring for the target system.
         conf = self.pacman_conf("live" if self.online else "offline")
         wanted = self.packages()
         available, missing = self.split_available(wanted, conf)
@@ -386,8 +381,8 @@ class Installation:
         self.run(["pacstrap", "-K", "-C", str(conf), str(self.target), *available])
         # pacstrap -K creates an empty target keyring. The keyring packages above provide
         # the public keys; populate them before the installed system does its first sync.
-        # Do not ignore errors here: a system with an empty/unpopulated keyring cannot
-        # verify the normal Arch and EndeavourOS repositories, and offline installs cannot repair it.
+        # The keyring packages are already installed in the target. Populate its
+        # separate pacstrap -K database before the first installed-system sync.
         self.chroot(["pacman-key", "--populate", "archlinux", "endeavouros"])
         self.chroot(["pacman-key", "--updatedb"])
 
