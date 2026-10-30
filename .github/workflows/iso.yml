@@ -3,6 +3,15 @@
 name: ISO
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/iso.yml"
+      - "build.sh"
+      - "iso/**"
+      - "lib/distrokit/build/iso.py"
+      - "packages/**"
+      - "tests/unit/test_iso.py"
   pull_request:
     branches: [main]
     paths:
