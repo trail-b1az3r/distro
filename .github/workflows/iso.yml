@@ -121,7 +121,7 @@ jobs:
 
   qemu:
     needs: build
-    if: ${{ !cancelled() && inputs.qemu != false && (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.iso_run)) }}
+    if: ${{ !cancelled() && (inputs.qemu != false || github.event_name == 'pull_request') && (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.iso_run)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
