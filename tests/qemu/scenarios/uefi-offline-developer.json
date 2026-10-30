@@ -1,0 +1,45 @@
+{
+  "description": "UEFI Developer profile installed from the full offline repository with no emulated network device",
+  "firmware": "uefi",
+  "disk_bus": "virtio",
+  "disk_gib": 80,
+  "memory_mib": 6144,
+  "network": false,
+  "expect": {
+    "filesystem": "btrfs",
+    "bootloader": "systemd-boot",
+    "encrypted": false
+  },
+  "config": {
+    "locale": "en_US.UTF-8",
+    "timezone": "UTC",
+    "keyboard_layout": "us",
+    "hostname": "qemu-offline-dev",
+    "user": {
+      "username": "tester",
+      "fullname": "Offline Developer",
+      "password": "test-password",
+      "root_password": "root-password",
+      "shell": "fish"
+    },
+    "disk": {
+      "mode": "erase",
+      "disk": "/dev/vda",
+      "filesystem": "btrfs",
+      "encrypt": false,
+      "swap": "zram"
+    },
+    "bootloader": "systemd-boot",
+    "profile": "developer",
+    "offline": true,
+    "rank_mirrors": false,
+    "kernel_params": [
+      "console=tty0",
+      "console=ttyS0,115200",
+      "plymouth.enable=0"
+    ],
+    "ai": {
+      "download": "first-boot"
+    }
+  }
+}

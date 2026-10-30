@@ -1,6 +1,7 @@
 [Unit]
 Description=@DISTRO_NAME@ live session: live user and desktop
-After=systemd-sysusers.service systemd-tmpfiles-setup.service
+Wants=NetworkManager.service
+After=systemd-sysusers.service systemd-tmpfiles-setup.service NetworkManager.service
 Before=greetd.service display-manager.service
 ConditionPathExists=/etc/@DISTRO_ID@/live
 

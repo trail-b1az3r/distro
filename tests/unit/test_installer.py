@@ -141,6 +141,19 @@ def test_bios_ext4_grub_plan_in_vm(machine):
     assert "-s /bin/bash" in find(cmds, "useradd -m")[0]
 
 
+def test_offline_pacstrap_populates_arch_and_endeavouros_keyrings(machine):
+    cfg = make_cfg(profile="developer", offline=True)
+    _root, report = machine("rtx4080_desktop")
+    runner = util.Runner(dry_run=True)
+    inst = Installation(cfg, report, runner=runner, online=False)
+    inst.pacstrap()
+    commands = [" ".join(command) for command in runner.recorded]
+    pacstrap = next(command for command in commands if "pacstrap -K -C" in command)
+    assert "archlinux-keyring" in pacstrap and "endeavouros-keyring" in pacstrap
+    assert any("pacman-key --populate archlinux endeavouros" in command for command in commands)
+    assert any("pacman-key --updatedb" in command for command in commands)
+
+
 def test_offline_install_queues_downloads_but_copies_local_model(machine, tmp_path):
     model = tmp_path / "tiny-model-Q4_K_M.gguf"
     model.write_bytes(b"GGUF" + b"\0" * 64)

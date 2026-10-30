@@ -107,6 +107,7 @@ class Deployer:
         # upstream itself), keyed by path relative to home.
         self._transforms: dict[str, Callable[[bytes], bytes]] = {
             ".config/quickshell/ii/services/FirstRunExperience.qml": self._greeting,
+            ".config/systemd/user/halcyon-uwu-agent.service": self._halcyon_uwu_agent_unit,
         }
         # Files whose content comes from the distribution instead of upstream.
         self._overrides: dict[str, Path] = {}
@@ -327,6 +328,25 @@ class Deployer:
         text = re.sub(r'(property string firstRunNotifSummary: )"[^"]*"',
                       lambda m: f'{m.group(1)}"Welcome to {self.branding.pretty_name}"', text)
         return text.encode("utf-8")
+
+    def _halcyon_uwu_agent_unit(self, data: bytes) -> bytes:
+        """Keep Halcyon's password agent startable from its own Hyprland hook.
+
+        Halcyon already starts this user unit from init.lua after importing the
+        compositor environment. Its extra hyprctl version ExecCondition can
+        race the Hyprland control socket at login and make systemd skip the
+        agent, leaving NetworkManager without a Wi-Fi password provider.
+        """
+        text = data.decode("utf-8")
+        if "halcyon_uwu.py" not in text or "ExecStart=" not in text:
+            return data
+        lines = text.splitlines(keepends=True)
+        cleaned = []
+        for line in lines:
+            if line.startswith("# Only inside a running Hyprland") or line.startswith("ExecCondition="):
+                continue
+            cleaned.append(line)
+        return "".join(cleaned).encode("utf-8")
 
     def write_user_settings(self, s: UserSettings) -> None:
         custom = self.config / "hypr" / "custom"

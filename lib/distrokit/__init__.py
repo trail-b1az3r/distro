@@ -9,4 +9,4 @@ All user-visible names come from ``distro.conf`` through
 :mod:`distrokit.branding`; nothing here hard-codes the distribution's name.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"

@@ -1,17 +1,20 @@
 # Release process
 
 Releases are numbered `YY.MM.<release>` with a name, both set in `distro.conf`
-(`ISO_VERSION_FORMAT`, `ISO_RELEASE`, `ISO_CODENAME`): the first one is
-**26.10.0.1.0 "Origin"**, tagged `v26.10.0.1.0`. Actions > Tag puts a tag on a commit without releasing it. Bump `ISO_RELEASE` (and give
-it a new `ISO_CODENAME`) for each release; a second build of the same release
-is tagged `v<version>.1`.
+(`ISO_VERSION_FORMAT`, `ISO_RELEASE`, `ISO_CODENAME`). The October 2026
+maintenance release is **26.10.0.1.2 "Origin"**, tagged `v26.10.0.1.2`.
+Actions > Tag puts a tag on a commit without releasing it. Bump `ISO_RELEASE`
+(and give it a new `ISO_CODENAME`) for each release; use a new patch number
+rather than moving a tag that already has a published release.
 
 ## Before tagging
 
 1. `main` is green in CI (lint, tests, Arch packages).
-2. Run the ISO workflow manually (*Actions → ISO → Run workflow*) and check
-   that every QEMU scenario passes; download the ISO and try it on at least one
-   real machine with each GPU vendor you can reach.
+2. The Release workflow builds the **Developer** profile with the **Full offline**
+   repository and runs every QEMU scenario, including a Developer installation
+   with networking disabled. Do not publish unless those checks pass.
+3. Test the ISO on at least one real machine, including a Wi-Fi connection
+   through Halcyon's NetworkManager password agent.
 3. Update pinned inputs if needed, each in its own reviewed commit:
    * `git -C desktop/dots pull` (the desktop), then `make test` (keybind collisions);
    * `scripts/build-packages.sh --update-lock` (AUR commits: read the diffs of

@@ -10,7 +10,10 @@
 * An internet connection is recommended. Whether one is required depends on
   the ISO: a standard ISO carries the distribution's own packages and
   downloads the rest while installing; an ISO built with `--offline full`
-  installs with no network at all. The installer tells you which one you have.
+  installs with no network at all. Full-offline images include the Arch and
+  EndeavourOS keyring packages, and the installer populates the installed
+  system's keyring from those packages before it finishes. The installer tells
+  you which mode the ISO contains.
 
 ## 1. Write the ISO to a USB stick
 

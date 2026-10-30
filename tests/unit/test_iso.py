@@ -130,6 +130,9 @@ def test_assemble_profile(tmp_path, releng):
     assert (air / f"etc/{b.id}/live").is_file()
 
     # Live session: greetd autologin, NetworkManager, the live user service.
+    live_setup_unit = air / f"usr/lib/systemd/system/{b.id}-live-setup.service"
+    assert "Wants=NetworkManager.service" in live_setup_unit.read_text()
+    assert "After=systemd-sysusers.service systemd-tmpfiles-setup.service NetworkManager.service" in live_setup_unit.read_text()
     systemd = air / "etc/systemd/system"
     assert os.readlink(systemd / "display-manager.service").endswith("/greetd.service")
     for unit in ("NetworkManager.service", "bluetooth.service", f"{b.id}-live-setup.service"):
@@ -185,7 +188,8 @@ def test_offline_sets_keep_conflicting_stacks_apart():
     b = load_branding()
     sets = iso.offline_sets(b, "standard")
     base = set(sets[0])
-    assert {"linux", "linux-headers", "grub", "sbctl", "llama.cpp-vulkan"} <= base
+    assert {"linux", "linux-headers", "grub", "sbctl", "llama.cpp-vulkan",
+            "archlinux-keyring", "endeavouros-keyring"} <= base
     assert "visual-studio-code-bin" not in base
     nvidia = [s for s in sets if "nvidia-utils" in s]
     assert any("nvidia-open" in s and "nvidia-open-dkms" not in s for s in nvidia)  # prebuilt variant

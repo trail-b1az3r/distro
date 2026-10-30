@@ -53,7 +53,7 @@ jobs:
       PROFILE: ${{ inputs.profile || 'standard' }}
       OFFLINE: ${{ inputs.offline || 'minimal' }}
     steps:
-      - name: Free disk space (the build needs ~30 GB)
+      - name: Free disk space (the full offline build needs ~60 GB)
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
             /usr/local/share/boost /usr/local/.ghcup
@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [uefi-btrfs-encrypted, bios-ext4-grub, live-uefi-usb, live-uefi-cdrom]
+        scenario: [uefi-btrfs-encrypted, bios-ext4-grub, uefi-offline-developer, live-uefi-usb, live-uefi-cdrom]
     steps:
       - uses: actions/checkout@v4
       - name: KVM and QEMU

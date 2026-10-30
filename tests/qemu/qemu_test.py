@@ -192,6 +192,7 @@ class Machine:
     cpus: int = 2
     disk: Path | None = None
     disk_bus: str = "virtio"
+    network: bool = True
     extra: list[str] = field(default_factory=list)
     proc: subprocess.Popen | None = None
 
@@ -221,9 +222,9 @@ class Machine:
 
     def start(self, serial: Path, args: list[str]) -> None:
         accel = ["-accel", "kvm", "-cpu", "host"] if self.kvm() else ["-accel", "tcg", "-cpu", "max"]
+        network_args = ["-nic", "user,model=virtio-net-pci"] if self.network else ["-nic", "none"]
         cmd = ["qemu-system-x86_64", "-machine", "q35", *accel, "-m", str(self.memory_mib), "-smp", str(self.cpus),
-               *self.firmware_args(), *self.disk_args(),
-               "-nic", "user,model=virtio-net-pci", "-device", "virtio-rng-pci",
+               *self.firmware_args(), *self.disk_args(), *network_args, "-device", "virtio-rng-pci",
                "-vga", "virtio", "-display", "none",
                "-serial", f"unix:{serial},server=on,wait=off",
                "-no-reboot", *args, *self.extra]
@@ -321,6 +322,17 @@ def checks_for(scn: dict) -> list[Check]:
         Check("system-running", "systemctl is-system-running --wait || { systemctl --failed --no-pager; false; }",
               must_pass=False),
     ]
+    if cfg.get("profile") == "developer":
+        out.append(Check("halcyon-wifi-agent",
+                         f"test -f /home/{user}/.config/systemd/user/halcyon-uwu-agent.service"
+                         f" && grep -q halcyon_uwu.py /home/{user}/.config/systemd/user/halcyon-uwu-agent.service"
+                         f" && ! grep -q '^ExecCondition=' /home/{user}/.config/systemd/user/halcyon-uwu-agent.service"
+                         f" && grep -q halcyon-uwu-agent.service /home/{user}/.config/hypr/hyprland/halcyon/init.lua"))
+    if cfg.get("offline"):
+        out.append(Check("offline-keyring-packages",
+                         "pacman -Q archlinux-keyring endeavouros-keyring >/dev/null"))
+        out.append(Check("offline-keyring-populated",
+                         "pacman-key --list-keys | grep -Eqi 'Arch Linux|EndeavourOS'"))
     if expect.get("bootloader") == "systemd-boot":
         out.append(Check("boot-entries", f"bootctl list --no-pager | grep -q '{B.id}-linux.conf'"))
         out.append(Check("boot-diagnostic", f"bootctl list --no-pager | grep -q '{B.id}-linux-diagnostic.conf'"))
@@ -345,7 +357,7 @@ def run_scenario(name: str, scn: dict, iso: Path, out: Path, timeout_min: float,
     subprocess.run(["qemu-img", "create", "-q", "-f", "qcow2", str(disk), f"{scn.get('disk_gib', 48)}G"], check=True)
     (out / "OVMF_VARS.fd").unlink(missing_ok=True)
     machine = Machine(out, scn.get("firmware", "uefi"), scn.get("memory_mib", 4096), scn.get("cpus", 2), disk,
-                      scn.get("disk_bus", "virtio"))
+                      scn.get("disk_bus", "virtio"), network=scn.get("network", True))
     if not machine.kvm():
         print("  (no usable /dev/kvm: TCG emulation, this takes a long time)")
         timeout_min *= 4

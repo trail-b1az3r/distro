@@ -149,6 +149,9 @@ class Installation:
     # -- package set ----------------------------------------------------------
     def packages(self) -> list[str]:
         pk = list(self.selection.packages)
+        # Keyring packages must be present even when a custom/minimal profile omits the base list.
+        # They are carried in the full offline repository, so this also works with no network.
+        pk += ["archlinux-keyring", "endeavouros-keyring"]
         pk += self.cfg.kernels
         micro = self.hw.cpu.microcode_package
         if micro:
@@ -363,7 +366,8 @@ class Installation:
         conf = self.pacman_conf("live" if self.online else "offline")
         wanted = self.packages()
         available, missing = self.split_available(wanted, conf)
-        essential = {"base", "linux", "mkinitcpio", "sudo", "networkmanager", f"{self.branding.id}-core"}
+        essential = {"base", "linux", "mkinitcpio", "sudo", "networkmanager", f"{self.branding.id}-core",
+                     "archlinux-keyring", "endeavouros-keyring"}
         fatal = [p for p in missing if p in essential or p in self.cfg.kernels]
         if fatal:
             raise InstallError(f"essential packages are unavailable: {', '.join(fatal)}. "
@@ -373,8 +377,12 @@ class Installation:
             self.missing_packages += missing
         self.emit({"type": "packages", "count": len(available)})
         self.run(["pacstrap", "-K", "-C", str(conf), str(self.target), *available])
-        # Keys for EndeavourOS and the distribution repository in the new system.
-        self.chroot(["pacman-key", "--populate", "archlinux", "endeavouros"], check=False)
+        # pacstrap -K creates an empty target keyring. The keyring packages above provide
+        # the public keys; populate them before the installed system does its first sync.
+        # Do not ignore errors here: a system with an empty/unpopulated keyring cannot
+        # verify the normal Arch and EndeavourOS repositories, and offline installs cannot repair it.
+        self.chroot(["pacman-key", "--populate", "archlinux", "endeavouros"])
+        self.chroot(["pacman-key", "--updatedb"])
 
     def fstab(self) -> None:
         tgt = str(self.target)

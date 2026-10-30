@@ -139,6 +139,12 @@ def test_first_deploy(deployer):
     assert timer.is_symlink() and os.readlink(timer) == f"{home}/.config/systemd/user/halcyon-auto-theme.timer"
     assert not (home / ".config/systemd/user/halcyon-update.timer").exists()
     assert (home / ".config/systemd/user/halcyon-quickshell.service").is_file()
+    # Halcyon starts this agent from init.lua after importing the session environment.
+    # The distro deployment removes the redundant hyprctl ExecCondition that can race login.
+    agent = (home / ".config/systemd/user/halcyon-uwu-agent.service").read_text()
+    assert "halcyon_uwu.py" in agent and "ExecStart=" in agent
+    assert "ExecCondition=" not in agent
+    assert "halcyon-uwu-agent.service" in (home / ".config/hypr/hyprland/halcyon/init.lua").read_text()
     assert (home / f".local/state/{b.id}/desktop-manifest.json").is_file()
 
 
