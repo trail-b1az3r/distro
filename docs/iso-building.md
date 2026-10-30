@@ -13,7 +13,7 @@ sudo scripts/bootstrap.sh --builder     # once: archiso, tools, EndeavourOS keyr
 sudo ./build.sh --profile standard
 
 # Compact Nano ISO for Nexora 26.10.0.1.3 (network-enabled installer):
-sudo ./build.sh --edition nano --profile standard --offline minimal
+sudo ./build.sh --edition nano --profile minimal --offline minimal
 ```
 
 Output:
@@ -81,7 +81,7 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
    `iso/` laid over it — branded boot menus, the live session, NetworkManager
    instead of systemd-networkd, no root autologin or SSH, pacman configurations
    and build information. Standard uses `base`, `desktop`, `browser`, `live`;
-   Nano uses `base`, `nano-desktop`, `live`. Nano's SDDM login manager exposes
+   Nano uses `base`, `nano-desktop`, `live` and defaults to the Minimal install profile to keep its offline custom-package closure small. Nano's SDDM login manager exposes
    LXQt and MATE as the only installed desktop sessions; it does not install
    the Halcyon desktop meta-package or Plasma. Its live user starts in LXQt by
    default and can switch to MATE at the SDDM session chooser after logging out.
