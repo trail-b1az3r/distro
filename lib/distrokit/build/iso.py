@@ -397,6 +397,10 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
         sddm = air / "etc" / "sddm.conf.d"
         sddm.mkdir(parents=True, exist_ok=True)
         (sddm / "10-nexora-nano.conf").write_text(
+            "[General]\n"
+            "SessionDir=/etc/nexora/xsessions\n"
+            "WaylandSessionDir=/etc/nexora/wayland-sessions\n"
+            "\\n"
             "[Autologin]\n"
             f"User={b['LIVE_USER']}\n"
             "Session=lxqt.desktop\n"
