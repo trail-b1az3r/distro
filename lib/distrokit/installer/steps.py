@@ -363,6 +363,13 @@ class Installation:
         return [p for p in packages if p not in missing], missing
 
     def pacstrap(self) -> None:
+        # A live ISO may be booted without NTP or a network. Initialize and
+        # populate its trust database explicitly before pacstrap verifies any
+        # packages; otherwise an uninitialized/stale live keyring can prevent
+        # even a complete local repository from being used.
+        self.run(["pacman-key", "--init"])
+        self.run(["pacman-key", "--populate", "archlinux", "endeavouros"])
+        self.run(["pacman-key", "--updatedb"])
         conf = self.pacman_conf("live" if self.online else "offline")
         wanted = self.packages()
         available, missing = self.split_available(wanted, conf)
