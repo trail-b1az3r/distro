@@ -11,7 +11,9 @@ if ! id "$user" &>/dev/null; then
     passwd -d "$user" >/dev/null
 fi
 
-if [[ ! -e "/home/$user/.config/hypr/@DISTRO_ID@/init.lua" ]]; then
+# Nano has its own LXQt and MATE sessions. Do not deploy the standard
+# Halcyon configuration (or require the Halcyon packages) in that edition.
+if [[ ! -e "/etc/@DISTRO_ID@/nano" && ! -e "/home/$user/.config/hypr/@DISTRO_ID@/init.lua" ]]; then
     log="/var/log/@DISTRO_ID@/live-desktop.log"
     mkdir -p "${log%/*}"
     if ! runuser -u "$user" -- env HOME="/home/$user" @DISTRO_CLI@ reset-desktop --yes >"$log" 2>&1; then
