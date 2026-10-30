@@ -14,8 +14,12 @@ NANO_EXCLUDE = {
     "7zip", "archinstall", "base-devel", "btop", "cage", "ddrescue",
     "ffmpegthumbs", "gparted", "greetd", "htop", "kdegraphics-thumbnailers",
     "kate", "kio-extras", "lsof", "man-db", "man-pages", "mdxl",
-    "noto-fonts-cjk", "openssh",
+    "noto-fonts", "noto-fonts-cjk", "openssh",
     "open-vm-tools", "qemu-guest-agent", "rsync", "spice-vdagent",
+    # Not needed in the live session; keep the standard Python runtime for the installer.
+    "python-pip", "python315", "python315-pip",
+    # Optional SMB file sharing pulls in Samba and its large dependency set.
+    "gvfs-smb",
     "testdisk", "texinfo", "unzip", "vim", "virtualbox-guest-utils",
     "hyperv", "zip",
 }
