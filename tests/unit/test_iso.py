@@ -173,8 +173,9 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
     air = prof / "airootfs"
     systemd = air / "etc/systemd/system"
     assert os.readlink(systemd / "display-manager.service") == "/usr/lib/systemd/system/sddm.service"
-    for unit in ("NetworkManager.service", "ModemManager.service", "NetworkManager-wait-online.service"):
+    for unit in ("NetworkManager.service", "ModemManager.service"):
         assert (systemd / "multi-user.target.wants" / unit).is_symlink()
+    assert (systemd / "network-online.target.wants" / "NetworkManager-wait-online.service").is_symlink()
     assert (systemd / "dbus-org.freedesktop.NetworkManager.service").is_symlink()
     assert (air / f"etc/{b.id}/nano").is_file()
     sddm = (air / "etc/sddm.conf.d/10-nexora-nano.conf").read_text()
