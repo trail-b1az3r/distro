@@ -50,8 +50,9 @@ jobs:
     if: needs.check.outputs.published != 'true'
     uses: ./.github/workflows/iso.yml
     with:
-      profile: standard
-      offline: minimal
+      # Release the same fully self-contained image users can install without Wi-Fi.
+      profile: developer
+      offline: full
       qemu: true
     secrets: inherit
 
