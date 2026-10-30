@@ -277,7 +277,7 @@ def wanted_packages(b: Branding, root: Path | None = None, *, edition: str = "st
     if edition == "nano":
         names = list(select_packages(load_profiles(root)[profile], branding=b).packages)
         for list_name in ("base", "nano-desktop", "live"):
-            names += read_list(list_name, b, root=root)
+            names += read_list(list_name, b, data_root=root)
         names += ["linux", "amd-ucode", "intel-ucode"]
         return list(dict.fromkeys(names))
     if edition != "standard":
