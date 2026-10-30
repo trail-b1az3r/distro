@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from ..branding import Branding
 from ..profiles import read_list
 
@@ -19,10 +21,10 @@ NANO_EXCLUDE = {
 }
 
 
-def nano_live_packages(branding: Branding) -> list[str]:
+def nano_live_packages(branding: Branding, data_root: Path | None = None) -> list[str]:
     """The compact Nano live package set, without optional/redundant tools."""
     packages: list[str] = []
     for name in NANO_LIVE_LISTS:
-        packages += read_list(name, branding)
+        packages += read_list(name, branding, data_root=data_root)
     packages = [name for name in packages if name not in NANO_EXCLUDE]
     return list(dict.fromkeys(packages + list(NANO_LIVE_EXTRA)))
