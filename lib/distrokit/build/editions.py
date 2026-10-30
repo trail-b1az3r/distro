@@ -14,7 +14,7 @@ NANO_EXCLUDE = {
     "7zip", "archinstall", "base-devel", "btop", "cage", "ddrescue",
     "ffmpegthumbs", "gparted", "greetd", "htop", "kdegraphics-thumbnailers",
     "kate", "kio-extras", "lsof", "man-db", "man-pages", "mdxl",
-    "mkinitcpio-nfs-utils", "nbd", "noto-fonts-cjk", "openssh",
+    "noto-fonts-cjk", "openssh",
     "open-vm-tools", "qemu-guest-agent", "rsync", "spice-vdagent",
     "testdisk", "texinfo", "unzip", "vim", "virtualbox-guest-utils",
     "hyperv", "zip",
