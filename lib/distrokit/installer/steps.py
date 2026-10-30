@@ -379,10 +379,8 @@ class Installation:
             self.missing_packages += missing
         self.emit({"type": "packages", "count": len(available)})
         self.run(["pacstrap", "-K", "-C", str(conf), str(self.target), *available])
-        # pacstrap -K creates an empty target keyring. The keyring packages above provide
-        # the public keys; populate them before the installed system does its first sync.
-        # The keyring packages are already installed in the target. Populate its
-        # separate pacstrap -K database before the first installed-system sync.
+        # pacstrap -K creates an empty target keyring. Populate it from the
+        # keyring packages installed in the target before its first repository sync.
         self.chroot(["pacman-key", "--populate", "archlinux", "endeavouros"])
         self.chroot(["pacman-key", "--updatedb"])
 
