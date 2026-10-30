@@ -557,6 +557,13 @@ def main(argv: list[str] | None = None) -> int:
     a = p.parse_args(argv)
     scenarios = {f.stem: json.loads(f.read_text()) for f in sorted((REPO / "tests/qemu/scenarios").glob("*.json"))}
     scenarios |= LIVE
+    if a.edition == "nano":
+        # Nano carries the Minimal profile's custom/AUR package closure.
+        # The installer remains the same; the live ISO's default profile is Minimal.
+        for scenario in scenarios.values():
+            if "config" in scenario:
+                scenario["config"]["profile"] = "minimal"
+                scenario["config"]["offline"] = False
     if a.list:
         for name, scn in scenarios.items():
             print(f"{name:28} {scn.get('description', '')}")
