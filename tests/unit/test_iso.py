@@ -146,6 +146,45 @@ def test_assemble_profile(tmp_path, releng):
         subprocess.run(["bash", "-n", str(air / f"usr/lib/{b.id}/bin/{script}")], check=True)
 
 
+def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
+    b = load_branding()
+    opts = iso.Options(edition="nano", profile="standard", offline="minimal",
+                       build=tmp_path / "build", releng=releng)
+    prof = iso.assemble(opts, b, epoch=1790393700)
+    packages = set((prof / "packages.x86_64").read_text().split())
+
+    assert {"lxqt-session", "lxqt-panel", "pcmanfm-qt", "qterminal",
+            "mate-session-manager", "mate-panel", "marco", "caja",
+            "mate-terminal", "sddm"} <= packages
+    assert {f"{b.id}-installer", f"{b.id}-branding", f"{b.id}-core",
+            f"{b.id}-welcome", f"{b.id}-write"} <= packages
+    assert "hyprland-plus" not in packages
+    assert not any(name.startswith("illogical-impulse-") for name in packages)
+    assert "plasma-desktop" not in packages and "greetd" not in packages
+
+    air = prof / "airootfs"
+    systemd = air / "etc/systemd/system"
+    assert os.readlink(systemd / "display-manager.service") == "/usr/lib/systemd/system/sddm.service"
+    assert (air / f"etc/{b.id}/nano").is_file()
+    sddm = (air / "etc/sddm.conf.d/10-nexora-nano.conf").read_text()
+    assert f"User={b['LIVE_USER']}" in sddm
+    assert "Session=lxqt.desktop" in sddm
+    live_setup = (air / f"usr/lib/{b.id}/bin/{b.id}-live-setup").read_text()
+    assert f"/etc/{b.id}/nano" in live_setup
+    assert "reset-desktop --yes" in live_setup
+
+
+def test_standard_edition_keeps_greetd_and_halcyon(tmp_path, releng):
+    b = load_branding()
+    opts = iso.Options(edition="standard", build=tmp_path / "build", releng=releng)
+    prof = iso.assemble(opts, b, epoch=1790393700)
+    packages = set((prof / "packages.x86_64").read_text().split())
+    assert "hyprland-plus" in packages and "illogical-impulse-hyprland" in packages
+    assert "lxqt-session" not in packages and "mate-session-manager" not in packages
+    systemd = prof / "airootfs/etc/systemd/system"
+    assert os.readlink(systemd / "display-manager.service") == "/usr/lib/systemd/system/greetd.service"
+
+
 def test_boot_menu_theme_goes_onto_the_iso(tmp_path, releng, monkeypatch):
     b = load_branding()
     src = tmp_path / "src"
