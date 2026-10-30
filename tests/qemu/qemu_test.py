@@ -460,7 +460,7 @@ LIVE = {
 }
 
 
-def run_live_boot(name: str, scn: dict, iso: Path, out: Path, timeout_min: float) -> dict:
+def run_live_boot(name: str, scn: dict, iso: Path, out: Path, timeout_min: float, edition: str = "standard") -> dict:
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("*.log"):
         old.unlink()
@@ -498,7 +498,8 @@ def run_live_boot(name: str, scn: dict, iso: Path, out: Path, timeout_min: float
             con.send(f"{B['LIVE_USER']}\n")
             con.expect([r"live system\s*$"], 60)  # the message of the day: logged in
             time.sleep(2)
-            con.send("sh -c 'for i in $(seq 90); do for p in Hyprland cage; do "
+            session_procs = "lxqt-session mate-session" if edition == "nano" else "Hyprland cage"
+            con.send("sh -c 'for i in $(seq 90); do for p in " + session_procs + "; do "
                      "pgrep -x $p >/dev/null && { echo \"@@SESSION $p\"; exit; }; done; sleep 2; done; "
                      "echo \"@@SESSION none\"'\n")
             _i, m = con.expect([r"^@@SESSION (\w+)[ \t]*\n"], 240)
@@ -508,6 +509,20 @@ def run_live_boot(name: str, scn: dict, iso: Path, out: Path, timeout_min: float
                 con.send(f"tail -n 60 /tmp/{B.id}-live-session.log; echo @@END\n")
                 _i, mm = con.expect([r"^@@END[ \t]*\n"], 60)
                 output = con.buf[m.end():mm.start()].strip()[-4000:]
+            if edition == "nano" and session != "none":
+                con.send("( test -L /etc/nexora/xsessions/lxqt.desktop"
+                         " && test -L /etc/nexora/xsessions/mate.desktop"
+                         " && test \"$(find /etc/nexora/xsessions -maxdepth 1 -name '*.desktop' | wc -l)\" -eq 2"
+                         " && test -z \"$(find /etc/nexora/wayland-sessions -maxdepth 1 -name '*.desktop' -print -quit)\""
+                         " && systemctl is-active --quiet sddm ) >/dev/null 2>&1; echo \"@@NANO_SESSIONS $?\"\\n")
+                _i, sm = con.expect([r"^@@NANO_SESSIONS (\\d+)[ \\t]*\\n"], 60)
+                ok = sm.group(1) == "0"
+                result["checks"].append({"name": "nano-desktop-sessions",
+                                         "status": "pass" if ok else "fail",
+                                         "rc": 0 if ok else 1,
+                                         "output": "SDDM exposes only LXQt and MATE" if ok else
+                                                   "SDDM session directories are not restricted to LXQt and MATE"})
+                print(f"  {'pass' if ok else 'fail'}  nano-desktop-sessions")
             result["checks"].append({"name": "graphical-session", "status": "pass" if session != "none" else "fail",
                                      "rc": 0 if session != "none" else 1, "output": output, "session": session})
             print(f"  {'pass' if session != 'none' else 'fail'}  graphical-session ({session})")
@@ -534,6 +549,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--iso", help="ISO to test (default: newest in dist/)")
     p.add_argument("--scenario", action="append", help="scenario name (default: all)")
     p.add_argument("--list", action="store_true")
+    p.add_argument("--edition", choices=("standard", "nano"), default="standard",
+                   help="ISO live edition; Nano checks its LXQt/MATE session menu")
     p.add_argument("--timeout", type=float, default=60, help="minutes allowed for the installation (KVM)")
     p.add_argument("--keep", action="store_true", help="keep the installed disk images")
     p.add_argument("--out", default=str(REPO / "build" / "qemu"))
@@ -565,7 +582,7 @@ def main(argv: list[str] | None = None) -> int:
     for name in wanted:
         print(f"== {name}: {scenarios[name].get('description', '')}")
         if name in LIVE:
-            res = run_live_boot(name, LIVE[name], iso, Path(a.out) / name, 15)
+            res = run_live_boot(name, LIVE[name], iso, Path(a.out) / name, 15, a.edition)
         else:
             res = run_scenario(name, scenarios[name], iso, Path(a.out) / name, a.timeout, a.keep)
         results.append(res)
