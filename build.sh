@@ -17,7 +17,7 @@ usage() {
 
 Options:
   --edition E      ISO edition: standard (default) or nano (compact live environment)
-  --profile P      installation profile offered by default and carried offline (default: standard)
+  --profile P      installation profile offered by default (standard by default; Nano defaults to minimal)
   --compression C  SquashFS preset: auto (default), release or nano
   --offline MODE   minimal: distribution packages on the ISO, the rest is downloaded while installing
                    full:    every package an installation can need (larger ISO, installs with no network)
