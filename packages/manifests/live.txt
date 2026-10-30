@@ -6,8 +6,9 @@
 alacritty
 alsa-firmware
 alsa-utils
-archlinux-keyring
 amd-ucode
+arch-install-scripts
+archlinux-keyring
 arch-install-scripts
 archinstall
 base
