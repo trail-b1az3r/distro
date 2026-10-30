@@ -61,6 +61,6 @@ xdg-user-dirs
 xdg-utils
 
 # Nexora live welcome/installer branding and tools.
-@nexora@-desktop
-@nexora@-welcome
-@nexora@-write
+@DISTRO_ID@-desktop
+@DISTRO_ID@-welcome
+@DISTRO_ID@-write
