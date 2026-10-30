@@ -474,16 +474,74 @@ def add_user_packages(opts: Options, b: Branding, runner: util.Runner) -> list[P
 DEBUG_PACKAGE = re.compile(r"-debug-[^-]+-[^-]+-[^-]+\.pkg\.tar\.")
 
 
+def package_metadata(path: Path) -> tuple[str, list[str]]:
+    """Read a built package's name and runtime dependencies from .PKGINFO."""
+    result = subprocess.run(["bsdtar", "-xOf", str(path), ".PKGINFO"],
+                            capture_output=True, text=True, check=True)
+    name = ""
+    dependencies: list[str] = []
+    for line in result.stdout.splitlines():
+        if line.startswith("pkgname = "):
+            name = line.split(" = ", 1)[1].strip()
+        elif line.startswith("depend = "):
+            dependency = line.split(" = ", 1)[1].strip()
+            dependencies.append(re.split(r"[<>=]", dependency, maxsplit=1)[0])
+    if not name:
+        raise ValueError(f"{path}: .PKGINFO has no pkgname")
+    return name, dependencies
+
+
+def nano_offline_packages(opts: Options, b: Branding) -> set[str]:
+    """Custom/AUR packages needed by Nano's live environment and install profile.
+
+    Nano is network-enabled. Carry the selected profile's custom/AUR dependency
+    closure, not every optional AI/GPU/developer package in the repository.
+    Official Arch/EndeavourOS dependencies are downloaded normally.
+    """
+    required = set(live_packages(b, "nano"))
+    profile = load_profiles()[opts.profile]
+    required.update(select_packages(profile, branding=b).packages)
+
+    archives = [p for p in sorted(opts.repo.glob("*.pkg.tar.*"))
+                if not p.name.endswith(".sig") and not DEBUG_PACKAGE.search(p.name)]
+    by_name: dict[str, Path] = {}
+    dependencies: dict[str, list[str]] = {}
+    for archive in archives:
+        name, deps = package_metadata(archive)
+        by_name[name] = archive
+        dependencies[name] = deps
+
+    selected: set[str] = set()
+    pending = list(required)
+    while pending:
+        name = pending.pop()
+        if name in selected or name not in by_name:
+            continue
+        selected.add(name)
+        pending.extend(dependencies.get(name, ()))
+    return selected
+
+
 def offline_repository(opts: Options, b: Branding, runner: util.Runner, conf: Path) -> Path:
-    """Fill ``opts.offline_repo`` and index it as ``<repo>-offline``. The
-    debug symbol packages makepkg splits off stay in the distribution
-    repository: nothing installs them from the ISO."""
+    """Fill the offline repository. Nano carries only its live and selected-
+    profile dependency closure; standard editions keep the complete repository."""
     out = opts.offline_repo
     _remove(out)
     out.mkdir(parents=True)
+    if opts.edition == "nano":
+        selected = nano_offline_packages(opts, b)
+        print(f"==> Nano offline repository: {len(selected)} custom/AUR packages "
+              f"for the {opts.profile} install profile and live environment")
+    else:
+        selected = None
     for f in sorted(opts.repo.glob("*.pkg.tar.*")):
-        if not DEBUG_PACKAGE.search(f.name):
-            shutil.copyfile(f, out / f.name)
+        if f.name.endswith(".sig") or DEBUG_PACKAGE.search(f.name):
+            continue
+        if selected is not None:
+            name, _deps = package_metadata(f)
+            if name not in selected:
+                continue
+        shutil.copyfile(f, out / f.name)
     if opts.offline == "full":
         db = opts.build / "offline-db"
         _remove(db)
