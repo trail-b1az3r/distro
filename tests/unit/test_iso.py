@@ -32,10 +32,12 @@ RELENG_FILES = {
     "airootfs/root/.automated_script.sh": "#!/bin/sh\n",
     "airootfs/etc/systemd/network/20-ethernet.network": "",
     "airootfs/etc/systemd/system/getty@tty1.service.d/autologin.conf": "",
+    "airootfs/etc/systemd/system/pacman-init.service": "[Service]\n",
 }
 RELENG_LINKS = {
     "airootfs/etc/systemd/system/multi-user.target.wants/sshd.service": "/usr/lib/systemd/system/sshd.service",
     "airootfs/etc/systemd/system/multi-user.target.wants/iwd.service": "/usr/lib/systemd/system/iwd.service",
+    "airootfs/etc/systemd/system/multi-user.target.wants/pacman-init.service": "/etc/systemd/system/pacman-init.service",
     "airootfs/etc/resolv.conf": "/run/systemd/resolve/stub-resolv.conf",
 }
 
