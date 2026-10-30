@@ -85,7 +85,7 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
    LXQt and MATE as the only installed live sessions; it does not install
    the Halcyon desktop meta-package or Plasma. Its live user starts in LXQt by
    default and can switch to MATE at the SDDM session chooser after logging out.
-   Nano also enforces a strict final ISO size below 1,990,000,000 bytes and
+   Nano also enforces a strict final ISO size below 2,617,000,000 bytes and
    prints the measured byte/GB size plus remaining budget. A build at or above
    the limit fails and reports the largest ISO members. The Nano size budget
    applies only to the live ISO package set; installed-system profiles are not
@@ -145,7 +145,7 @@ qemu-system-x86_64 -enable-kvm -m 4G -smp 2 -cdrom dist/*.iso \
 | `Not found anywhere: X` | a package in `packages/lists` does not exist (renamed or removed upstream): fix the list |
 | an AUR package fails to build | pin an older commit in `aur.lock.json` or remove it from the lists; see `build/packages/src/<pkg>` |
 | `could not fetch the AUR package X` | both the AUR and its mirror failed; the message shows git's error for each. Check the network and [status.archlinux.org](https://status.archlinux.org), then build again. "Commit … is gone": run `scripts/build-packages.sh --update-lock` |
-| `Nano ISO exceeds the strict 1,990,000,000-byte limit` | review the largest ISO members in the error; reduce only Nano live packages or tune the Nano compression preset. Do not trim installed-system profiles. |
+| `Nano ISO exceeds the strict 2,617,000,000-byte limit` | review the largest ISO members in the error; reduce only Nano live packages or tune the Nano compression preset. Do not trim installed-system profiles. |
 | `… exceeds FAT32's 4 GiB file size limit` | the live system's image (`airootfs.sfs`, which also carries the offline repository) grew past 4 GiB: drop packages from `packages/lists/live.list` or the distribution repository, or build with `--offline minimal` |
 | `No space left on device` | free space or point `--build-dir` elsewhere; `--clean` removes old work directories |
 | mkarchiso: `umount: …/airootfs/proc: target is busy`, then `find: …/proc/…: Invalid argument` | something on the host (a file indexer, say) held the live system's `/proc`. mkarchiso now runs in a mount namespace of its own, and the next build unmounts whatever an earlier one left mounted under `build/` |
