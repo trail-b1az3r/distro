@@ -32,12 +32,10 @@ RELENG_FILES = {
     "airootfs/root/.automated_script.sh": "#!/bin/sh\n",
     "airootfs/etc/systemd/network/20-ethernet.network": "",
     "airootfs/etc/systemd/system/getty@tty1.service.d/autologin.conf": "",
-    "airootfs/etc/systemd/system/pacman-init.service": "[Service]\n",
 }
 RELENG_LINKS = {
     "airootfs/etc/systemd/system/multi-user.target.wants/sshd.service": "/usr/lib/systemd/system/sshd.service",
     "airootfs/etc/systemd/system/multi-user.target.wants/iwd.service": "/usr/lib/systemd/system/iwd.service",
-    "airootfs/etc/systemd/system/multi-user.target.wants/pacman-init.service": "/etc/systemd/system/pacman-init.service",
     "airootfs/etc/resolv.conf": "/run/systemd/resolve/stub-resolv.conf",
 }
 
@@ -84,8 +82,9 @@ def test_assemble_profile(tmp_path, releng):
     rank = air / "etc/pacman.d/hooks/eos-rankmirrors.hook"
     assert "Target = endeavouros-mirrorlist" in rank.read_text()
     assert rank.read_text().startswith("# remove from airootfs!")
-    # Kept: keyring initialisation and the archiso initramfs.
-    assert (air / "etc/systemd/system/multi-user.target.wants/pacman-init.service").is_symlink()
+    # The Pacman trust database is prepared at ISO/USB creation, not first boot.
+    assert not (air / "etc/systemd/system/pacman-init.service").exists()
+    assert not (air / "etc/systemd/system/multi-user.target.wants/pacman-init.service").exists()
     assert (air / "etc/mkinitcpio.conf.d/archiso.conf").is_file()
 
     # profiledef.sh parses and names the ISO after distro.conf.
@@ -146,6 +145,19 @@ def test_assemble_profile(tmp_path, releng):
     assert (air / "etc/shadow").read_text().startswith("root:!*:")  # no empty root password
     for script in (f"{b.id}-live-session", f"{b.id}-live-setup"):
         subprocess.run(["bash", "-n", str(air / f"usr/lib/{b.id}/bin/{script}")], check=True)
+
+
+def test_prepare_live_keyring_bakes_trust_database_into_iso(tmp_path):
+    profile = tmp_path / "profile"
+    runner = iso.util.Runner(dry_run=True)
+    gpgdir = iso.prepare_live_keyring(profile, runner)
+    assert gpgdir == profile / "airootfs/etc/pacman.d/gnupg"
+    assert gpgdir.is_dir() and gpgdir.stat().st_mode & 0o777 == 0o700
+    commands = [" ".join(command) for command in runner.recorded]
+    assert len(commands) == 3
+    assert "--init" in commands[0]
+    assert "--populate archlinux endeavouros" in commands[1]
+    assert "--updatedb" in commands[2]
 
 
 def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
