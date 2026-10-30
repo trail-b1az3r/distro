@@ -8,8 +8,8 @@ alsa-firmware
 alsa-utils
 amd-ucode
 arch-install-scripts
-archlinux-keyring
 archinstall
+archlinux-keyring
 base
 base-devel
 bash-completion
