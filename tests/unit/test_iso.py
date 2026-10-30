@@ -186,6 +186,9 @@ def test_iso_files_and_the_fat32_limit(tmp_path, monkeypatch):
 
 def test_offline_sets_keep_conflicting_stacks_apart():
     b = load_branding()
+    for profile in ("minimal", "standard", "developer", "ai"):
+        base = set(iso.offline_sets(b, profile)[0])
+        assert {"archlinux-keyring", "endeavouros-keyring"} <= base
     sets = iso.offline_sets(b, "standard")
     base = set(sets[0])
     assert {"linux", "linux-headers", "grub", "sbctl", "llama.cpp-vulkan",

@@ -197,6 +197,11 @@ def offline_sets(b: Branding, profile_id: str, multilib: bool = True) -> list[li
     root = paths.DATA_ROOT
     profile = load_profiles()[profile_id]
     base = list(select_packages(profile, branding=b).packages)
+    # These keys are the bootstrap trust roots for the installed system. They
+    # must be carried even if a custom profile omits the common base list:
+    # the installer requests them unconditionally and an offline install has
+    # no network path from which to recover a missing keyring.
+    base += ["archlinux-keyring", "endeavouros-keyring"]
     for extra in ("grub", "laptop", "intel-laptop", "snapshots", "firewall", "virt-qemu", "virt-virtualbox",
                   "virt-vmware", "virt-hyperv"):
         base += read_list(extra, b)

@@ -146,6 +146,10 @@ def test_pacman_configs(kind):
     if kind == "offline":
         assert has == {"core": False, "extra": False, "multilib": False, "endeavouros": False,
                        b.repo_name: False, f"{b.repo_name}-offline": True}
+        assert f"[{b.repo_name}-offline]\\nSigLevel = Optional TrustAll\\nServer = file:///var/cache/x/repo" in text
+        # Full-offline installation must never try to contact a remote repo or
+        # verify local package signatures against a keyring it has not populated yet.
+        assert "https://" not in text and "Include = /etc/pacman.d/" not in text
     else:
         assert has["core"] and has["extra"] and has["multilib"] and has["endeavouros"]
         # Only installed systems use the published repository; the ISO carries its packages.
