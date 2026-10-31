@@ -460,8 +460,10 @@ class Installation:
         return [p for p in packages if p not in missing], missing
 
     def pacstrap(self) -> None:
-        # The live ISO's trust database is initialized during ISO/USB creation.
-        # pacstrap -K creates a separate empty keyring for the target system.
+        # Use the live ISO's populated trust database for package verification.
+        # pacstrap's default behavior copies that keyring into the target before
+        # installing packages; -K would create an empty keyring and make the
+        # first signed-package transaction fail before we can populate it.
         conf = self.pacman_conf("live" if self.online else "offline")
         wanted = self.packages()
         available, missing = self.split_available(wanted, conf)
@@ -475,9 +477,8 @@ class Installation:
             self.log(f"Not in the repositories, will be built from the AUR after installation: {', '.join(missing)}")
             self.missing_packages += missing
         self.emit({"type": "packages", "count": len(available)})
-        self.run(["pacstrap", "-K", "-C", str(conf), str(self.target), *available])
-        # pacstrap -K creates an empty target keyring. Populate it from the
-        # keyring packages installed in the target before its first repository sync.
+        self.run(["pacstrap", "-C", str(conf), str(self.target), *available])
+        # Apply the keyring packages' current Arch and EndeavourOS trust stores.
         self.chroot(["pacman-key", "--populate", "archlinux", "endeavouros"])
         self.chroot(["pacman-key", "--updatedb"])
 
