@@ -78,6 +78,9 @@ RELENG_REMOVE = [
     "airootfs/etc/systemd/system/dbus-org.freedesktop.resolve1.service",
     "airootfs/etc/systemd/system/multi-user.target.wants/iwd.service",
     "airootfs/etc/systemd/system/multi-user.target.wants/sshd.service",
+    # Releng mounts tmpfs over the baked-in keyring on access; keep the
+    # build-time trust database visible because pacman-init is not used.
+    "airootfs/etc/systemd/system/etc-pacman.d-gnupg.mount",
     "airootfs/etc/systemd/system/pacman-init.service",
     "airootfs/etc/systemd/system/multi-user.target.wants/pacman-init.service",
     "airootfs/etc/systemd/system/multi-user.target.wants/systemd-networkd.service",
