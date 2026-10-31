@@ -146,7 +146,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: ${{ (inputs.edition == 'nano' || github.event_name == 'pull_request') && fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "live-uefi-usb", "live-uefi-cdrom"]') || fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "uefi-offline-developer", "live-uefi-usb", "live-uefi-cdrom"]') }}
+        # The offline-developer scenario requires the full offline repository.
+        # Never run it against the default minimal ISO, which intentionally
+        # omits packages such as base, linux, and the keyring packages.
+        scenario: ${{ (inputs.edition == 'nano' || github.event_name == 'pull_request' || inputs.offline != 'full') && fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "live-uefi-usb", "live-uefi-cdrom"]') || fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "uefi-offline-developer", "live-uefi-usb", "live-uefi-cdrom"]') }}
     steps:
       - uses: actions/checkout@v4
       - name: KVM and QEMU
