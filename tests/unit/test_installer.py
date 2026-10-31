@@ -3,6 +3,7 @@ plan on fixture machines (dry run), plus the configuration files it writes."""
 
 import shlex
 import shutil
+import socket
 import stat
 from pathlib import Path
 
@@ -11,7 +12,7 @@ import pytest
 from distrokit import hardware, pacmanconf, util
 from distrokit.branding import load as load_branding
 from distrokit.installer import config as cfgmod
-from distrokit.installer.steps import Installation, _config_with_gpgdir, dry_run_commands, summary
+from distrokit.installer.steps import Installation, _config_with_gpgdir, _ignore_gpg_runtime_sockets, dry_run_commands, summary
 from distrokit.profiles import load_features, load_profiles
 
 GiB = 2**30
@@ -302,3 +303,17 @@ def test_dry_run_writes_nothing(machine, tmp_path, monkeypatch, name, over):
     assert cmds
     assert not target.exists(), sorted(str(p) for p in target.rglob("*"))
     assert list(scratch.iterdir()) == []
+
+
+def test_gpg_keyring_copy_ignores_runtime_agent_sockets(tmp_path):
+    """Live GnuPG agent sockets must not be copied into pacstrap's keyring."""
+    regular = tmp_path / "pubring.gpg"
+    regular.write_text("trust database")
+    agent = tmp_path / "S.gpg-agent"
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        server.bind(str(agent))
+        ignored = _ignore_gpg_runtime_sockets(str(tmp_path), [regular.name, agent.name])
+        assert ignored == [agent.name]
+    finally:
+        server.close()
