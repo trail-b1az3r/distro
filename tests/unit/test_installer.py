@@ -104,7 +104,8 @@ def test_encrypted_btrfs_uefi_plan_on_hybrid_laptop(machine):
     assert not any("disk-secret-123" in c or "correct horse" in c for c in cmds)
     # Packages: GTX 1080 (Pascal) gets the 580 legacy branch, Intel microcode,
     # laptop tools, the Vulkan llama.cpp build for the AI profile.
-    pac = find(cmds, "pacstrap -K -C")[0]
+    pac = find(cmds, "pacstrap -C")[0]
+    assert "-K" not in pac  # an empty target keyring cannot verify pacstrap's first package transaction
     pacman_init = find(cmds, "systemctl start pacman-init.service")[0]
     assert cmds.index(pacman_init) < cmds.index(pac)
     for pkg in ("base", "linux", "intel-ucode", f"{b.id}-core", f"{b.id}-desktop", "nvidia-580xx-dkms",
@@ -163,7 +164,8 @@ def test_offline_pacstrap_populates_arch_and_endeavouros_keyrings(machine):
     inst = Installation(cfg, report, runner=runner, online=False)
     inst.pacstrap()
     commands = [" ".join(command) for command in runner.recorded]
-    pacstrap = next(command for command in commands if "pacstrap -K -C" in command)
+    pacstrap = next(command for command in commands if "pacstrap -C" in command)
+    assert "pacstrap -K" not in pacstrap
     assert "archlinux-keyring" in pacstrap and "endeavouros-keyring" in pacstrap
     populate = next(i for i, command in enumerate(commands)
                     if "arch-chroot" in command and "pacman-key --populate archlinux endeavouros" in command)
