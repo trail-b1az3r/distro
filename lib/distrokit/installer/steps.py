@@ -14,6 +14,7 @@ import re
 import shlex
 import shutil
 import socket
+import stat
 import tempfile
 import time
 from dataclasses import dataclass
@@ -43,6 +44,25 @@ def _ignore_gpg_runtime_sockets(directory: str, names: list[str]) -> list[str]:
     be copied into the installer's private writable keyring.
     """
     return [name for name in names if (Path(directory) / name).is_socket()]
+
+
+def _make_gpg_keyring_writable(gpgdir: Path) -> None:
+    """Restore owner write permissions lost when copying from read-only SquashFS.
+
+    shutil.copytree preserves source modes. The ISO's pubring.gpg and trust
+    database can therefore arrive read-only in /run; libalpm specifically
+    requires pubring.gpg to be writable before it can import missing keys.
+    Keep the keyring private while restoring owner write/search permissions.
+    """
+    for path in gpgdir.rglob("*"):
+        if path.is_symlink():
+            continue
+        mode = stat.S_IMODE(path.stat().st_mode)
+        if path.is_dir():
+            path.chmod(mode | stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+        elif path.is_file():
+            path.chmod(mode | stat.S_IWUSR)
+    gpgdir.chmod(0o700)
 
 MKINITCPIO_HOOKS = "base systemd plymouth autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck"
 SYSTEM_SERVICES = ["NetworkManager.service", "bluetooth.service", "sddm.service", "fstrim.timer",
@@ -182,7 +202,7 @@ class Installation:
             self._temp_dirs.append(runtime)
             gpgdir = runtime / "gnupg"
             shutil.copytree(seed, gpgdir, ignore=_ignore_gpg_runtime_sockets)
-            gpgdir.chmod(0o700)
+            _make_gpg_keyring_writable(gpgdir)
             config_text = _config_with_gpgdir(config_text, gpgdir)
             fd, name = tempfile.mkstemp(prefix=f"{self.branding.id}-pacman-{kind}-", suffix=".conf",
                                         dir=runtime)
