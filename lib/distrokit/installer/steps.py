@@ -12,6 +12,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import socket
 import tempfile
 import time
@@ -96,6 +97,7 @@ class Installation:
         self.state: dict[str, Any] = {"created_partitions": [], "opened": [], "mounted": False, "swap_on": []}
         self.missing_packages: list[str] = []
         self._temp_files: list[Path] = []
+        self._temp_dirs: list[Path] = []
         self.warnings: list[str] = list(self.disk_plan.warnings)
 
     # -- helpers --------------------------------------------------------------
@@ -134,15 +136,50 @@ class Installation:
         return f"/home/{self.user}"
 
     def pacman_conf(self, kind: str) -> Path:
-        """The live ISO ships /etc/<id>/pacman-<kind>.conf; elsewhere (tests,
-        installing from an installed system) one is generated."""
+        """Return a pacman config with a writable keyring for live installation.
+
+        The ISO's seed keyring lives in the read-only SquashFS image. Pacman
+        and GnuPG update trustdb files while checking package signatures, so
+        using that directory directly makes pacstrap fail with "keyring is
+        not writable". Copy the pre-populated trust database to /run and point
+        the installer config at that writable copy.
+        """
         shipped = Path(f"/etc/{self.branding.id}/pacman-{kind}.conf")
-        if shipped.is_file() or self.runner.dry_run:
-            return shipped  # a dry run only names it
+        if self.runner.dry_run:
+            return shipped
+        if shipped.is_file():
+            config_text = shipped.read_text()
+        else:
+            config_text = pacmanconf.render(kind, self.branding, multilib=self.cfg.multilib,
+                                            offline_repo=f"/var/cache/{self.branding.id}/repo")
+
+        seed = Path("/etc/pacman.d/gnupg")
+        if kind in ("live", "offline") and shipped.is_file() and seed.is_dir():
+            runtime = Path(tempfile.mkdtemp(prefix=f"{self.branding.id}-pacman-", dir="/run"))
+            self._temp_dirs.append(runtime)
+            gpgdir = runtime / "gnupg"
+            shutil.copytree(seed, gpgdir)
+            gpgdir.chmod(0o700)
+            config_text, count = re.subn(
+                r"(?m)^\\[options\\]\\s*$",
+                lambda match: f"{match.group(0)}\\nGPGDir = {gpgdir}",
+                config_text,
+                count=1,
+            )
+            if count != 1:
+                raise InstallError(f"invalid pacman config {shipped}: missing [options] section")
+            fd, name = tempfile.mkstemp(prefix=f"{self.branding.id}-pacman-{kind}-", suffix=".conf",
+                                        dir=runtime)
+            with os.fdopen(fd, "w") as fh:
+                fh.write(config_text)
+            self._temp_files.append(Path(name))
+            return Path(name)
+
+        if shipped.is_file():
+            return shipped
         fd, name = tempfile.mkstemp(prefix=f"{self.branding.id}-pacman-{kind}-", suffix=".conf")
         with os.fdopen(fd, "w") as fh:
-            fh.write(pacmanconf.render(kind, self.branding, multilib=self.cfg.multilib,
-                                       offline_repo=f"/var/cache/{self.branding.id}/repo"))
+            fh.write(config_text)
         self._temp_files.append(Path(name))
         return Path(name)
 
@@ -762,6 +799,9 @@ class Installation:
         for tmp in self._temp_files:
             tmp.unlink(missing_ok=True)
         self._temp_files.clear()
+        for tmpdir in self._temp_dirs:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+        self._temp_dirs.clear()
 
     def install_log_copy(self, log_file: Path) -> None:
         if self.runner.dry_run or not log_file.exists():
