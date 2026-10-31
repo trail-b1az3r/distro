@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import pwd
 import re
 import shlex
 import shutil
@@ -47,21 +48,34 @@ def _ignore_gpg_runtime_sockets(directory: str, names: list[str]) -> list[str]:
 
 
 def _make_gpg_keyring_writable(gpgdir: Path) -> None:
-    """Restore owner write permissions lost when copying from read-only SquashFS.
+    """Make the copied live keyring writable by pacman's configured user.
 
-    shutil.copytree preserves source modes. The ISO's pubring.gpg and trust
-    database can therefore arrive read-only in /run; libalpm specifically
-    requires pubring.gpg to be writable before it can import missing keys.
-    Keep the keyring private while restoring owner write/search permissions.
+    Pacman 7's live config uses DownloadUser=alpm. Keep the temporary parent
+    searchable by that account and make the private keyring tree owned by
+    alpm; root can still administer it, while libalpm/GnuPG can update its
+    trust database without relying on the SquashFS source modes.
     """
-    for path in gpgdir.rglob("*"):
+    try:
+        account = pwd.getpwnam("alpm")
+        uid, gid = account.pw_uid, account.pw_gid
+    except KeyError:
+        # Older pacman images may not define DownloadUser's account.
+        uid, gid = os.getuid(), os.getgid()
+
+    paths = [*gpgdir.rglob("*"), gpgdir]
+    # Restore permissions before changing ownership, so nested read-only
+    # directories remain traversable while the tree is being repaired.
+    for path in paths:
         if path.is_symlink():
             continue
         mode = stat.S_IMODE(path.stat().st_mode)
         if path.is_dir():
             path.chmod(mode | stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
         elif path.is_file():
-            path.chmod(mode | stat.S_IWUSR)
+            path.chmod(mode | stat.S_IRUSR | stat.S_IWUSR)
+    for path in paths:
+        if not path.is_symlink():
+            os.chown(path, uid, gid)
     gpgdir.chmod(0o700)
 
 MKINITCPIO_HOOKS = "base systemd plymouth autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck"
@@ -199,6 +213,8 @@ class Installation:
         seed = Path("/etc/pacman.d/gnupg")
         if kind in ("live", "offline") and shipped.is_file() and seed.is_dir():
             runtime = Path(tempfile.mkdtemp(prefix=f"{self.branding.id}-pacman-", dir="/run"))
+            # DownloadUser=alpm must be able to traverse to its private GPGDir.
+            runtime.chmod(0o755)
             self._temp_dirs.append(runtime)
             gpgdir = runtime / "gnupg"
             shutil.copytree(seed, gpgdir, ignore=_ignore_gpg_runtime_sockets)
