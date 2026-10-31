@@ -91,11 +91,17 @@ jobs:
     if: ${{ !inputs.iso_run }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      # Every push validates both supported offline repository modes. Manual
+      # dispatch and reusable calls retain their requested single mode.
+      matrix:
+        offline: ${{ github.event_name == 'push' && fromJSON('["minimal","full"]') || fromJSON(format('["{0}"]', inputs.offline || 'minimal')) }}
     env:
       EDITION: ${{ inputs.edition || (github.event_name == 'pull_request' && 'nano' || 'standard') }}
       COMPRESSION: ${{ inputs.compression || 'auto' }}
       PROFILE: ${{ (inputs.edition == 'nano' || github.event_name == 'pull_request') && 'minimal' || (inputs.profile || 'standard') }}
-      OFFLINE: ${{ inputs.offline || 'minimal' }}
+      OFFLINE: ${{ matrix.offline }}
     steps:
       - name: Free disk space (the full offline build needs ~60 GB)
         run: |
@@ -118,7 +124,7 @@ jobs:
         run: ./build.sh --container --edition "$EDITION" --compression "$COMPRESSION" --profile "$PROFILE" --offline "$OFFLINE"
       - uses: actions/upload-artifact@v4
         with:
-          name: iso
+          name: iso-${{ matrix.offline }}
           path: |
             dist/*.iso
             checksums/
@@ -126,7 +132,7 @@ jobs:
           compression-level: 0
       - uses: actions/upload-artifact@v4
         with:
-          name: repo
+          name: repo-${{ matrix.offline }}
           path: build/repo/
           compression-level: 0
       - uses: actions/upload-artifact@v4
@@ -146,10 +152,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The offline-developer scenario requires the full offline repository.
-        # Never run it against the default minimal ISO, which intentionally
-        # omits packages such as base, linux, and the keyring packages.
-        scenario: ${{ (inputs.edition == 'nano' || github.event_name == 'pull_request' || inputs.offline != 'full') && fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "live-uefi-usb", "live-uefi-cdrom"]') || fromJSON('["uefi-btrfs-encrypted", "bios-ext4-grub", "uefi-offline-developer", "live-uefi-usb", "live-uefi-cdrom"]') }}
+        offline: ${{ github.event_name == 'push' && fromJSON('["minimal","full"]') || fromJSON(format('["{0}"]', inputs.offline || 'minimal')) }}
+        scenario: [uefi-btrfs-encrypted, bios-ext4-grub, live-uefi-usb, live-uefi-cdrom]
+        # This scenario is meaningful only for an ISO containing the complete
+        # offline repository. On pushes, test that full ISO alongside minimal.
+        include: ${{ (github.event_name == 'push' || inputs.offline == 'full') && github.event_name != 'pull_request' && inputs.edition != 'nano' && fromJSON('[{"offline":"full","scenario":"uefi-offline-developer"}]') || fromJSON('[]') }}
     steps:
       - uses: actions/checkout@v4
       - name: KVM and QEMU
@@ -161,7 +168,7 @@ jobs:
           sudo apt-get install -y -q qemu-system-x86 qemu-utils ovmf xorriso
       - uses: actions/download-artifact@v4
         with:
-          name: iso
+          name: ${{ inputs.iso_run && 'iso' || format('iso-{0}', matrix.offline) }}
           run-id: ${{ inputs.iso_run || github.run_id }}
           github-token: ${{ github.token }}
       - name: Install and check (${{ matrix.scenario }})
