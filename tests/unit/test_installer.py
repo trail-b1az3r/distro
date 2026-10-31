@@ -1,6 +1,7 @@
 """The installer: configuration, validation and the complete installation
 plan on fixture machines (dry run), plus the configuration files it writes."""
 
+import os
 import shlex
 import shutil
 import socket
@@ -333,7 +334,7 @@ def test_gpg_keyring_copy_restores_owner_write_permissions(tmp_path):
     revocation.chmod(0o444)
     nested.chmod(0o500)
 
-    _make_gpg_keyring_writable(gpgdir)
+    _make_gpg_keyring_writable(gpgdir, owner=(os.getuid(), os.getgid()))
 
     assert pubring.stat().st_mode & 0o200
     assert nested.stat().st_mode & 0o300 == 0o300
