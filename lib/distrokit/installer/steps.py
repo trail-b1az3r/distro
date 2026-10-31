@@ -324,6 +324,11 @@ class Installation:
             if not self.runner.dry_run and not util.which(tool):
                 raise InstallError(f"Required tool '{tool}' is missing from the live system.")
         self.run(["timedatectl", "set-ntp", "true"], check=False)
+        # Arch ISO initializes and populates the live Pacman keyring in a
+        # boot-time oneshot. Starting it here synchronously prevents pacstrap
+        # from copying/using the keyring while pacman-init is still mutating it.
+        # Older/custom live images may not ship this unit, so it is optional.
+        self.run(["systemctl", "start", "pacman-init.service"], check=False)
         if self.disk_plan.disk:
             self._release_disk(self.disk_plan.disk)
         self.log(f"Network: {'online' if self.online else 'offline (offline repository only)'}")
