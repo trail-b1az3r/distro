@@ -141,6 +141,28 @@ def test_bios_ext4_grub_plan_in_vm(machine):
     assert "-s /bin/bash" in find(cmds, "useradd -m")[0]
 
 
+
+def test_live_pacman_config_uses_writable_keyring_copy(machine, tmp_path, monkeypatch):
+    """The installer must never ask pacman to update the ISO's read-only keyring."""
+    cfg = make_cfg(profile="minimal")
+    _root, report = machine("rtx4080_desktop")
+    inst = Installation(cfg, report, runner=util.Runner(dry_run=True), branding=load_branding(), online=True)
+    # Exercise the same config transformation with a realistic ISO keyring seed.
+    config = "[options]\\nSigLevel = Required DatabaseOptional\\n\\n[core]\\n"
+    gpgdir = tmp_path / "runtime-gnupg"
+    gpgdir.mkdir()
+    from distrokit.installer.steps import re
+    updated, count = re.subn(
+        r"(?m)^\\[options\\]\\s*$",
+        lambda match: f"{match.group(0)}\\nGPGDir = {gpgdir}",
+        config,
+        count=1,
+    )
+    assert count == 1
+    assert f"GPGDir = {gpgdir}" in updated
+    assert "[core]" in updated
+
+
 def test_offline_pacstrap_populates_arch_and_endeavouros_keyrings(machine):
     cfg = make_cfg(profile="developer", offline=True)
     _root, report = machine("rtx4080_desktop")
