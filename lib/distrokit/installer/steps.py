@@ -497,7 +497,7 @@ class Installation:
 
             # pacstrap's pacman -r must use the keyring inside the target,
             # not the temporary host GPGDir used by split_available().
-            pacstrap_text = re.sub(r"(?m)^GPGDir\\s*=.*(?:\\n|$)", "", conf.read_text())
+            pacstrap_text = re.sub(r"(?m)^GPGDir\s*=.*(?:\n|$)", "", conf.read_text())
             fd, name = tempfile.mkstemp(prefix=f"{self.branding.id}-pacstrap-", suffix=".conf",
                                         dir=conf.parent)
             with os.fdopen(fd, "w") as fh:
