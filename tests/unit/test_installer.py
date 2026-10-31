@@ -327,7 +327,7 @@ def test_gpg_keyring_copy_restores_owner_write_permissions(tmp_path):
     pubring.write_bytes(b"keyring")
     pubring.chmod(0o444)
     nested = gpgdir / "openpgp-revocs.d"
-    nested.mkdir(mode=0o500)
+    nested.mkdir(mode=0o700)
     revocation = nested / "test.rev"
     revocation.write_text("revocation")
     revocation.chmod(0o444)
