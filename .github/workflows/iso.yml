@@ -10,8 +10,12 @@ on:
       - "build.sh"
       - "iso/**"
       - "lib/distrokit/build/iso.py"
+      - "lib/distrokit/installer/**"
+      - "lib/distrokit/pacmanconf.py"
       - "packages/**"
       - "tests/unit/test_iso.py"
+      - "tests/unit/test_installer.py"
+      - "tests/qemu/**"
   pull_request:
     branches: [main]
     paths:
@@ -19,8 +23,12 @@ on:
       - "build.sh"
       - "iso/**"
       - "lib/distrokit/build/iso.py"
+      - "lib/distrokit/installer/**"
+      - "lib/distrokit/pacmanconf.py"
       - "packages/**"
       - "tests/unit/test_iso.py"
+      - "tests/unit/test_installer.py"
+      - "tests/qemu/**"
   workflow_dispatch:
     inputs:
       edition:
