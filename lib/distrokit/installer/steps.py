@@ -47,7 +47,7 @@ def _ignore_gpg_runtime_sockets(directory: str, names: list[str]) -> list[str]:
     return [name for name in names if (Path(directory) / name).is_socket()]
 
 
-def _make_gpg_keyring_writable(gpgdir: Path) -> None:
+def _make_gpg_keyring_writable(gpgdir: Path, owner: tuple[int, int] | None = None) -> None:
     """Make the copied live keyring writable by pacman's configured user.
 
     Pacman 7's live config uses DownloadUser=alpm. Keep the temporary parent
@@ -55,12 +55,15 @@ def _make_gpg_keyring_writable(gpgdir: Path) -> None:
     alpm; root can still administer it, while libalpm/GnuPG can update its
     trust database without relying on the SquashFS source modes.
     """
-    try:
-        account = pwd.getpwnam("alpm")
-        uid, gid = account.pw_uid, account.pw_gid
-    except KeyError:
-        # Older pacman images may not define DownloadUser's account.
-        uid, gid = os.getuid(), os.getgid()
+    if owner is None:
+        try:
+            account = pwd.getpwnam("alpm")
+            uid, gid = account.pw_uid, account.pw_gid
+        except KeyError:
+            # Older pacman images may not define DownloadUser's account.
+            uid, gid = os.getuid(), os.getgid()
+    else:
+        uid, gid = owner
 
     paths = [*gpgdir.rglob("*"), gpgdir]
     # Restore permissions before changing ownership, so nested read-only
