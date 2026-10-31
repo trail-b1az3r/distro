@@ -55,6 +55,19 @@ class Step:
     destructive: bool = False
 
 
+def _config_with_gpgdir(config_text: str, gpgdir: Path) -> str:
+    """Override pacman's GPGDir while preserving the shipped repository config."""
+    updated, count = re.subn(
+        r"(?m)^\[options\]\s*$",
+        lambda match: f"{match.group(0)}\nGPGDir = {gpgdir}",
+        config_text,
+        count=1,
+    )
+    if count != 1:
+        raise InstallError("invalid pacman config: missing [options] section")
+    return updated
+
+
 def is_online(host: str = "geo.mirror.pkgbuild.com", port: int = 443, timeout: float = 4.0) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout):
@@ -160,14 +173,7 @@ class Installation:
             gpgdir = runtime / "gnupg"
             shutil.copytree(seed, gpgdir)
             gpgdir.chmod(0o700)
-            config_text, count = re.subn(
-                r"(?m)^\\[options\\]\\s*$",
-                lambda match: f"{match.group(0)}\\nGPGDir = {gpgdir}",
-                config_text,
-                count=1,
-            )
-            if count != 1:
-                raise InstallError(f"invalid pacman config {shipped}: missing [options] section")
+            config_text = _config_with_gpgdir(config_text, gpgdir)
             fd, name = tempfile.mkstemp(prefix=f"{self.branding.id}-pacman-{kind}-", suffix=".conf",
                                         dir=runtime)
             with os.fdopen(fd, "w") as fh:
