@@ -13,7 +13,7 @@ import pytest
 from distrokit import hardware, pacmanconf, util
 from distrokit.branding import load as load_branding
 from distrokit.installer import config as cfgmod
-from distrokit.installer.steps import Installation, _config_with_gpgdir, _ignore_gpg_runtime_sockets, _make_gpg_keyring_writable, dry_run_commands, summary
+from distrokit.installer.steps import Installation, _config_with_gpgdir, _has_gpg_public_keyring, _ignore_gpg_runtime_sockets, _make_gpg_keyring_writable, dry_run_commands, summary
 from distrokit.profiles import load_features, load_profiles
 
 GiB = 2**30
@@ -106,8 +106,7 @@ def test_encrypted_btrfs_uefi_plan_on_hybrid_laptop(machine):
     # laptop tools, the Vulkan llama.cpp build for the AI profile.
     pac = find(cmds, "pacstrap -G -C")[0]
     assert "-K" not in pac  # an empty target keyring cannot verify pacstrap's first package transaction
-    pacman_init = find(cmds, "systemctl start pacman-init.service")[0]
-    assert cmds.index(pacman_init) < cmds.index(pac)
+    assert not find(cmds, "systemctl start pacman-init.service")
     for pkg in ("base", "linux", "intel-ucode", f"{b.id}-core", f"{b.id}-desktop", "nvidia-580xx-dkms",
                 "nvidia-prime", "linux-headers", "llama.cpp-vulkan", "zram-generator"):
         assert f" {pkg} " in f" {pac} ", pkg
@@ -145,6 +144,25 @@ def test_bios_ext4_grub_plan_in_vm(machine):
     assert not find(cmds, "passwd --lock root")
     assert "-s /bin/bash" in find(cmds, "useradd -m")[0]
 
+
+
+def test_gpg_keyring_detection_accepts_modern_keybox_and_legacy_keyring(tmp_path):
+    gpgdir = tmp_path / "gnupg"
+    gpgdir.mkdir()
+    assert not _has_gpg_public_keyring(gpgdir)
+
+    # GnuPG 2.4 defaults to pubring.kbx; older databases use pubring.gpg.
+    (gpgdir / "pubring.kbx").write_bytes(b"keybox")
+    assert _has_gpg_public_keyring(gpgdir)
+    (gpgdir / "pubring.kbx").unlink()
+    (gpgdir / "pubring.gpg").write_bytes(b"legacy-keyring")
+    assert _has_gpg_public_keyring(gpgdir)
+
+    (gpgdir / "pubring.gpg").unlink()
+    public_keys = gpgdir / "public-keys.d"
+    public_keys.mkdir()
+    (public_keys / "pubring.db").write_bytes(b"keyboxd")
+    assert _has_gpg_public_keyring(gpgdir)
 
 
 def test_live_pacman_config_uses_writable_keyring_copy(tmp_path):
