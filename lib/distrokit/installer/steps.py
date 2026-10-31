@@ -47,6 +47,19 @@ def _ignore_gpg_runtime_sockets(directory: str, names: list[str]) -> list[str]:
     return [name for name in names if (Path(directory) / name).is_socket()]
 
 
+def _has_gpg_public_keyring(gpgdir: Path) -> bool:
+    """Recognize GnuPG's legacy keyring and modern keybox databases."""
+    for name in ("pubring.gpg", "pubring.kbx"):
+        path = gpgdir / name
+        if path.is_file() and path.stat().st_size:
+            return True
+    # GnuPG can keep public keys in keyboxd's database instead of pubring.kbx.
+    public_keys = gpgdir / "public-keys.d"
+    return public_keys.is_dir() and any(
+        path.is_file() and path.stat().st_size for path in public_keys.iterdir()
+    )
+
+
 def _make_gpg_keyring_writable(gpgdir: Path, owner: tuple[int, int] | None = None) -> None:
     """Make the copied live keyring writable by pacman's configured user.
 
@@ -324,11 +337,9 @@ class Installation:
             if not self.runner.dry_run and not util.which(tool):
                 raise InstallError(f"Required tool '{tool}' is missing from the live system.")
         self.run(["timedatectl", "set-ntp", "true"], check=False)
-        # Arch ISO initializes and populates the live Pacman keyring in a
-        # boot-time oneshot. Starting it here synchronously prevents pacstrap
-        # from copying/using the keyring while pacman-init is still mutating it.
-        # Older/custom live images may not ship this unit, so it is optional.
-        self.run(["systemctl", "start", "pacman-init.service"], check=False)
+        # The ISO build bakes a populated keyring into the read-only live
+        # image. Do not start pacman-init.service here: this profile removes
+        # that unit deliberately, and the keyring is prepared at build time.
         if self.disk_plan.disk:
             self._release_disk(self.disk_plan.disk)
         self.log(f"Network: {'online' if self.online else 'offline (offline repository only)'}")
@@ -485,8 +496,8 @@ class Installation:
         target_gpgdir = self.t("/etc/pacman.d/gnupg")
         if not self.runner.dry_run:
             seed_gpgdir = Path("/etc/pacman.d/gnupg")
-            if not (seed_gpgdir / "pubring.gpg").is_file():
-                raise InstallError("the live Pacman keyring is not initialized (missing pubring.gpg)")
+            if not _has_gpg_public_keyring(seed_gpgdir):
+                raise InstallError("the live Pacman keyring is not initialized (no public key database found)")
             target_gpgdir.parent.mkdir(parents=True, exist_ok=True)
             if target_gpgdir.is_symlink() or target_gpgdir.is_file():
                 target_gpgdir.unlink()
