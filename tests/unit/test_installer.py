@@ -12,7 +12,7 @@ import pytest
 from distrokit import hardware, pacmanconf, util
 from distrokit.branding import load as load_branding
 from distrokit.installer import config as cfgmod
-from distrokit.installer.steps import Installation, _config_with_gpgdir, _ignore_gpg_runtime_sockets, dry_run_commands, summary
+from distrokit.installer.steps import Installation, _config_with_gpgdir, _ignore_gpg_runtime_sockets, _make_gpg_keyring_writable, dry_run_commands, summary
 from distrokit.profiles import load_features, load_profiles
 
 GiB = 2**30
@@ -317,3 +317,25 @@ def test_gpg_keyring_copy_ignores_runtime_agent_sockets(tmp_path):
         assert ignored == [agent.name]
     finally:
         server.close()
+
+
+def test_gpg_keyring_copy_restores_owner_write_permissions(tmp_path):
+    """SquashFS source modes must not leave pubring.gpg read-only in /run."""
+    gpgdir = tmp_path / "gnupg"
+    gpgdir.mkdir(mode=0o700)
+    pubring = gpgdir / "pubring.gpg"
+    pubring.write_bytes(b"keyring")
+    pubring.chmod(0o444)
+    nested = gpgdir / "openpgp-revocs.d"
+    nested.mkdir(mode=0o500)
+    revocation = nested / "test.rev"
+    revocation.write_text("revocation")
+    revocation.chmod(0o444)
+    nested.chmod(0o500)
+
+    _make_gpg_keyring_writable(gpgdir)
+
+    assert pubring.stat().st_mode & 0o200
+    assert nested.stat().st_mode & 0o300 == 0o300
+    assert revocation.stat().st_mode & 0o200
+    assert gpgdir.stat().st_mode & 0o777 == 0o700
