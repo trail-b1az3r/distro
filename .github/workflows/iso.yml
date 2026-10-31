@@ -138,7 +138,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: aur-lock
+          name: aur-lock-${{ matrix.offline }}
           path: packages/aur.lock.json
           if-no-files-found: ignore
 
@@ -176,7 +176,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: qemu-${{ matrix.scenario }}
+          name: qemu-${{ matrix.offline }}-${{ matrix.scenario }}
           path: |
             build/qemu/**/*.log
             build/qemu/**/*.json
