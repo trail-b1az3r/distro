@@ -34,6 +34,16 @@ from .config import InstallConfig, resolve_bootloader
 
 Event = Callable[[dict[str, Any]], None]
 
+
+def _ignore_gpg_runtime_sockets(directory: str, names: list[str]) -> list[str]:
+    """Exclude transient GnuPG agent sockets when cloning the seed keyring.
+
+    The live ISO's /etc/pacman.d/gnupg may contain active Unix-domain
+    sockets. They are runtime endpoints, not trust-database state, and cannot
+    be copied into the installer's private writable keyring.
+    """
+    return [name for name in names if (Path(directory) / name).is_socket()]
+
 MKINITCPIO_HOOKS = "base systemd plymouth autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck"
 SYSTEM_SERVICES = ["NetworkManager.service", "bluetooth.service", "sddm.service", "fstrim.timer",
                    "systemd-timesyncd.service", "power-profiles-daemon.service", "paccache.timer"]
@@ -171,7 +181,7 @@ class Installation:
             runtime = Path(tempfile.mkdtemp(prefix=f"{self.branding.id}-pacman-", dir="/run"))
             self._temp_dirs.append(runtime)
             gpgdir = runtime / "gnupg"
-            shutil.copytree(seed, gpgdir)
+            shutil.copytree(seed, gpgdir, ignore=_ignore_gpg_runtime_sockets)
             gpgdir.chmod(0o700)
             config_text = _config_with_gpgdir(config_text, gpgdir)
             fd, name = tempfile.mkstemp(prefix=f"{self.branding.id}-pacman-{kind}-", suffix=".conf",
