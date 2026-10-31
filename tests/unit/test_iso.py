@@ -32,6 +32,7 @@ RELENG_FILES = {
     "airootfs/root/.automated_script.sh": "#!/bin/sh\n",
     "airootfs/etc/systemd/network/20-ethernet.network": "",
     "airootfs/etc/systemd/system/getty@tty1.service.d/autologin.conf": "",
+    "airootfs/etc/systemd/system/etc-pacman.d-gnupg.mount": "[Mount]\nWhat=tmpfs\nWhere=/etc/pacman.d/gnupg\n",
     "airootfs/etc/systemd/system/pacman-init.service": "[Service]\n",
 }
 RELENG_LINKS = {
@@ -85,6 +86,8 @@ def test_assemble_profile(tmp_path, releng):
     assert "Target = endeavouros-mirrorlist" in rank.read_text()
     assert rank.read_text().startswith("# remove from airootfs!")
     # The Pacman trust database is prepared at ISO/USB creation, not first boot.
+    # Do not mask the pre-populated SquashFS keyring with releng tmpfs.
+    assert not (air / "etc/systemd/system/etc-pacman.d-gnupg.mount").exists()
     assert not (air / "etc/systemd/system/pacman-init.service").exists()
     assert not (air / "etc/systemd/system/multi-user.target.wants/pacman-init.service").exists()
     assert (air / "etc/mkinitcpio.conf.d/archiso.conf").is_file()
