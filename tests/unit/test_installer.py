@@ -105,6 +105,8 @@ def test_encrypted_btrfs_uefi_plan_on_hybrid_laptop(machine):
     # Packages: GTX 1080 (Pascal) gets the 580 legacy branch, Intel microcode,
     # laptop tools, the Vulkan llama.cpp build for the AI profile.
     pac = find(cmds, "pacstrap -K -C")[0]
+    pacman_init = find(cmds, "systemctl start pacman-init.service")[0]
+    assert cmds.index(pacman_init) < cmds.index(pac)
     for pkg in ("base", "linux", "intel-ucode", f"{b.id}-core", f"{b.id}-desktop", "nvidia-580xx-dkms",
                 "nvidia-prime", "linux-headers", "llama.cpp-vulkan", "zram-generator"):
         assert f" {pkg} " in f" {pac} ", pkg
