@@ -477,7 +477,37 @@ class Installation:
             self.log(f"Not in the repositories, will be built from the AUR after installation: {', '.join(missing)}")
             self.missing_packages += missing
         self.emit({"type": "packages", "count": len(available)})
-        self.run(["pacstrap", "-C", str(conf), str(self.target), *available])
+
+        # pacstrap's -K creates an empty keyring, while its default keyring
+        # copy preserves the read-only modes from the live SquashFS. Seed the
+        # target explicitly: omit transient agent sockets and make the copied
+        # trust database writable by the configured DownloadUser (alpm).
+        target_gpgdir = self.t("/etc/pacman.d/gnupg")
+        if not self.runner.dry_run:
+            seed_gpgdir = Path("/etc/pacman.d/gnupg")
+            if not (seed_gpgdir / "pubring.gpg").is_file():
+                raise InstallError("the live Pacman keyring is not initialized (missing pubring.gpg)")
+            target_gpgdir.parent.mkdir(parents=True, exist_ok=True)
+            if target_gpgdir.is_symlink() or target_gpgdir.is_file():
+                target_gpgdir.unlink()
+            elif target_gpgdir.exists():
+                shutil.rmtree(target_gpgdir)
+            shutil.copytree(seed_gpgdir, target_gpgdir, ignore=_ignore_gpg_runtime_sockets)
+            _make_gpg_keyring_writable(target_gpgdir)
+
+            # pacstrap's pacman -r must use the keyring inside the target,
+            # not the temporary host GPGDir used by split_available().
+            pacstrap_text = re.sub(r"(?m)^GPGDir\\s*=.*(?:\\n|$)", "", conf.read_text())
+            fd, name = tempfile.mkstemp(prefix=f"{self.branding.id}-pacstrap-", suffix=".conf",
+                                        dir=conf.parent)
+            with os.fdopen(fd, "w") as fh:
+                fh.write(pacstrap_text)
+            pacstrap_conf = Path(name)
+            self._temp_files.append(pacstrap_conf)
+        else:
+            pacstrap_conf = conf
+
+        self.run(["pacstrap", "-G", "-C", str(pacstrap_conf), str(self.target), *available])
         # Apply the keyring packages' current Arch and EndeavourOS trust stores.
         self.chroot(["pacman-key", "--populate", "archlinux", "endeavouros"])
         self.chroot(["pacman-key", "--updatedb"])
