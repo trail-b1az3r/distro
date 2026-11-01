@@ -163,18 +163,40 @@ class Stage:
         # the known remedy; only machines with the driver loaded are touched.
         self.text(f"/usr/lib/systemd/system-sleep/{b.id}-mwifiex", (
             "#!/bin/sh\n"
-            f"# {b.pretty_name}: Marvell mwifiex Wi-Fi (Surface) does not survive suspend;\n"
-            "# unload the driver before sleeping and load it again on waking.\n"
+            f"# {b.pretty_name}: recover Marvell mwifiex Wi-Fi across suspend/resume.\n"
             f"mark=/run/{b.id}-mwifiex-unloaded\n"
+            f"nm_mark=/run/{b.id}-mwifiex-networkmanager-active\n"
             'case "$1" in\n'
             "    pre)\n"
             "        if grep -q '^mwifiex_pcie ' /proc/modules; then\n"
-            '            modprobe -r mwifiex_pcie && touch "$mark"\n'
+            "            # Stop NM before removing the interface, but preserve its\n"
+            "            # previous active state so we do not start a disabled service.\n"
+            "            if systemctl is-active --quiet NetworkManager.service; then\n"
+            '                touch "$nm_mark"\n'
+            "                systemctl stop NetworkManager.service || rm -f \"$nm_mark\"\n"
+            "            fi\n"
+            '            if modprobe -r mwifiex_pcie; then\n'
+            '                touch "$mark"\n'
+            "            else\n"
+            '                if [ -e "$nm_mark" ]; then\n'
+            '                    rm -f "$nm_mark"\n'
+            "                    systemctl start NetworkManager.service || true\n"
+            "                fi\n"
+            '                logger -t nexora-mwifiex "could not unload mwifiex_pcie before suspend"\n'
+            "            fi\n"
             "        fi ;;\n"
             "    post)\n"
             '        if [ -e "$mark" ]; then\n'
             '            rm -f "$mark"\n'
-            "            modprobe mwifiex_pcie\n"
+            "            if modprobe mwifiex_pcie; then\n"
+            "                udevadm settle --timeout=10 || true\n"
+            "            else\n"
+            '                logger -t nexora-mwifiex "could not reload mwifiex_pcie after resume"\n'
+            "            fi\n"
+            '            if [ -e "$nm_mark" ]; then\n'
+            '                rm -f "$nm_mark"\n'
+            "                systemctl start NetworkManager.service || true\n"
+            "            fi\n"
             "        fi ;;\n"
             "esac\n"
             "exit 0\n"
