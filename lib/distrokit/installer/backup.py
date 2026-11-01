@@ -196,6 +196,13 @@ def restore(snapshot: dict[str, Any], log) -> None:
     current = int(_run(["blockdev", "--getsize64", disk]).strip())
     if current != expected:
         raise SnapshotError("target disk size changed; refusing to restore to a different-sized disk")
+    tree = _tree()
+    mounted = []
+    for node in tree:
+        if node.get("_parent_disk") == disk or node.get("name") == disk:
+            mounted.extend(m for m in (node.get("mountpoints") or []) if m)
+    if mounted:
+        raise SnapshotError("cannot restore while target partitions are mounted: " + ", ".join(mounted))
     log(f"Restoring original disk image to {disk}")
     copied = 0
     with image.open("rb", buffering=0) as src, open(disk, "wb", buffering=0) as dst:
@@ -212,3 +219,9 @@ def restore(snapshot: dict[str, Any], log) -> None:
     subprocess.run(["partprobe", disk], check=False, capture_output=True)
     subprocess.run(["udevadm", "settle"], check=False, capture_output=True)
     log("Original partition table and installation restored")
+
+
+def discard_ram_snapshot(snapshot: dict[str, Any]) -> None:
+    """Release a RAM-backed image after successful installation."""
+    if snapshot.get("mode") == "ram":
+        shutil.rmtree(Path(snapshot["image"]).parent, ignore_errors=True)
