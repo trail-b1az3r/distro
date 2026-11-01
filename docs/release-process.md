@@ -50,25 +50,20 @@ scripts/publish-release.sh            # publish the ISO already in dist/ (--dry-
    this build's packages, unless `--no-repo`.
 
 Publishing runs on your machine as you (never in the build container) and
-uploads several GB: on a slow connection, prefer tagging and letting CI build.
+uploads several GB: on a slow connection, build and test the ISO with the manual Actions workflow, then publish using its run ID.
 Running it again for the same tag replaces the release's files.
 
-## Tagging (CI builds the release)
+## Publishing a CI-built ISO
 
-```bash
-git tag -s v26.10.0.1.0 -m 'Nexora Linux 26.10.0.1.0 "Origin"'
-git push origin v26.10.0.1.0
-```
+ISO builds are manual-only. In GitHub Actions:
 
-`.github/workflows/release.yml` then:
+1. Open **ISO** and choose **Run workflow**.
+2. Select the **standard** edition, **Full** offline repository, and enable QEMU.
+3. Wait for the build and QEMU jobs to pass. Copy the successful run ID from the run URL.
+4. Open **Release** and choose **Run workflow**. Enter the release tag and the ISO run ID.
+5. The Release workflow downloads the `iso-full` and `repo-full` artifacts from that exact run, creates/pushes the tag if needed, publishes the release, and updates the package repository.
 
-1. builds the ISO in a container (`iso.yml`) and runs the QEMU scenarios;
-2. creates the GitHub release with the ISO (split into parts under 2 GiB when
-   larger), SHA-256 and BLAKE2 checksums, and the metadata (package lists, AUR
-   lock, build information), with the same `scripts/publish-release.sh`;
-3. updates the `repo` release, which is the package repository installed
-   systems use (`DISTRO_REPO_SERVER`), with the packages of this build
-   (`scripts/publish-repo.sh`).
+A tag push does not start an ISO build or a release workflow. Do not publish an ISO run that has not passed its QEMU checks.
 
 ## Signing
 
@@ -97,6 +92,6 @@ permission"). Give the workflows a token of yours instead:
 2. This repository > Settings > Secrets and variables > Actions > New
    repository secret: name `RELEASE_TOKEN`, the token as its value.
 
-Release and Publish use it whenever it is set. **Actions > Publish** publishes
-the ISO an earlier run built and tested (its run ID and the tag), without
+Release and Publish use it whenever it is set. **Actions > Release** publishes
+the ISO an earlier manual ISO run built and tested (its run ID and the tag), without
 building it again.
