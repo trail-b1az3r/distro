@@ -117,8 +117,6 @@ def create(target_disk: str, branding_id: str, log) -> dict[str, Any]:
         raise SnapshotError("could not determine the target disk size")
     nodes = _tree()
     target_real = os.path.realpath(target_disk)
-    target_parent = next((n.get("_parent_disk") for n in nodes
-                          if os.path.realpath("/dev/" + n["name"].removeprefix("/dev/")) == target_real), target_real)
     candidates: list[tuple[int, str]] = []
     for node in nodes:
         if node.get("type") != "disk" or int(node.get("size") or 0) < MIN_BACKUP_DISK:
@@ -168,7 +166,7 @@ def create(target_disk: str, branding_id: str, log) -> dict[str, Any]:
         meta = {"version": 1, "disk": target_disk, "size_bytes": size, "mode": mode,
                 "created_at": int(time.time()), "image": str(image), "manifest": str(manifest)}
         metadata.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
-        with metadata.open("rb") as fh:
+        with metadata.open("rb+") as fh:
             os.fsync(fh.fileno())
         # Read the complete image back to ensure it is accessible and the
         # expected number of bytes can be read before any destructive action.
