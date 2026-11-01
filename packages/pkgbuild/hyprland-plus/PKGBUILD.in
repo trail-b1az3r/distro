@@ -9,7 +9,7 @@
 # Generated from packages/pkgbuild/hyprland-plus/PKGBUILD.in.
 
 pkgname=hyprland-plus
-_commit=4c7525d969285d8b5254bcc0b6a0917709e2a8bb
+_commit=e242247f03876e14465e964a1d098c7b1cbfb814
 _udis86=5336633af70f3917760a6d441ff02d93477b0c86
 pkgver=0.57.0.p2
 pkgrel=1
