@@ -224,3 +224,28 @@ def discard_ram_snapshot(snapshot: dict[str, Any]) -> None:
     """Release a RAM-backed image after successful installation."""
     if snapshot.get("mode") == "ram":
         shutil.rmtree(Path(snapshot["image"]).parent, ignore_errors=True)
+
+
+def physical_disk(device: str) -> str:
+    """Resolve a partition or mapper device to its parent physical disk."""
+    parent = _run(["lsblk", "-n", "-o", "PKNAME", device]).strip().splitlines()
+    if parent and parent[-1].strip():
+        return str(Path("/dev") / parent[-1].strip())
+    return os.path.realpath(device)
+
+
+def create_many(target_disks: list[str], branding_id: str, log) -> list[dict[str, Any]]:
+    """Snapshot every physical disk that the install plan may format."""
+    targets = list(dict.fromkeys(os.path.realpath(d) for d in target_disks if d))
+    if not targets:
+        raise SnapshotError("the destructive plan does not identify any physical target disk")
+    snapshots: list[dict[str, Any]] = []
+    try:
+        for disk in targets:
+            snapshots.append(create(disk, branding_id, log, exclude_disks=targets))
+        return snapshots
+    except Exception:
+        for snapshot in snapshots:
+            if snapshot.get("mode") == "ram":
+                shutil.rmtree(Path(snapshot["image"]).parent, ignore_errors=True)
+        raise
