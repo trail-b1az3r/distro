@@ -31,7 +31,7 @@ from ..gpu.plan import build_plan
 from ..hardware.report import HardwareReport
 from ..profiles import load_editors, load_features, load_profiles, read_list, select_packages
 from ..tasks import TaskQueue, queue_for_install
-from . import disks, localization
+from . import backup, disks, localization
 from .config import InstallConfig, resolve_bootloader
 
 Event = Callable[[dict[str, Any]], None]
@@ -167,7 +167,7 @@ class Installation:
         disk = next((d for d in report.disks if d.path == cfg.disk.disk), None)
         self.disk_plan = disks.plan_disks(cfg, disk, uefi=self.uefi, ram_bytes=report.memory.total_bytes,
                                           all_disks=report.disks, required_bytes=int(self.profile.approx_size_gb * 2**30))
-        self.state: dict[str, Any] = {"created_partitions": [], "opened": [], "mounted": False, "swap_on": []}
+        self.state: dict[str, Any] = {"created_partitions": [], "opened": [], "mounted": False, "swap_on": [], "rollback_snapshot": None}
         self.missing_packages: list[str] = []
         self._temp_files: list[Path] = []
         self._temp_dirs: list[Path] = []
@@ -298,8 +298,10 @@ class Installation:
 
     # -- steps ----------------------------------------------------------------
     def steps(self) -> list[Step]:
-        s = [
-            Step("preflight", "Checking the system", self.preflight, 0.5),
+        s = [Step("preflight", "Checking the system", self.preflight, 0.5)]
+        if self.disk_plan.destructive and self.disk_plan.disk:
+            s.append(Step("backup", "Creating and verifying rollback snapshot", self.backup_snapshot, 5))
+        s += [
             Step("mirrors", "Choosing fast mirrors", self.rank_mirrors, 1, critical=False),
             Step("partition", "Partitioning", self.partition, 1, destructive=True),
             Step("format", "Creating file systems" + (" and encryption" if self._encrypting else ""), self.format, 2, destructive=True),
@@ -370,6 +372,20 @@ class Installation:
         mounted = [m for n in walk(data.get("blockdevices", [])) for m in (n.get("mountpoints") or []) if m]
         if self.cfg.disk.mode == "erase" and mounted:
             raise InstallError(f"{disk} is in use (mounted at {', '.join(mounted)}). Unmount it and try again.")
+
+    def backup_snapshot(self) -> None:
+        """Back up the entire target disk before its partition table is changed."""
+        if self.runner.dry_run:
+            self.log(f"verify a separate 256 GiB backup disk or sufficient RAM for {self.disk_plan.disk}")
+            self.log("create and verify a complete raw-disk rollback image and JSONL package inventory")
+            return
+        try:
+            snapshot = backup.create(self.disk_plan.disk, self.branding.id, self.log)
+        except backup.SnapshotError as exc:
+            raise InstallError(f"cannot safely start a destructive install without a verified backup: {exc}") from exc
+        self.state["rollback_snapshot"] = snapshot
+        self.emit({"type": "backup-ready", "mode": snapshot["mode"], "path": str(Path(snapshot["image"]).parent),
+                   "size_bytes": snapshot["size_bytes"]})
 
     def rank_mirrors(self) -> None:
         if not self.online or not self.cfg.rank_mirrors or self.runner.dry_run:
