@@ -115,19 +115,24 @@ class Engine:
         except Exception as exc:  # noqa: BLE001
             self.emit({"type": "warning", "step": "cleanup", "message": str(exc)})
             ok = False
-        snapshot = inst.state.get("rollback_snapshot")
-        if snapshot and not ok:
+        snapshots = inst.state.get("rollback_snapshots") or (
+            [inst.state["rollback_snapshot"]] if inst.state.get("rollback_snapshot") else [])
+        if snapshots and not ok:
             try:
                 from . import backup
-                backup.restore(snapshot, lambda line: self.emit({"type": "log", "line": line}))
+                for snapshot in reversed(snapshots):
+                    backup.restore(snapshot, lambda line: self.emit({"type": "log", "line": line}))
                 inst.state["rollback_restored"] = True
-                self.emit({"type": "rollback", "success": True, "mode": snapshot.get("mode")})
+                self.emit({"type": "rollback", "success": True,
+                           "mode": "multiple" if len(snapshots) > 1 else snapshots[0].get("mode")})
             except Exception as exc:  # noqa: BLE001
+                locations = ", ".join(str(item.get("image")) for item in snapshots)
                 self.emit({"type": "error", "step": "rollback", "label": "Restore",
-                           "message": f"Automatic rollback failed: {exc}. The backup is retained at {snapshot.get('image')}."})
-        elif snapshot and snapshot.get("mode") == "ram":
+                           "message": f"Automatic rollback failed: {exc}. Backups retained at {locations}."})
+        elif snapshots:
             from . import backup
-            backup.discard_ram_snapshot(snapshot)
+            for snapshot in snapshots:
+                backup.discard_ram_snapshot(snapshot)
         if ok:
             self.emit({"type": "done", "warnings": inst.warnings})
         elif self.cancelled:
