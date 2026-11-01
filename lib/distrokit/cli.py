@@ -1,7 +1,7 @@
 """The distribution's command-line tool (installed as ``/usr/bin/<cli>``).
 
-    <cli> system | hardware | gpu | surface | update | install | ai | model |
-          doctor | repair | repair-gpu | reset-desktop | setup | installer | iso
+    <cli> system | hardware | gpu | surface | update | experiments | install |
+          ai | model | doctor | repair | repair-gpu | reset-desktop | setup | installer | iso
 
 Read-only commands never need root. Commands that change the system say
 what they will do, ask for confirmation, and then re-run themselves through
