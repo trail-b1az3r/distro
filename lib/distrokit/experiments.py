@@ -191,6 +191,33 @@ def fetch_packages(selected: list[str], branding: Branding | None = None) -> tup
     return packages, run_id, sha
 
 
+def _packages_newer_than_installed(packages: list[Path]) -> list[Path]:
+    """Never replace a stable installed package with an older CI snapshot."""
+    pending = []
+    for package in packages:
+        query = subprocess.run(["pacman", "-Qp", str(package)], capture_output=True, text=True, check=False)
+        if query.returncode:
+            raise ExperimentError(f"cannot read package metadata from {package.name}: {query.stderr.strip()}")
+        fields = query.stdout.split()
+        if len(fields) != 2:
+            raise ExperimentError(f"unexpected pacman package metadata for {package.name}")
+        name, candidate = fields
+        installed = subprocess.run(["pacman", "-Q", name], capture_output=True, text=True, check=False)
+        if installed.returncode:
+            pending.append(package)
+            continue
+        current_fields = installed.stdout.split()
+        if len(current_fields) != 2:
+            pending.append(package)
+            continue
+        comparison = subprocess.run(["vercmp", current_fields[1], candidate], capture_output=True, text=True, check=False)
+        if comparison.returncode:
+            raise ExperimentError("vercmp is required to compare experimental package versions")
+        if comparison.stdout.strip() == "-1":
+            pending.append(package)
+    return pending
+
+
 def apply(runner: util.Runner, branding: Branding | None = None, *, interactive: bool = True) -> list[str]:
     b = branding or load_branding()
     enabled = read_enabled(b)
@@ -201,6 +228,9 @@ def apply(runner: util.Runner, branding: Branding | None = None, *, interactive:
         packages, run_id, sha = fetch_packages(components, b)
     except (ExperimentError, OSError, zipfile.BadZipFile) as exc:
         raise ExperimentError(str(exc)) from exc
+    if not packages:
+        return []
+    packages = _packages_newer_than_installed(packages)
     if not packages:
         return []
     print(f"Experimental Nexora packages: successful CI run #{run_id} ({sha[:12] or 'unknown commit'})")
