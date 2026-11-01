@@ -118,17 +118,21 @@ class Engine:
         snapshots = inst.state.get("rollback_snapshots") or (
             [inst.state["rollback_snapshot"]] if inst.state.get("rollback_snapshot") else [])
         if snapshots and not ok:
-            try:
-                from . import backup
-                for snapshot in reversed(snapshots):
+            from . import backup
+            restore_errors: list[str] = []
+            for snapshot in reversed(snapshots):
+                try:
                     backup.restore(snapshot, lambda line: self.emit({"type": "log", "line": line}))
+                except Exception as exc:  # noqa: BLE001
+                    restore_errors.append(f"{snapshot.get('disk')}: {exc}")
+            if not restore_errors:
                 inst.state["rollback_restored"] = True
                 self.emit({"type": "rollback", "success": True,
                            "mode": "multiple" if len(snapshots) > 1 else snapshots[0].get("mode")})
-            except Exception as exc:  # noqa: BLE001
+            else:
                 locations = ", ".join(str(item.get("image")) for item in snapshots)
                 self.emit({"type": "error", "step": "rollback", "label": "Restore",
-                           "message": f"Automatic rollback failed: {exc}. Backups retained at {locations}."})
+                           "message": f"Automatic rollback was incomplete: {'; '.join(restore_errors)}. Backups retained at {locations}."})
         elif snapshots:
             from . import backup
             for snapshot in snapshots:
