@@ -299,7 +299,7 @@ class Installation:
     # -- steps ----------------------------------------------------------------
     def steps(self) -> list[Step]:
         s = [Step("preflight", "Checking the system", self.preflight, 0.5)]
-        if self.disk_plan.destructive and self.disk_plan.disk:
+        if self.disk_plan.destructive:
             s.append(Step("backup", "Creating and verifying rollback snapshot", self.backup_snapshot, 5))
         s += [
             Step("mirrors", "Choosing fast mirrors", self.rank_mirrors, 1, critical=False),
@@ -380,12 +380,19 @@ class Installation:
             self.log("create and verify a complete raw-disk rollback image and JSONL package inventory")
             return
         try:
-            snapshot = backup.create(self.disk_plan.disk, self.branding.id, self.log)
+            if self.disk_plan.mode == "manual":
+                devices = [v.device for v in self.disk_plan.volumes if v.format and v.device]
+                targets = list(dict.fromkeys(backup.physical_disk(device) for device in devices))
+            else:
+                targets = [self.disk_plan.disk]
+            snapshots = backup.create_many(targets, self.branding.id, self.log)
         except backup.SnapshotError as exc:
             raise InstallError(f"cannot safely start a destructive install without a verified backup: {exc}") from exc
-        self.state["rollback_snapshot"] = snapshot
-        self.emit({"type": "backup-ready", "mode": snapshot["mode"], "path": str(Path(snapshot["image"]).parent),
-                   "size_bytes": snapshot["size_bytes"]})
+        self.state["rollback_snapshots"] = snapshots
+        self.state["rollback_snapshot"] = snapshots[0] if len(snapshots) == 1 else None
+        self.emit({"type": "backup-ready", "mode": "multiple" if len(snapshots) > 1 else snapshots[0]["mode"],
+                   "path": str(Path(snapshots[0]["image"]).parent),
+                   "size_bytes": sum(item["size_bytes"] for item in snapshots)})
 
     def rank_mirrors(self) -> None:
         if not self.online or not self.cfg.rank_mirrors or self.runner.dry_run:
