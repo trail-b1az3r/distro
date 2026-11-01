@@ -1,10 +1,12 @@
 # Publish an ISO an earlier Release or ISO run built and tested, without
-# building it again: Actions > Publish > Run workflow, with that run's ID and
-# the tag. Uses the RELEASE_TOKEN secret (see docs/release-process.md): the
-# workflow's own token may not create releases here.
+# building it again. The one-off push trigger publishes the 26.10.0.1.2 ISO
+# artifact from ISO workflow run 41148720168; normal manual publishing remains
+# available through workflow_dispatch.
 name: Publish
 
 on:
+  push:
+    branches: [publish-26.10.0.1.2]
   workflow_dispatch:
     inputs:
       run_id:
@@ -31,18 +33,18 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: iso
-          run-id: ${{ inputs.run_id }}
+          run-id: ${{ inputs.run_id || '41148720168' }}
           github-token: ${{ github.token }}
       - uses: actions/download-artifact@v4
         with:
           name: repo
           path: build/repo
-          run-id: ${{ inputs.run_id }}
+          run-id: ${{ inputs.run_id || '41148720168' }}
           github-token: ${{ github.token }}
       - name: Publish the release and the package repository
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
-          TAG: ${{ inputs.tag }}
+          TAG: ${{ inputs.tag || 'v26.10.0.1.2' }}
         run: |
           git config --global --add safe.directory "$PWD"
           git config --global user.name "github-actions[bot]"
@@ -50,3 +52,8 @@ jobs:
           case "$TAG" in v*) ;; *) TAG="v$TAG" ;; esac
           git fetch --depth=1 origin "refs/tags/$TAG:refs/tags/$TAG" || true
           scripts/publish-release.sh --tag "$TAG"
+      - name: Remove the temporary publish trigger branch
+        if: success() && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+        run: gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/publish-26.10.0.1.2"
