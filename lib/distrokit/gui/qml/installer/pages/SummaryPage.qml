@@ -56,6 +56,43 @@ ColumnLayout {
             title: qsTr("A verified rollback copy is required")
             text: page.s.rollbackPolicy || ""
         }
+        Card {
+            visible: page.s.needsConfirm === true
+            Layout.fillWidth: true
+            CheckBox {
+                id: backupChoice
+                text: qsTr("Create a verified rollback backup before installing")
+                checked: installer.config.backup !== false
+                onToggled: {
+                    installer.set("backup", checked)
+                    installer.prepareSummary()
+                }
+                contentItem: Text {
+                    leftPadding: backupChoice.indicator.width + 8
+                    text: backupChoice.text
+                    color: Theme.fg
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: Theme.text
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                text: backupChoice.checked
+                    ? qsTr("Recommended. Nexora will verify a complete disk image before making changes. You need a separate drive with enough space or sufficient available RAM.")
+                    : qsTr("Backup is disabled. Installation can still proceed after disk confirmation, but automatic restoration will not be available if installation fails.")
+                color: backupChoice.checked ? Theme.muted : Theme.danger
+                wrapMode: Text.WordWrap
+                font.pixelSize: Theme.textSmall
+            }
+        }
+        Notice {
+            visible: page.s.backupSkipped === true
+            Layout.fillWidth: true
+            kind: "warning"
+            title: qsTr("Rollback backup disabled")
+            text: qsTr("No disk image will be created. If installation fails after disk changes, automatic restoration will not be available.")
+        }
         GridLayout {
             Layout.fillWidth: true
             columns: width > 700 ? 2 : 1
