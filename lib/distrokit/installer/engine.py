@@ -98,8 +98,20 @@ class Engine:
             inst.cleanup(failed=not ok)
         except Exception as exc:  # noqa: BLE001
             self.emit({"type": "warning", "step": "cleanup", "message": str(exc)})
-        if ok:
-            self.emit({"type": "done", "warnings": inst.warnings})
+            ok = False
+        snapshot = inst.state.get("rollback_snapshot")
+        if snapshot and not ok:
+            try:
+                from . import backup
+                backup.restore(snapshot, lambda line: self.emit({"type": "log", "line": line}))
+                self.emit({"type": "rollback", "success": True, "mode": snapshot.get("mode")})
+            except Exception as exc:  # noqa: BLE001
+                self.emit({"type": "error", "step": "rollback", "label": "Restore",
+                           "message": f"Automatic rollback failed: {exc}. The backup is retained at {snapshot.get('image')}."})
+        elif snapshot and snapshot.get("mode") == "ram":
+            from . import backup
+            backup.discard_ram_snapshot(snapshot)
+        if ok:            self.emit({"type": "done", "warnings": inst.warnings})
         if self._log_fh:
             self._log_fh.write(f"==== installation {'finished' if ok else 'FAILED'} {time.ctime()} ====\n")
             self._log_fh.close()
