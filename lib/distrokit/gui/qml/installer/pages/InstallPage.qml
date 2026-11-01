@@ -13,6 +13,7 @@ ColumnLayout {
     property var warnings: []
     property bool showLog: false
     property string download: ""
+    property bool cancelling: false
 
     function handle(e) {
             if (e.type === "plan") { page.steps = e.steps }
@@ -22,6 +23,7 @@ ColumnLayout {
             else if (e.type === "log") { log.append(e.line) }
             else if (e.type === "warning") { page.warnings = page.warnings.concat([e.message]); const s = Object.assign({}, page.states); s[e.step] = "warning"; page.states = s }
             else if (e.type === "download") { page.download = e.total ? (Math.round(e.done / e.total * 100) + "%") : "" }
+            else if (e.type === "cancelled") { page.cancelling = true; page.current = qsTr("Cancelling safely…") }
             else if (e.type === "error") { page.error = e.label + ": " + e.message; const s = Object.assign({}, page.states); s[e.step] = "failed"; page.states = s; page.showLog = true }
             else if (e.type === "exit" && page.error === "") { page.error = qsTr("The installer stopped unexpectedly (code %1).").arg(e.code); page.showLog = true }
     }
