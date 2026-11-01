@@ -93,7 +93,9 @@ class DiskPlan:
 
     @property
     def destructive(self) -> bool:
-        return self.new_table or any(v.format for v in self.volumes)
+        # Manual mode still writes a new OS into the selected root filesystem
+        # even when the user leaves its format checkbox disabled.
+        return self.new_table or self.mode == "manual" or any(v.format for v in self.volumes)
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
