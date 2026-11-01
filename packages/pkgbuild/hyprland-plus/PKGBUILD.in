@@ -9,11 +9,11 @@
 # Generated from packages/pkgbuild/hyprland-plus/PKGBUILD.in.
 
 pkgname=hyprland-plus
-_commit=e5d85f53a40b16ecc83f09260bf585f657effa69
+_commit=05df01ee0cddc24514c9c6bb171fe3d77081d344
 _udis86=5336633af70f3917760a6d441ff02d93477b0c86
-pkgver=0.57.0.p1
+pkgver=0.57.0.p2
 pkgrel=1
-pkgdesc="Hyprland with the Halcyon additions: mini, superposition and Plus Tiles windows"
+pkgdesc="Hyprland with Halcyon windows, renderer effects, app-scoped pen pressure curves and touchD support"
 arch=(x86_64)
 url="https://github.com/trail-b1az3r/hyprland-plus"
 license=(BSD-3-Clause)
@@ -28,7 +28,9 @@ depends=(
 )
 makedepends=(cmake git glaze hyprland-protocols hyprwayland-scanner xorgproto)
 optdepends=('hyprpm: build and install plugins'
-            'xdg-desktop-portal-hyprland: xdg-desktop-portal backend for hyprland')
+            'xdg-desktop-portal-hyprland: xdg-desktop-portal backend for hyprland'
+            'touchd-dkms: Surface IPTS DKMS touchscreen driver and touchdctl'
+            'iptsd: Surface multitouch and stylus processing')
 provides=("hyprland=${pkgver%.p*}" wayland-compositor)
 conflicts=(hyprland)
 source=(
