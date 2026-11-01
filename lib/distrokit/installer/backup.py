@@ -1,9 +1,4 @@
-"""Verified pre-install rollback snapshots.
-
-The snapshot is a raw image of the target disk, not a filesystem-level
-approximation. It is written only to a different physical disk with enough
-free space, or to /run when the live tmpfs and MemAvailable can hold it.
-"""
+"""Verified pre-install rollback snapshots and legacy-system inventory."""
 from __future__ import annotations
 
 import hashlib
@@ -11,6 +6,7 @@ import json
 import os
 import shutil
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -23,25 +19,27 @@ class SnapshotError(RuntimeError):
     pass
 
 
-def _run(args: list[str]) -> str:
+def _run(args: list[str], *, check: bool = True) -> str:
     proc = subprocess.run(args, text=True, capture_output=True, check=False)
-    if proc.returncode:
+    if check and proc.returncode:
         raise SnapshotError(proc.stderr.strip() or f"{args[0]} failed")
     return proc.stdout
 
 
 def _tree() -> list[dict[str, Any]]:
     try:
-        data = json.loads(_run(["lsblk", "-J", "-p", "-b", "-o", "NAME,TYPE,SIZE,MOUNTPOINTS,PKNAME"]))
+        data = json.loads(_run(["lsblk", "-J", "-p", "-b", "-o", "NAME,TYPE,SIZE,FSTYPE,MOUNTPOINTS,PKNAME"]))
     except (ValueError, OSError) as exc:
         raise SnapshotError(f"cannot inspect storage devices: {exc}") from exc
     out: list[dict[str, Any]] = []
+
     def walk(node: dict[str, Any], parent: str = "") -> None:
         if node.get("type") == "disk":
             parent = node.get("name", "")
         out.append({**node, "_parent_disk": parent})
         for child in node.get("children") or []:
             walk(child, parent)
+
     for node in data.get("blockdevices", []):
         walk(node)
     return out
@@ -78,36 +76,169 @@ def _copy_image(source: str, destination: Path, expected: int, log) -> str:
     return digest.hexdigest()
 
 
-def _manifest(destination: Path, log) -> None:
-    packages = _run(["pacman", "-Q"]).splitlines()
-    foreign = set()
-    proc = subprocess.run(["pacman", "-Qm"], text=True, capture_output=True, check=False)
+def _section(path: Path, section: str) -> list[str]:
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    marker = f"%{section}%"
+    try:
+        start = lines.index(marker) + 1
+    except ValueError:
+        return []
+    values: list[str] = []
+    for line in lines[start:]:
+        if line.startswith("%"):
+            break
+        if line:
+            values.append(line)
+    return values
+
+
+def _inventory_from_root(root: Path, destination: Path, log) -> bool:
+    db = root / "var/lib/pacman/local"
+    if not db.is_dir() or not (root / "etc/os-release").is_file():
+        return False
+
+    foreign: set[str] = set()
+    pacman_config = Path("/etc/pacman.conf")
+    proc = subprocess.run(
+        ["pacman", "--config", str(pacman_config), "--dbpath", str(root / "var/lib/pacman"), "-Qm"],
+        text=True, capture_output=True, check=False,
+    )
     if proc.returncode == 0:
         foreign = {line.split()[0] for line in proc.stdout.splitlines() if line.split()}
-    files_proc = subprocess.run(["pacman", "-Ql"], text=True, capture_output=True, check=False)
-    if files_proc.returncode:
-        raise SnapshotError("could not export Pacman package file ownership")
-    paths: dict[str, list[str]] = {}
-    for line in files_proc.stdout.splitlines():
-        name, sep, path = line.partition(" ")
-        if sep:
-            paths.setdefault(name, []).append(path)
+
+    packages = 0
     with destination.open("w", encoding="utf-8") as out:
-        out.write(json.dumps({"type": "inventory", "scope": "installer_live_environment", "note": "The raw disk image is the authoritative backup of the pre-install OS."}) + "\n")
-        for line in packages:
-            fields = line.split()
-            if len(fields) < 2:
+        out.write(json.dumps({
+            "type": "inventory", "scope": "previous_installed_system",
+            "root": str(root), "foreign_classification": "pacman sync database; foreign packages may include AUR and locally built packages",
+        }) + "\n")
+        for entry in sorted(db.iterdir()):
+            if not entry.is_dir():
                 continue
-            name, version = fields[0], fields[1]
-            out.write(json.dumps({"type": "package", "name": name, "version": version,
-                                  "source": "aur" if name in foreign else "repository"},
+            names = _section(entry / "desc", "NAME")
+            versions = _section(entry / "desc", "VERSION")
+            if not names or not versions:
+                continue
+            name, version = names[0], versions[0]
+            source = "aur_or_local" if name in foreign else "repository_or_unknown"
+            out.write(json.dumps({"type": "package", "name": name, "version": version, "source": source},
                                  ensure_ascii=False) + "\n")
-            for path in paths.get(name, []):
+            for path in _section(entry / "files", "FILES"):
                 out.write(json.dumps({"type": "file", "package": name, "path": path},
                                      ensure_ascii=False) + "\n")
+            packages += 1
         out.flush()
         os.fsync(out.fileno())
-    log(f"Saved package and owned-file inventory ({len(packages)} packages)")
+    log(f"Saved previous-system Pacman inventory ({packages} packages)")
+    return True
+
+
+def _copy_visible_home(root: Path, destination: Path, log) -> None:
+    """Copy visible files from each regular user's home when backup space permits."""
+    passwd = root / "etc/passwd"
+    if not passwd.is_file():
+        return
+    users: list[tuple[str, str]] = []
+    for line in passwd.read_text(encoding="utf-8", errors="replace").splitlines():
+        fields = line.split(":")
+        if len(fields) < 7:
+            continue
+        username, uid, home = fields[0], fields[2], fields[5]
+        try:
+            numeric_uid = int(uid)
+        except ValueError:
+            continue
+        if 1000 <= numeric_uid < 65534 and home.startswith("/home/"):
+            source = root / home.lstrip("/")
+            if source.is_dir():
+                users.append((username, str(source)))
+
+    for username, source_text in users:
+        source = Path(source_text)
+        visible = [item for item in source.iterdir() if not item.name.startswith(".")]
+        if not visible:
+            continue
+        target = destination / "home-data" / username
+        estimate = 0
+        for item in visible:
+            if item.is_symlink():
+                continue
+            if item.is_file():
+                estimate += item.stat().st_size
+            elif item.is_dir():
+                for base, dirs, files in os.walk(item, followlinks=False):
+                    dirs[:] = [name for name in dirs if not name.startswith(".")]
+                    for name in files:
+                        if not name.startswith("."):
+                            try:
+                                estimate += (Path(base) / name).stat().st_size
+                            except OSError:
+                                pass
+        if shutil.disk_usage(destination).free < estimate + 128 * 2**20:
+            log(f"Skipped optional home-data copy for {username}: not enough free space; full-disk snapshot is retained")
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.mkdir(parents=True, exist_ok=False)
+        for item in visible:
+            out = target / item.name
+            try:
+                if item.is_dir() and not item.is_symlink():
+                    shutil.copytree(item, out, symlinks=True, ignore=shutil.ignore_patterns(".*"))
+                elif item.is_symlink():
+                    out.symlink_to(os.readlink(item))
+                elif item.is_file():
+                    shutil.copy2(item, out)
+            except OSError as exc:
+                shutil.rmtree(target, ignore_errors=True)
+                log(f"Optional home-data copy for {username} was skipped after an I/O error: {exc}")
+                break
+        else:
+            log(f"Copied visible home files for {username} to {target}")
+
+
+def _export_previous_system(target_disk: str, base: Path, manifest: Path, log) -> None:
+    """Mount candidate target partitions read-only to inventory the old OS."""
+    nodes = _tree()
+    disk_real = os.path.realpath(target_disk)
+    partitions = [
+        node for node in nodes
+        if node.get("_parent_disk") and os.path.realpath(node["_parent_disk"]) == disk_real
+        and node.get("type") in ("part", "crypt")
+        and node.get("fstype") in ("ext4", "btrfs", "xfs")
+    ]
+    temp_root = Path(tempfile.mkdtemp(prefix="nexora-inspect-", dir="/run"))
+    mounted: list[Path] = []
+    found = False
+    try:
+        for index, node in enumerate(partitions):
+            mountpoint = temp_root / str(index)
+            mountpoint.mkdir()
+            fs = node["fstype"]
+            options = {"ext4": "ro,noload", "btrfs": "ro,nologreplay", "xfs": "ro,norecovery"}[fs]
+            proc = subprocess.run(["mount", "-o", options, node["name"], str(mountpoint)],
+                                  text=True, capture_output=True, check=False)
+            if proc.returncode:
+                continue
+            mounted.append(mountpoint)
+            if _inventory_from_root(mountpoint, manifest, log):
+                found = True
+                _copy_visible_home(mountpoint, base, log)
+                break
+        if not found:
+            with manifest.open("w", encoding="utf-8") as out:
+                out.write(json.dumps({"type": "inventory", "scope": "no_unencrypted_previous_system_found",
+                                      "note": "The full raw-disk snapshot is the authoritative rollback copy. "
+                                              "Encrypted or nonstandard installations may need manual inspection."}) + "\n")
+                out.flush()
+                os.fsync(out.fileno())
+            log("No readable existing Pacman installation was found for a separate inventory")
+    finally:
+        for mountpoint in reversed(mounted):
+            subprocess.run(["umount", str(mountpoint)], text=True, capture_output=True, check=False)
+        shutil.rmtree(temp_root, ignore_errors=True)
 
 
 def create(target_disk: str, branding_id: str, log, *, exclude_disks: list[str] | None = None) -> dict[str, Any]:
@@ -115,10 +246,13 @@ def create(target_disk: str, branding_id: str, log, *, exclude_disks: list[str] 
     target = Path(target_disk)
     if not target.exists():
         raise SnapshotError(f"target disk disappeared: {target_disk}")
-    size_text = _run(["blockdev", "--getsize64", target_disk]).strip()
-    size = int(size_text)
+    try:
+        size = int(_run(["blockdev", "--getsize64", target_disk]).strip())
+    except ValueError as exc:
+        raise SnapshotError("could not determine the target disk size") from exc
     if size <= 0:
         raise SnapshotError("could not determine the target disk size")
+
     nodes = _tree()
     excluded = {os.path.realpath(path) for path in (exclude_disks or [])}
     excluded.add(os.path.realpath(target_disk))
@@ -132,8 +266,7 @@ def create(target_disk: str, branding_id: str, log, *, exclude_disks: list[str] 
         for part in nodes:
             if part.get("_parent_disk") != parent:
                 continue
-            mounts = part.get("mountpoints") or []
-            for mount in mounts:
+            for mount in part.get("mountpoints") or []:
                 if not mount or mount in ("/", "/run", "/tmp"):
                     continue
                 try:
@@ -142,8 +275,7 @@ def create(target_disk: str, branding_id: str, log, *, exclude_disks: list[str] 
                     continue
                 if free >= size + 128 * 2**20:
                     candidates.append((free, mount))
-    base: Path
-    mode: str
+
     stamp = time.time_ns()
     disk_label = target.name.replace("/", "_")
     if candidates:
@@ -151,9 +283,9 @@ def create(target_disk: str, branding_id: str, log, *, exclude_disks: list[str] 
         base = Path(mount) / f"{branding_id}-rollback-{disk_label}-{stamp}"
         mode = "external"
     else:
+        required = size + 128 * 2**20
         run_free = shutil.disk_usage("/run").free
         ram_free = _available_ram()
-        required = size + 128 * 2**20
         if run_free < required or ram_free < required:
             raise SnapshotError(
                 f"no separate backup disk with at least 256 GiB and {size // (1024**3)} GiB free was found; "
@@ -162,6 +294,7 @@ def create(target_disk: str, branding_id: str, log, *, exclude_disks: list[str] 
             )
         base = Path("/run") / f"{branding_id}-rollback-{disk_label}-{os.getpid()}-{stamp}"
         mode = "ram"
+
     base.mkdir(parents=True, exist_ok=False)
     image = base / "disk.img"
     manifest = base / "packages.jsonl"
@@ -169,17 +302,13 @@ def create(target_disk: str, branding_id: str, log, *, exclude_disks: list[str] 
     try:
         log(f"Creating {mode} rollback snapshot ({size // (1024**3)} GiB)")
         image_sha256 = _copy_image(target_disk, image, size, log)
-        _manifest(manifest, log)
-        meta = {"version": 1, "disk": target_disk, "size_bytes": size, "mode": mode,
+        _export_previous_system(target_disk, base, manifest, log)
+        meta = {"version": 2, "disk": target_disk, "size_bytes": size, "mode": mode,
                 "created_at": int(time.time()), "image": str(image), "manifest": str(manifest),
                 "image_sha256": image_sha256}
         metadata.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
         with metadata.open("rb+") as fh:
             os.fsync(fh.fileno())
-        # Read the complete image back to ensure it is accessible and the
-        # expected number of bytes can be read before any destructive action.
-        if image.stat().st_size != size:
-            raise SnapshotError("rollback image verification failed")
         verify = hashlib.sha256()
         with image.open("rb", buffering=0) as fh:
             while True:
@@ -215,13 +344,10 @@ def restore(snapshot: dict[str, Any], log) -> None:
     current = int(_run(["blockdev", "--getsize64", disk]).strip())
     if current != expected:
         raise SnapshotError("target disk size changed; refusing to restore to a different-sized disk")
-    tree = _tree()
-    mounted = []
     disk_real = os.path.realpath(disk)
-    for node in tree:
-        parent = node.get("_parent_disk", "")
-        name = node.get("name", "")
-        if os.path.realpath(parent) == disk_real or os.path.realpath(name) == disk_real:
+    mounted: list[str] = []
+    for node in _tree():
+        if os.path.realpath(node.get("_parent_disk", "")) == disk_real or os.path.realpath(node.get("name", "")) == disk_real:
             mounted.extend(m for m in (node.get("mountpoints") or []) if m)
     if mounted:
         raise SnapshotError("cannot restore while target partitions are mounted: " + ", ".join(mounted))
@@ -251,10 +377,12 @@ def discard_ram_snapshot(snapshot: dict[str, Any]) -> None:
 
 def physical_disk(device: str) -> str:
     """Resolve a partition or mapper device to its parent physical disk."""
-    parent = _run(["lsblk", "-n", "-o", "PKNAME", device]).strip().splitlines()
-    if parent and parent[-1].strip():
-        return str(Path("/dev") / parent[-1].strip())
-    return os.path.realpath(device)
+    rows = _run(["lsblk", "-s", "-n", "-p", "-o", "NAME,TYPE", device]).splitlines()
+    for row in reversed(rows):
+        fields = row.split()
+        if len(fields) >= 2 and fields[1] == "disk":
+            return fields[0]
+    raise SnapshotError(f"cannot resolve a physical disk for {device}")
 
 
 def create_many(target_disks: list[str], branding_id: str, log) -> list[dict[str, Any]]:
