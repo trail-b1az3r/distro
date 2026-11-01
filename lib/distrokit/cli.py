@@ -247,7 +247,14 @@ def cmd_update(a) -> int:
     if experimental_enabled:
         print(S.info("Experimental CI packages enabled: " + ", ".join(experimental_enabled)))
     if a.check:
-        return 100 if total or experimental_enabled else 0
+        try:
+            experimental_updates = experiments.check(B) if experimental_enabled else []
+        except experiments.ExperimentError as exc:
+            print(S.warn(f"Could not check experimental CI packages: {exc}"))
+            experimental_updates = []
+        if experimental_updates:
+            print(S.info("Experimental CI updates: " + ", ".join(experimental_updates)))
+        return 100 if total or experimental_updates else 0
     if not total and not experimental_enabled:
         print(S.ok("Everything is up to date."))
         return 0
