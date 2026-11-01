@@ -117,6 +117,7 @@ class Engine:
             try:
                 from . import backup
                 backup.restore(snapshot, lambda line: self.emit({"type": "log", "line": line}))
+                inst.state["rollback_restored"] = True
                 self.emit({"type": "rollback", "success": True, "mode": snapshot.get("mode")})
             except Exception as exc:  # noqa: BLE001
                 self.emit({"type": "error", "step": "rollback", "label": "Restore",
