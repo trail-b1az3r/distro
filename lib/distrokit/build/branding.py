@@ -285,13 +285,27 @@ def grub_slices(b: Branding, out: Path) -> None:
     nine("terminal_box", surface + (235,), None, 8)
 
 
-def ansi_logo(png: Path, cols: int = 24) -> str:
-    """The logo as truecolour half blocks, for fastfetch's ``file-raw`` logo
-    (fastfetch otherwise falls back to the ID_LIKE distribution's logo)."""
+def ansi_logo(png: Path, cols: int = 24, max_colors: int = 9) -> str:
+    """The logo as a <=9-colour ANSI half-block image for Fastfetch.
+
+    Quantise after resizing so interpolation cannot introduce extra colours;
+    keep the original alpha channel so the N-shaped cutout and sparks remain
+    transparent and the complete SVG silhouette is preserved.
+    """
     from PIL import Image
 
+    if not 1 <= max_colors <= 9:
+        raise ValueError("max_colors must be between 1 and 9")
     rows = cols // 2
-    img = Image.open(png).convert("RGBA").resize((cols, rows * 2), Image.Resampling.LANCZOS)
+    resized = Image.open(png).convert("RGBA").resize((cols, rows * 2), Image.Resampling.LANCZOS)
+    alpha = resized.getchannel("A")
+    quantized = resized.convert("RGB").quantize(
+        colors=max_colors,
+        method=Image.Quantize.MEDIANCUT,
+        dither=Image.Dither.FLOYDSTEINBERG,
+    ).convert("RGB")
+    img = quantized.convert("RGBA")
+    img.putalpha(alpha)
     px = img.load()
     lines = []
     for r in range(rows):
