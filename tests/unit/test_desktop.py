@@ -207,3 +207,9 @@ def test_default_apps_wraps_terminal_resource_tools():
     apps = deploy.default_apps({"foot", "btop"})
     helper = "~/.config/hypr/hyprland/scripts/launch_first_available.sh"
     assert apps["taskManager"] == f"{helper} 'foot -e btop'"
+
+def test_default_apps_wraps_tui_replacements():
+    apps = deploy.default_apps({"foot", "yazi", "micro"})
+    helper = "~/.config/hypr/hyprland/scripts/launch_first_available.sh"
+    assert apps["fileManager"] == f"{helper} 'foot -e yazi'"
+    assert apps["textEditor"] == f"{helper} 'foot -e micro'"
