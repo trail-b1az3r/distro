@@ -1,34 +1,8 @@
 # Build the ISO in an Arch Linux container and install it in QEMU/KVM.
-# Runs weekly, on demand, and from release.yml for tags.
+# Manual-only ISO builds. Use Actions > ISO > Run workflow.
 name: ISO
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/iso.yml"
-      - "build.sh"
-      - "iso/**"
-      - "lib/distrokit/build/iso.py"
-      - "lib/distrokit/installer/**"
-      - "lib/distrokit/pacmanconf.py"
-      - "packages/**"
-      - "tests/unit/test_iso.py"
-      - "tests/unit/test_installer.py"
-      - "tests/qemu/**"
-  pull_request:
-    branches: [main]
-    paths:
-      - ".github/workflows/iso.yml"
-      - "build.sh"
-      - "iso/**"
-      - "lib/distrokit/build/iso.py"
-      - "lib/distrokit/installer/**"
-      - "lib/distrokit/pacmanconf.py"
-      - "packages/**"
-      - "tests/unit/test_iso.py"
-      - "tests/unit/test_installer.py"
-      - "tests/qemu/**"
   workflow_dispatch:
     inputs:
       edition:
@@ -59,28 +33,6 @@ on:
         description: Skip the build and test the ISO of this earlier run (its ID)
         type: string
         default: ""
-  workflow_call:
-    inputs:
-      edition:
-        type: string
-        default: standard
-      compression:
-        type: string
-        default: auto
-      profile:
-        type: string
-        default: standard
-      offline:
-        type: string
-        default: minimal
-      qemu:
-        type: boolean
-        default: true
-    secrets:
-      GPG_PRIVATE_KEY:
-        required: false
-  schedule:
-    - cron: "17 3 * * 1"
 
 permissions:
   contents: read
@@ -93,14 +45,13 @@ jobs:
     timeout-minutes: 360
     strategy:
       fail-fast: false
-      # Every push validates both supported offline repository modes. Manual
-      # dispatch and reusable calls retain their requested single mode.
+      # A manual run builds only the selected offline repository mode.
       matrix:
-        offline: ${{ github.event_name == 'push' && fromJSON('["minimal","full"]') || fromJSON(format('["{0}"]', inputs.offline || 'minimal')) }}
+        offline: ${{ fromJSON(format('["{0}"]', inputs.offline || 'minimal')) }}
     env:
-      EDITION: ${{ inputs.edition || (github.event_name == 'pull_request' && 'nano' || 'standard') }}
+      EDITION: ${{ inputs.edition || 'standard' }}
       COMPRESSION: ${{ inputs.compression || 'auto' }}
-      PROFILE: ${{ (inputs.edition == 'nano' || github.event_name == 'pull_request') && 'minimal' || (inputs.profile || 'standard') }}
+      PROFILE: ${{ inputs.edition == 'nano' && 'minimal' || (inputs.profile || 'standard') }}
       OFFLINE: ${{ matrix.offline }}
     steps:
       - name: Free disk space (the full offline build needs ~60 GB)
@@ -144,7 +95,7 @@ jobs:
 
   qemu:
     needs: build
-    if: ${{ !cancelled() && (inputs.qemu != false || github.event_name == 'pull_request' || github.event_name == 'push') && (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.iso_run)) }}
+    if: ${{ !cancelled() && (inputs.qemu != false || inputs.iso_run) && (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.iso_run)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
@@ -152,11 +103,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        offline: ${{ github.event_name == 'push' && fromJSON('["minimal","full"]') || fromJSON(format('["{0}"]', inputs.offline || 'minimal')) }}
+        offline: ${{ fromJSON(format('["{0}"]', inputs.offline || 'minimal')) }}
         scenario: [uefi-btrfs-encrypted, bios-ext4-grub, live-uefi-usb, live-uefi-cdrom]
         # This scenario is meaningful only for an ISO containing the complete
         # offline repository. On pushes, test that full ISO alongside minimal.
-        include: ${{ (github.event_name == 'push' || inputs.offline == 'full') && github.event_name != 'pull_request' && inputs.edition != 'nano' && fromJSON('[{"offline":"full","scenario":"uefi-offline-developer"}]') || fromJSON('[]') }}
+        include: ${{ inputs.offline == 'full' && inputs.edition != 'nano' && fromJSON('[{"offline":"full","scenario":"uefi-offline-developer"}]') || fromJSON('[]') }}
     steps:
       - uses: actions/checkout@v4
       - name: KVM and QEMU
