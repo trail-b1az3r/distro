@@ -10,8 +10,8 @@ Each ``package_<id>-<component>()`` function in the PKGBUILD calls this with
 component  contents
 ========== ================================================================
 core       distrokit, data files, CLI, GPU tool, privileged helper, pacman
-           hooks, polkit policy, completions, model-server user unit
-branding   logos, icons, wallpapers, boot splash, GRUB/SDDM themes, fastfetch
+           hooks, polkit policy, completions, model-server user unit, fastfetch
+branding   logos, icons, wallpapers, boot splash, GRUB/SDDM themes
 desktop    the dots (pinned) and the distribution layer, shell integration
 welcome    Welcome wizard and graphical updater
 installer  graphical and unattended installer
@@ -120,6 +120,12 @@ class Stage:
             self.tree(d, f"{share}/{d}")
         self.file("packages/editors.toml", f"{share}/packages/editors.toml")
         self.tree("branding/icons/ui", f"{share}/branding/icons/ui")
+        # Fastfetch is a core system tool: ship the generated Nexora logo and
+        # config with core so every installation has the branded command.
+        fastfetch = Path("branding/generated/fastfetch")
+        self.file(fastfetch / "config.jsonc", f"{share}/fastfetch.jsonc")
+        self.file(fastfetch / "logo.ansi", f"{share}/fastfetch-logo.ansi")
+        self.file(fastfetch / "config.jsonc", "/etc/xdg/fastfetch/config.jsonc")
 
         self.python_entry(f"/usr/bin/{b.cli}", "distrokit.cli", comment=f"{b.pretty_name} system tool")
         self.link(f"/usr/bin/{b.id}-gpu", b.cli)
@@ -237,10 +243,6 @@ class Stage:
             self.file(f, f"{ply}/{name}")
         self.tree(gen / "grub", f"/usr/share/grub/themes/{b.id}")
         self.tree(gen / "sddm", f"/usr/share/sddm/themes/{b.id}")
-        self.file(gen / "fastfetch" / "config.jsonc", f"{share}/fastfetch.jsonc")
-        self.file(gen / "fastfetch" / "logo.ansi", f"{share}/fastfetch-logo.ansi")
-        # Plain `fastfetch` would otherwise show the ID_LIKE distribution's logo.
-        self.file(gen / "fastfetch" / "config.jsonc", "/etc/xdg/fastfetch/config.jsonc")
         self.license(f"{b.id}-branding")
 
     def desktop(self) -> None:
