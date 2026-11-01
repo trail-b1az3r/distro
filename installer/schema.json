@@ -111,6 +111,11 @@
       "type": "boolean",
       "description": "Use only the ISO's offline repository",
       "default": false
+    },
+    "backup": {
+      "type": "boolean",
+      "description": "Create a verified rollback disk image before destructive installation",
+      "default": true
     }
   },
   "$defs": {
