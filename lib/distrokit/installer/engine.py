@@ -136,7 +136,8 @@ class Engine:
         if ok:
             self.emit({"type": "done", "warnings": inst.warnings})
         elif self.cancelled:
-            self.emit({"type": "cancelled-done", "restored": bool(inst.state.get("rollback_restored")), "rollback_needed": bool(snapshot)})
+            self.emit({"type": "cancelled-done", "restored": bool(inst.state.get("rollback_restored")),
+                       "rollback_needed": bool(snapshots)})
         if self._log_fh:
             self._log_fh.write(f"==== installation {'finished' if ok else 'FAILED'} {time.ctime()} ====\n")
             self._log_fh.close()
