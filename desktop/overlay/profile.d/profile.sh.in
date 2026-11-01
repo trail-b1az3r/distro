@@ -4,6 +4,8 @@ case ":${PATH}:" in
     *":${HOME}/.local/bin:"*) ;;
     *) PATH="${HOME}/.local/bin:${PATH}"; export PATH ;;
 esac
+# Keep Halcyon's per-user Fastfetch settings from overriding Nexora's distro logo.
+export HALCYON_FASTFETCH_LOGO_OVERRIDE=0
 # The text editor (nano starts it too); set EDITOR yourself to use another.
 : "${EDITOR:=micro}" "${VISUAL:=micro}"
 export EDITOR VISUAL
