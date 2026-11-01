@@ -583,7 +583,7 @@ class InstallerBackend(QObject):
     def _on_engine_event(self, event: dict) -> None:
         if event.get("type") != "progress":
             self._history.append(event)
-        if event.get("type") in ("done", "error", "exit"):
+        if event.get("type") in ("done", "error", "exit", "cancelled-done"):
             self._busy = False
             self._installing = False
             self.busyChanged.emit()
