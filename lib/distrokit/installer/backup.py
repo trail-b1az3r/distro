@@ -89,6 +89,7 @@ def _manifest(destination: Path, log) -> None:
         if sep:
             paths.setdefault(name, []).append(path)
     with destination.open("w", encoding="utf-8") as out:
+        out.write(json.dumps({"type": "inventory", "scope": "installer_live_environment", "note": "The raw disk image is the authoritative backup of the pre-install OS."}) + "\\n")
         for line in packages:
             fields = line.split()
             if len(fields) < 2:
