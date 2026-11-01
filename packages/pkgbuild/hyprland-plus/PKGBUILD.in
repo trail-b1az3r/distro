@@ -28,7 +28,6 @@ depends=(
 )
 makedepends=(cmake git glaze hyprland-protocols hyprwayland-scanner xorgproto)
 optdepends=('hyprpm: build and install plugins'
-            'xdg-desktop-portal-hyprland: xdg-desktop-portal backend for hyprland'
             'xdg-desktop-portal-hyprland: xdg-desktop-portal backend for hyprland')
 provides=("hyprland=${pkgver%.p*}" wayland-compositor)
 conflicts=(hyprland)
