@@ -231,7 +231,7 @@ def _mount_separate_home(root: Path, mounted: list[Path], log) -> None:
         return
 
 
-def _export_previous_system(target_disk: str, base: Path, manifest: Path, log) -> None:
+def _export_previous_system(target_disk: str, base: Path, manifest: Path, log, *, copy_home: bool) -> None:
     """Mount candidate target partitions read-only to inventory the old OS."""
     nodes = _tree()
     disk_real = os.path.realpath(target_disk)
@@ -258,13 +258,14 @@ def _export_previous_system(target_disk: str, base: Path, manifest: Path, log) -
             if _inventory_from_root(mountpoint, manifest, log):
                 found = True
                 _mount_separate_home(mountpoint, mounted, log)
-                _copy_visible_home(mountpoint, base, log)
+                if copy_home:
+                    _copy_visible_home(mountpoint, base, log)
                 break
         if not found:
             with manifest.open("w", encoding="utf-8") as out:
                 out.write(json.dumps({"type": "inventory", "scope": "no_unencrypted_previous_system_found",
                                       "note": "The full raw-disk snapshot is the authoritative rollback copy. "
-                                              "Encrypted or nonstandard installations may need manual inspection."}) + "\\n")
+                                              "Encrypted or nonstandard installations may need manual inspection."}) + "\n")
                 out.flush()
                 os.fsync(out.fileno())
             log("No readable existing Pacman installation was found for a separate inventory")
@@ -274,7 +275,8 @@ def _export_previous_system(target_disk: str, base: Path, manifest: Path, log) -
         shutil.rmtree(temp_root, ignore_errors=True)
 
 
-def create(target_disk: str, branding_id: str, log, *, exclude_disks: list[str] | None = None) -> dict[str, Any]:
+def create(target_disk: str, branding_id: str, log, *, exclude_disks: list[str] | None = None,
+           copy_home: bool = True) -> dict[str, Any]:
     """Create and verify a raw-disk rollback image before partitioning."""
     target = Path(target_disk)
     if not target.exists():
@@ -335,7 +337,7 @@ def create(target_disk: str, branding_id: str, log, *, exclude_disks: list[str] 
     try:
         log(f"Creating {mode} rollback snapshot ({size // (1024**3)} GiB)")
         image_sha256 = _copy_image(target_disk, image, size, log)
-        _export_previous_system(target_disk, base, manifest, log)
+        _export_previous_system(target_disk, base, manifest, log, copy_home=copy_home and mode == "external")
         meta = {"version": 2, "disk": target_disk, "size_bytes": size, "mode": mode,
                 "created_at": int(time.time()), "image": str(image), "manifest": str(manifest),
                 "image_sha256": image_sha256}
@@ -425,8 +427,8 @@ def create_many(target_disks: list[str], branding_id: str, log) -> list[dict[str
         raise SnapshotError("the destructive plan does not identify any physical target disk")
     snapshots: list[dict[str, Any]] = []
     try:
-        for disk in targets:
-            snapshots.append(create(disk, branding_id, log, exclude_disks=targets))
+        for index, disk in enumerate(targets):
+            snapshots.append(create(disk, branding_id, log, exclude_disks=targets, copy_home=index == 0))
         return snapshots
     except Exception:
         for snapshot in snapshots:
