@@ -197,7 +197,6 @@ def restore(snapshot: dict[str, Any], log) -> None:
     if current != expected:
         raise SnapshotError("target disk size changed; refusing to restore to a different-sized disk")
     log(f"Restoring original disk image to {disk}")
-    _copy_image(str(image), Path("/dev/null"), 0, lambda _: None) if False else None
     copied = 0
     with image.open("rb", buffering=0) as src, open(disk, "wb", buffering=0) as dst:
         while True:
