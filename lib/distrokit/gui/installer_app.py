@@ -562,6 +562,24 @@ class InstallerBackend(QObject):
         self._engine_thread.start()
         return True
 
+    @Slot(result=bool)
+    def cancel(self) -> bool:
+        """Request a safe stop; the engine rolls back after the active step exits."""
+        thread = self._engine_thread
+        if not self._installing or thread is None:
+            return False
+        if self.demo:
+            thread.cancel_event.set()
+            return True
+        if thread.proc is None or thread.proc.poll() is not None:
+            return False
+        try:
+            thread.proc.send_signal(signal.SIGINT)
+            return True
+        except OSError as exc:
+            self.message.emit(f"Could not request cancellation: {exc}")
+            return False
+
     def _on_engine_event(self, event: dict) -> None:
         if event.get("type") != "progress":
             self._history.append(event)
