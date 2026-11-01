@@ -41,7 +41,6 @@ zip
 rsync
 htop
 btop
-fastfetch
 lsof
 usbutils
 pciutils
