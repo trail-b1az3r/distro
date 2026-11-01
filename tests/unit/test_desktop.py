@@ -112,7 +112,7 @@ def test_first_deploy(deployer):
     b, home, make = deployer
     settings = deploy.UserSettings(keyboard_layout="de", keyboard_variant="nodeadkeys",
                                    monitors=[{"connector": "eDP-1", "scale": 1.5}],
-                                   apps=deploy.default_apps({"firefox", "kate"}, "code"))
+                                   apps=deploy.default_apps({"alacritty", "dolphin", "firefox", "kate", "pavucontrol", "plasma-systemmonitor"}, "code"))
     report = make().deploy(settings, first=True)
     assert len(report.written) > 300 and not report.backed_up
     entry = (home / ".config/hypr/hyprland.lua").read_text()
@@ -123,7 +123,12 @@ def test_first_deploy(deployer):
     assert 'kb_layout = "de"' in general and 'kb_variant = "nodeadkeys"' in general
     assert 'hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = 1.5 })' in general
     variables = (home / ".config/hypr/custom/variables.lua").read_text()
-    assert 'terminal = "konsole"' in variables and 'browser = "firefox"' in variables
+    helper = "~/.config/hypr/hyprland/scripts/launch_first_available.sh"
+    assert f'terminal = "{helper} alacritty"' in variables
+    assert f'fileManager = "{helper} dolphin"' in variables
+    assert f'browser = "{helper} firefox"' in variables
+    assert f'volumeMixer = "{helper} pavucontrol"' in variables
+    assert f'taskManager = "{helper} plasma-systemmonitor --page-name Processes"' in variables
     assert 'codeEditor = "code"' in variables
     assert (home / ".config/quickshell/ii/shell.qml").is_file()
     assert (home / "Pictures/Wallpapers" / f"{b.id}-default.png").is_file()
@@ -180,5 +185,20 @@ def test_reset_backs_up_custom_and_restores_defaults(deployer):
 
 def test_default_apps_only_lists_installed_software():
     apps = deploy.default_apps({"kate"})
-    assert apps == {"terminal": "konsole", "textEditor": "kate"}
-    assert deploy.default_apps({"alacritty"})["terminal"] == "alacritty"
+    helper = "~/.config/hypr/hyprland/scripts/launch_first_available.sh"
+    assert apps == {"textEditor": f"{helper} kate"}
+    assert "terminal" not in apps
+
+def test_default_apps_unifies_installed_distro_replacements():
+    apps = deploy.default_apps({
+        "konsole", "foot", "loaf", "dolphin", "brave-bin", "chromium",
+        "libreoffice-fresh", "wps-office", "pavucontrol-qt",
+        "plasma-systemmonitor", "gnome-system-monitor",
+    })
+    helper = "~/.config/hypr/hyprland/scripts/launch_first_available.sh"
+    assert apps["terminal"] == f"{helper} konsole foot"
+    assert apps["fileManager"] == f"{helper} loaf dolphin"
+    assert apps["browser"] == f"{helper} brave chromium"
+    assert apps["officeSoftware"] == f"{helper} libreoffice wps"
+    assert apps["volumeMixer"] == f"{helper} pavucontrol-qt"
+    assert apps["taskManager"] == f"{helper} 'plasma-systemmonitor --page-name Processes' gnome-system-monitor"
