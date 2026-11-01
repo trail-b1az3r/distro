@@ -54,6 +54,18 @@ def test_unknown_fields_are_rejected():
         cfgmod.InstallConfig.from_dict({"disk": {"size": 1}})
 
 
+def test_rollback_backup_can_be_disabled(machine):
+    _root, report = machine("rtx4080_desktop")
+    default_cfg = make_cfg()
+    default_install = Installation(default_cfg, report, runner=util.Runner(dry_run=True), online=True)
+    assert "backup" in {step.id for step in default_install.steps()}
+
+    no_backup_cfg = make_cfg(backup=False)
+    no_backup_install = Installation(no_backup_cfg, report, runner=util.Runner(dry_run=True), online=True)
+    assert "backup" not in {step.id for step in no_backup_install.steps()}
+    assert cfgmod.InstallConfig.from_dict(no_backup_cfg.to_dict()).backup is False
+
+
 @pytest.mark.parametrize("over, field", [
     ({"user": {"username": "Alex"}}, "user.username"),
     ({"user": {"username": "root"}}, "user.username"),
