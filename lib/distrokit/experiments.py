@@ -62,7 +62,7 @@ def set_enabled(action: str, requested: str, branding: Branding | None = None) -
     if requested == "all":
         selected = list(COMPONENTS)
     elif requested in COMPONENTS:
-        selected = list(DEPENDENCIES[requested])
+        selected = [requested]
     else:
         raise ExperimentError(f"unknown component {requested!r}; choose all or: {', '.join(COMPONENTS)}")
     enabled = set(read_enabled(b))
@@ -167,12 +167,12 @@ def fetch_packages(selected: list[str], branding: Branding | None = None) -> tup
         tmp = archive.with_suffix(".zip.tmp")
         tmp.write_bytes(data)
         os.replace(tmp, archive)
-    packages = _safe_extract_packages(archive, cache / "pkg", set(selected), b)
+    expanded = {dep for component in selected for dep in DEPENDENCIES[component]}
+    packages = _safe_extract_packages(archive, cache / "pkg", expanded, b)
     return packages, run_id, sha
 
 
-def apply(runner: util.Runner, selected: list[str], branding: Branding | None = None,
-          *, interactive: bool = True) -> list[str]:
+def apply(runner: util.Runner, branding: Branding | None = None, *, interactive: bool = True) -> list[str]:
     b = branding or load_branding()
     enabled = read_enabled(b)
     if not enabled:
