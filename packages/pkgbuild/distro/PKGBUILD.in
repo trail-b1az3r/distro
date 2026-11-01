@@ -66,7 +66,7 @@ package_@DISTRO_ID@-core() {
     'yay: AUR packages'
     'flatpak: Flatpak updates'
   )
-  backup=(etc/xdg/fastfetch/config.jsonc)
+  backup=()
   _stage core
   python -m compileall -q -s "$pkgdir" -p / "$pkgdir/usr/lib/@DISTRO_ID@/distrokit"
 }
@@ -78,7 +78,9 @@ package_@DISTRO_ID@-branding() {
     'plymouth: boot splash'
     'sddm: login screen theme (Qt 6 greeter)'
     'grub: boot menu theme'
+    'fastfetch: system information with the logo'
   )
+  backup=(etc/xdg/fastfetch/config.jsonc)
   _stage branding
 }
 
