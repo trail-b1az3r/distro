@@ -7,6 +7,8 @@ if not contains -- $HOME/.local/bin $PATH
     set -gx PATH $HOME/.local/bin $PATH
 end
 
+# Keep Halcyon's per-user Fastfetch settings from overriding Nexora's distro logo.
+set -gx HALCYON_FASTFETCH_LOGO_OVERRIDE 0
 # The text editor (nano starts it too); set EDITOR yourself to use another.
 set -q EDITOR; or set -gx EDITOR micro
 set -q VISUAL; or set -gx VISUAL micro
