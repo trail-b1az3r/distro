@@ -61,7 +61,8 @@ ApplicationWindow {
             else if (e.type === "cancelled-done") {
                 win.page = win.pageIds.indexOf("summary")
                 win.toast = e.restored ? qsTr("Installation cancelled. Your original disk was restored.")
-                                       : qsTr("Installation cancelled, but rollback needs attention. Check the installer log.")
+                           : e.rollback_needed ? qsTr("Installation cancelled, but rollback needs attention. Check the installer log.")
+                           : qsTr("Installation cancelled before disk changes. Nothing needed restoring.")
                 toastTimer.restart()
             }
         }
