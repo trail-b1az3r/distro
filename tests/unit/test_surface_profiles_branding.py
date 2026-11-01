@@ -140,3 +140,26 @@ def test_surface_pro5_named_and_wifi_firmware_without_surface_kernel(machine):
     assert r.has_touchpad and r.displays[0].hidpi
     assert dict(r.summary_rows())["Surface"] == "Microsoft Surface Pro (5th Gen)"
     assert r.displays[0].recommended_scale == 2
+
+
+def test_fastfetch_logo_uses_at_most_nine_colours(tmp_path):
+    import re
+
+    from PIL import Image, ImageDraw
+
+    from distrokit.build.branding import ansi_logo
+
+    png = tmp_path / "logo.png"
+    image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.polygon([(32, 2), (60, 18), (60, 46), (32, 62), (4, 46), (4, 18)],
+                 fill=(124, 108, 255, 255))
+    draw.rectangle((28, 18, 36, 48), fill=(35, 213, 196, 255))
+    image.save(png)
+
+    ansi = ansi_logo(png, cols=24, max_colors=9)
+    colours = set(re.findall(r"(?:38|48);2;(\\d+);(\\d+);(\\d+)", ansi))
+    assert 1 <= len(colours) <= 9
+    assert len(ansi.splitlines()) == 12
+    assert "\\x1b[38;2;" in ansi
+    assert " " in ansi  # transparent parts of the mark stay transparent
