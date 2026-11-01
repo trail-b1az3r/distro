@@ -113,7 +113,11 @@ def _inventory_from_root(root: Path, destination: Path, log) -> bool:
     with destination.open("w", encoding="utf-8") as out:
         out.write(json.dumps({
             "type": "inventory", "scope": "previous_installed_system",
-            "root": str(root), "foreign_classification": "pacman sync database; foreign packages may include AUR and locally built packages",
+            "root": str(root),
+            "foreign_classification": (
+                "pacman sync database; foreign packages may include AUR "
+                "and locally built packages"
+            ),
         }) + "\n")
         for entry in sorted(db.iterdir()):
             if not entry.is_dir():
