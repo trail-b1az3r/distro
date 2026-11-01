@@ -69,6 +69,10 @@ def rasterise(svg: Path, png: Path, width: int, height: int | None = None) -> No
     if shutil.which("rsvg-convert"):
         subprocess.run(["rsvg-convert", "-w", str(width), "-h", str(height), "-o", str(png), str(svg)], check=True)
         return
+    if shutil.which("inkscape"):
+        subprocess.run(["inkscape", str(svg), "--export-filename", str(png),
+                        "-w", str(width), "-h", str(height)], check=True, stdout=subprocess.DEVNULL)
+        return
     try:
         from PySide6.QtCore import Qt
         from PySide6.QtGui import QGuiApplication, QImage, QPainter
