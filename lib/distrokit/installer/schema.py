@@ -36,6 +36,7 @@ DESCRIPTIONS: dict[tuple[str, str], str] = {
     ("InstallConfig", "kernels"): "Kernel packages: linux, linux-lts, linux-zen, ...",
     ("InstallConfig", "kernel_params"): "Extra kernel parameters (the root file system is set by the installer)",
     ("InstallConfig", "offline"): "Use only the ISO's offline repository",
+    ("InstallConfig", "backup"): "Create a verified rollback disk image before destructive installation",
     ("UserConfig", "password"): "May be empty in the file and given as INSTALL_USER_PASSWORD",
     ("UserConfig", "root_password"): "Empty: root login disabled (sudo only). Or INSTALL_ROOT_PASSWORD",
     ("DiskConfig", "passphrase"): "LUKS passphrase (8+ characters). May be given as INSTALL_DISK_PASSPHRASE",
