@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 
 from distrokit.installer import backup
+from distrokit.installer.disks import DiskPlan, Volume
 
 
 def test_copy_image_returns_sha256_and_rejects_short_reads(tmp_path):
@@ -64,3 +65,11 @@ def test_home_copy_excludes_hidden_files_and_directories(tmp_path):
     assert (copied / "Documents/notes.txt").read_text() == "notes"
     assert not (copied / ".hidden").exists()
     assert not (copied / ".config").exists()
+
+
+def test_manual_plan_is_destructive_even_when_root_is_not_formatted():
+    plan = DiskPlan(
+        mode="manual", disk="", firmware="uefi", bootloader="systemd-boot", new_table=False,
+        volumes=[Volume("root", "/", "ext4", device="/dev/sda2", format=False, existing=True)],
+    )
+    assert plan.destructive
