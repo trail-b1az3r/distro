@@ -6,6 +6,7 @@ free space, or to /run when the live tmpfs and MemAvailable can hold it.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -31,7 +32,7 @@ def _run(args: list[str]) -> str:
 
 def _tree() -> list[dict[str, Any]]:
     try:
-        data = json.loads(_run(["lsblk", "-J", "-b", "-o", "NAME,TYPE,SIZE,MOUNTPOINTS,PKNAME"]))
+        data = json.loads(_run(["lsblk", "-J", "-p", "-b", "-o", "NAME,TYPE,SIZE,MOUNTPOINTS,PKNAME"]))
     except (ValueError, OSError) as exc:
         raise SnapshotError(f"cannot inspect storage devices: {exc}") from exc
     out: list[dict[str, Any]] = []
@@ -56,14 +57,16 @@ def _available_ram() -> int:
     return 0
 
 
-def _copy_image(source: str, destination: Path, expected: int, log) -> None:
+def _copy_image(source: str, destination: Path, expected: int, log) -> str:
     copied = 0
+    digest = hashlib.sha256()
     with open(source, "rb", buffering=0) as src, destination.open("wb", buffering=0) as dst:
         while True:
             block = src.read(CHUNK)
             if not block:
                 break
             dst.write(block)
+            digest.update(block)
             copied += len(block)
             if copied and copied % (1024**3) < CHUNK:
                 log(f"Snapshot copied {copied // (1024**3)} GiB of {expected // (1024**3)} GiB")
@@ -72,6 +75,7 @@ def _copy_image(source: str, destination: Path, expected: int, log) -> None:
     if copied != expected:
         destination.unlink(missing_ok=True)
         raise SnapshotError(f"snapshot size mismatch: copied {copied} bytes, expected {expected}")
+    return digest.hexdigest()
 
 
 def _manifest(destination: Path, log) -> None:
@@ -106,7 +110,7 @@ def _manifest(destination: Path, log) -> None:
     log(f"Saved package and owned-file inventory ({len(packages)} packages)")
 
 
-def create(target_disk: str, branding_id: str, log) -> dict[str, Any]:
+def create(target_disk: str, branding_id: str, log, *, exclude_disks: list[str] | None = None) -> dict[str, Any]:
     """Create and verify a raw-disk rollback image before partitioning."""
     target = Path(target_disk)
     if not target.exists():
@@ -116,12 +120,13 @@ def create(target_disk: str, branding_id: str, log) -> dict[str, Any]:
     if size <= 0:
         raise SnapshotError("could not determine the target disk size")
     nodes = _tree()
-    target_real = os.path.realpath(target_disk)
+    excluded = {os.path.realpath(path) for path in (exclude_disks or [])}
+    excluded.add(os.path.realpath(target_disk))
     candidates: list[tuple[int, str]] = []
     for node in nodes:
         if node.get("type") != "disk" or int(node.get("size") or 0) < MIN_BACKUP_DISK:
             continue
-        if os.path.realpath(node.get("name", "")) == target_real:
+        if os.path.realpath(node.get("name", "")) in excluded:
             continue
         parent = node.get("name", "")
         for part in nodes:
@@ -163,10 +168,11 @@ def create(target_disk: str, branding_id: str, log) -> dict[str, Any]:
     metadata = base / "snapshot.json"
     try:
         log(f"Creating {mode} rollback snapshot ({size // (1024**3)} GiB)")
-        _copy_image(target_disk, image, size, log)
+        image_sha256 = _copy_image(target_disk, image, size, log)
         _manifest(manifest, log)
         meta = {"version": 1, "disk": target_disk, "size_bytes": size, "mode": mode,
-                "created_at": int(time.time()), "image": str(image), "manifest": str(manifest)}
+                "created_at": int(time.time()), "image": str(image), "manifest": str(manifest),
+                "image_sha256": image_sha256}
         metadata.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
         with metadata.open("rb+") as fh:
             os.fsync(fh.fileno())
@@ -174,12 +180,15 @@ def create(target_disk: str, branding_id: str, log) -> dict[str, Any]:
         # expected number of bytes can be read before any destructive action.
         if image.stat().st_size != size:
             raise SnapshotError("rollback image verification failed")
+        verify = hashlib.sha256()
         with image.open("rb", buffering=0) as fh:
-            first = fh.read(min(CHUNK, size))
-            fh.seek(max(0, size - min(CHUNK, size)))
-            last = fh.read(min(CHUNK, size))
-        if not first or not last:
-            raise SnapshotError("rollback image verification failed")
+            while True:
+                block = fh.read(CHUNK)
+                if not block:
+                    break
+                verify.update(block)
+        if verify.hexdigest() != image_sha256:
+            raise SnapshotError("rollback image checksum verification failed")
         log(f"Verified rollback snapshot at {base}")
         return meta
     except Exception:
@@ -194,13 +203,25 @@ def restore(snapshot: dict[str, Any], log) -> None:
     expected = int(snapshot["size_bytes"])
     if not image.is_file() or image.stat().st_size != expected:
         raise SnapshotError("rollback image is missing or incomplete; refusing an unsafe restore")
+    digest = hashlib.sha256()
+    with image.open("rb", buffering=0) as fh:
+        while True:
+            block = fh.read(CHUNK)
+            if not block:
+                break
+            digest.update(block)
+    if digest.hexdigest() != snapshot.get("image_sha256"):
+        raise SnapshotError("rollback image checksum mismatch; refusing an unsafe restore")
     current = int(_run(["blockdev", "--getsize64", disk]).strip())
     if current != expected:
         raise SnapshotError("target disk size changed; refusing to restore to a different-sized disk")
     tree = _tree()
     mounted = []
+    disk_real = os.path.realpath(disk)
     for node in tree:
-        if node.get("_parent_disk") == disk or node.get("name") == disk:
+        parent = node.get("_parent_disk", "")
+        name = node.get("name", "")
+        if os.path.realpath(parent) == disk_real or os.path.realpath(name) == disk_real:
             mounted.extend(m for m in (node.get("mountpoints") or []) if m)
     if mounted:
         raise SnapshotError("cannot restore while target partitions are mounted: " + ", ".join(mounted))
