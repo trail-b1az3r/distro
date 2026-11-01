@@ -343,7 +343,7 @@ class Installation:
         # image. Do not start pacman-init.service here: this profile removes
         # that unit deliberately, and the keyring is prepared at build time.
         if self.disk_plan.mode == "manual":
-            target_disks = [backup.physical_disk(v.device) for v in self.disk_plan.volumes if v.format and v.device]
+            target_disks = [backup.physical_disk(v.device) for v in self.disk_plan.volumes if v.device]
         else:
             target_disks = [self.disk_plan.disk] if self.disk_plan.destructive and self.disk_plan.disk else []
         for target_disk in dict.fromkeys(target_disks):
@@ -385,7 +385,10 @@ class Installation:
             return
         try:
             if self.disk_plan.mode == "manual":
-                devices = [v.device for v in self.disk_plan.volumes if v.format and v.device]
+                # Every selected manual volume can be modified by the install,
+                # even when its format option is disabled (pacstrap writes into
+                # the existing root filesystem).
+                devices = [v.device for v in self.disk_plan.volumes if v.device]
                 targets = list(dict.fromkeys(backup.physical_disk(device) for device in devices))
             else:
                 targets = [self.disk_plan.disk]
