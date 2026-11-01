@@ -36,6 +36,16 @@ ApplicationWindow {
         }
     }
 
+    function movePage(delta) {
+        const lastPage = reader.hasBook ? 3 : 2
+        page = Math.max(0, Math.min(lastPage, page + delta))
+    }
+
+    function togglePreview() {
+        editor.viewMode = editor.viewMode === 2 ? 1 : 2
+        page = 0
+    }
+
     Component.onCompleted: {
         for (const f of startupFiles)
             openFile(f)
@@ -75,10 +85,21 @@ ApplicationWindow {
     Shortcut { sequences: [StandardKey.Save]; onActivated: editor.saveNow() }
     Shortcut { sequences: [StandardKey.SaveAs]; onActivated: saveAsDialog.open() }
     Shortcut { sequences: [StandardKey.New]; onActivated: win.openFile(Files.newNote(qsTr("New note"))) }
+    // Documents and editing
     Shortcut { sequence: "Ctrl+1"; onActivated: win.page = 0 }
     Shortcut { sequence: "Ctrl+2"; onActivated: win.page = 1 }
     Shortcut { sequence: "Ctrl+3"; onActivated: win.page = 2 }
+    Shortcut { sequence: "Ctrl+4"; onActivated: if (reader.hasBook) win.page = 3 }
     Shortcut { sequence: "Ctrl+E"; onActivated: editor.viewMode = (editor.viewMode + 1) % 3 }
+    Shortcut { sequence: "Ctrl+Shift+E"; onActivated: win.togglePreview() }
+    Shortcut { sequence: "Ctrl+PageDown"; onActivated: win.movePage(1) }
+    Shortcut { sequence: "Ctrl+PageUp"; onActivated: win.movePage(-1) }
+
+    // Direct navigation aliases for one-handed use.
+    Shortcut { sequence: "Ctrl+Alt+1"; onActivated: win.page = 0 }
+    Shortcut { sequence: "Ctrl+Alt+2"; onActivated: win.page = 1 }
+    Shortcut { sequence: "Ctrl+Alt+3"; onActivated: win.page = 2 }
+    Shortcut { sequence: "Ctrl+Alt+4"; onActivated: if (reader.hasBook) win.page = 3 }
 
     RowLayout {
         anchors.fill: parent
