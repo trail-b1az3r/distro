@@ -31,7 +31,6 @@ endeavouros-keyring
 endeavouros-mirrorlist
 eos-rankmirrors
 exfatprogs
-fastfetch
 ffmpegthumbs
 firefox
 fish
