@@ -1,6 +1,5 @@
 import json
 import subprocess
-from pathlib import Path
 
 from distrokit.installer import backup
 from distrokit.installer.disks import DiskPlan, Volume
