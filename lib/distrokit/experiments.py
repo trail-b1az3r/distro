@@ -91,24 +91,40 @@ def _repo(branding: Branding) -> tuple[str, str]:
     return parts[0], parts[1].removesuffix(".git")
 
 
-def _request(url: str, *, binary: bool = False, timeout: int = 60) -> bytes:
+def _headers(accept: str = "application/vnd.github+json") -> dict[str, str]:
     headers = {
-        "Accept": "application/vnd.github+json" if not binary else "application/octet-stream",
+        "Accept": accept,
         "User-Agent": "Nexora-Experiments",
         "X-GitHub-Api-Version": "2022-11-28",
     }
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    req = urllib.request.Request(url, headers=headers)
+    return headers
+
+
+def _request(url: str, timeout: int = 60) -> bytes:
+    req = urllib.request.Request(url, headers=_headers())
     try:
         with urllib.request.urlopen(req, timeout=timeout) as response:
-            data = response.read(MAX_ARTIFACT_BYTES + 1)
+            return response.read(4 * 1024 * 1024 + 1)
     except (OSError, urllib.error.URLError) as exc:
         raise ExperimentError(f"GitHub request failed: {exc}") from exc
-    if len(data) > MAX_ARTIFACT_BYTES:
-        raise ExperimentError("CI package artifact exceeds the 2 GiB safety limit")
-    return data
+
+
+def _download(url: str, destination: Path) -> None:
+    req = urllib.request.Request(url, headers=_headers("application/octet-stream"))
+    total = 0
+    try:
+        with urllib.request.urlopen(req, timeout=180) as response, destination.open("wb") as output:
+            while chunk := response.read(1024 * 1024):
+                total += len(chunk)
+                if total > MAX_ARTIFACT_BYTES:
+                    raise ExperimentError("CI package artifact exceeds the 2 GiB safety limit")
+                output.write(chunk)
+    except (OSError, urllib.error.URLError) as exc:
+        destination.unlink(missing_ok=True)
+        raise ExperimentError(f"CI artifact download failed: {exc}") from exc
 
 
 def latest_packages_artifact(branding: Branding | None = None) -> tuple[int, int, str]:
@@ -162,10 +178,13 @@ def fetch_packages(selected: list[str], branding: Branding | None = None) -> tup
     cache = Path.home() / ".cache" / b.id / "experiments" / str(run_id)
     cache.mkdir(parents=True, exist_ok=True)
     archive = cache / "packages.zip"
-    if not archive.exists():
-        data = _request(url, binary=True, timeout=180)
+    if not archive.exists() or not zipfile.is_zipfile(archive):
+        archive.unlink(missing_ok=True)
         tmp = archive.with_suffix(".zip.tmp")
-        tmp.write_bytes(data)
+        _download(url, tmp)
+        if not zipfile.is_zipfile(tmp):
+            tmp.unlink(missing_ok=True)
+            raise ExperimentError("GitHub returned an invalid CI artifact ZIP")
         os.replace(tmp, archive)
     expanded = {dep for component in selected for dep in DEPENDENCIES[component]}
     packages = _safe_extract_packages(archive, cache / "pkg", expanded, b)
