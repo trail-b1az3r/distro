@@ -222,6 +222,11 @@ def _mount_separate_home(root: Path, mounted: list[Path], log) -> None:
         target.mkdir(exist_ok=True)
         fs = fields[2]
         options = {"ext4": "ro,noload", "btrfs": "ro,nologreplay", "xfs": "ro,norecovery"}.get(fs, "ro")
+        if fs == "btrfs" and len(fields) >= 4:
+            subvolume_options = [value for value in fields[3].split(",")
+                                 if value.startswith(("subvol=", "subvolid="))]
+            if subvolume_options:
+                options += "," + ",".join(subvolume_options)
         proc = subprocess.run(["mount", "-o", options, source, str(target)],
                               text=True, capture_output=True, check=False)
         if proc.returncode == 0:
