@@ -245,6 +245,16 @@ def apply(runner: util.Runner, branding: Branding | None = None, *, interactive:
     return [p.name for p in packages]
 
 
+def check(branding: Branding | None = None) -> list[str]:
+    b = branding or load_branding()
+    enabled = read_enabled(b)
+    if not enabled:
+        return []
+    components = [c for c in COMPONENTS if c in enabled]
+    packages, _, _ = fetch_packages(components, b)
+    return [p.name for p in _packages_newer_than_installed(packages)]
+
+
 def status(branding: Branding | None = None) -> list[str]:
     enabled = read_enabled(branding)
     return enabled
