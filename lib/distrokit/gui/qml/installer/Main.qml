@@ -14,6 +14,7 @@ ApplicationWindow {
     color: Theme.bg
 
     property int page: 0
+    property int furthestPage: 0
     property var issues: []
     property string toast: ""
     // Lets tests and command-line options pick the colour scheme.
@@ -40,14 +41,14 @@ ApplicationWindow {
         if (locked) return
         if (!validateCurrent()) return
         if (pageIds[page + 1] === "summary") installer.prepareSummary()
-        if (page < pageIds.length - 1) { page += 1; issues = [] }
+        if (page < pageIds.length - 1) { page += 1; furthestPage = Math.max(furthestPage, page); issues = [] }
     }
     function back() {
         if (locked || page === 0) return
         page -= 1
         issues = []
     }
-    function goTo(index) { if (!locked && index < page) { page = index; issues = [] } }
+    function goTo(index) { if (!locked && index >= 0 && index <= furthestPage) { page = index; issues = [] } }
 
     Shortcut { sequences: ["Alt+Right", "Ctrl+Return"]; onActivated: win.next() }
     Shortcut { sequence: "Alt+Left"; onActivated: win.back() }
