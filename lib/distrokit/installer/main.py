@@ -119,7 +119,12 @@ def run_engine(args) -> int:
               "message": "the disk confirmation does not match the plan; nothing was changed"})
         return 3
     log_file = None if args.dry_run else Path(f"/var/log/{b.id}/installer.log")
-    ok = Engine(inst, emit, log_file).run()
+    cancelled = threading.Event()
+    previous_handler = signal.signal(signal.SIGINT, lambda *_: cancelled.set())
+    try:
+        ok = Engine(inst, emit, log_file, cancel_check=cancelled.is_set).run()
+    finally:
+        signal.signal(signal.SIGINT, previous_handler)
     return 0 if ok else 1
 
 
