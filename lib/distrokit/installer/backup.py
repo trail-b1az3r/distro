@@ -260,11 +260,16 @@ def _export_previous_system(target_disk: str, base: Path, manifest: Path, log, *
             if proc.returncode:
                 continue
             mounted.append(mountpoint)
-            if _inventory_from_root(mountpoint, manifest, log):
+            # Nexora and many Arch installations keep the actual root in a
+            # Btrfs subvolume (commonly @) beneath the top-level mount.
+            root_candidates = [mountpoint, *(mountpoint / name for name in ("@", "@root", "root", "rootfs"))]
+            previous_root = next((candidate for candidate in root_candidates
+                                  if _inventory_from_root(candidate, manifest, log)), None)
+            if previous_root is not None:
                 found = True
-                _mount_separate_home(mountpoint, mounted, log)
+                _mount_separate_home(previous_root, mounted, log)
                 if copy_home:
-                    _copy_visible_home(mountpoint, base, log)
+                    _copy_visible_home(previous_root, base, log)
                 break
         if not found:
             with manifest.open("w", encoding="utf-8") as out:
