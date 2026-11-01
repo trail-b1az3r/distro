@@ -199,6 +199,38 @@ def _copy_visible_home(root: Path, destination: Path, log) -> None:
             log(f"Copied visible home files for {username} to {target}")
 
 
+def _mount_separate_home(root: Path, mounted: list[Path], log) -> None:
+    """Mount a separate /home filesystem from the old installation's fstab."""
+    fstab = root / "etc/fstab"
+    if not fstab.is_file():
+        return
+    for line in fstab.read_text(encoding="utf-8", errors="replace").splitlines():
+        fields = line.split()
+        if len(fields) < 3 or fields[1] != "/home" or fields[0].startswith("#"):
+            continue
+        source = fields[0]
+        if source.startswith("UUID="):
+            proc = subprocess.run(["blkid", "-U", source[5:]], text=True, capture_output=True, check=False)
+            source = proc.stdout.strip()
+        elif source.startswith("PARTUUID="):
+            proc = subprocess.run(["blkid", "-t", source, "-o", "device"], text=True, capture_output=True, check=False)
+            source = proc.stdout.strip().splitlines()[0] if proc.stdout.strip() else ""
+        if not source or not Path(source).exists():
+            log("Separate /home partition from the old fstab could not be resolved; the raw snapshot remains available")
+            return
+        target = root / "home"
+        target.mkdir(exist_ok=True)
+        fs = fields[2]
+        options = {"ext4": "ro,noload", "btrfs": "ro,nologreplay", "xfs": "ro,norecovery"}.get(fs, "ro")
+        proc = subprocess.run(["mount", "-o", options, source, str(target)],
+                              text=True, capture_output=True, check=False)
+        if proc.returncode == 0:
+            mounted.append(target)
+        else:
+            log(f"Could not mount separate /home read-only: {proc.stderr.strip()}")
+        return
+
+
 def _export_previous_system(target_disk: str, base: Path, manifest: Path, log) -> None:
     """Mount candidate target partitions read-only to inventory the old OS."""
     nodes = _tree()
@@ -225,13 +257,14 @@ def _export_previous_system(target_disk: str, base: Path, manifest: Path, log) -
             mounted.append(mountpoint)
             if _inventory_from_root(mountpoint, manifest, log):
                 found = True
+                _mount_separate_home(mountpoint, mounted, log)
                 _copy_visible_home(mountpoint, base, log)
                 break
         if not found:
             with manifest.open("w", encoding="utf-8") as out:
                 out.write(json.dumps({"type": "inventory", "scope": "no_unencrypted_previous_system_found",
                                       "note": "The full raw-disk snapshot is the authoritative rollback copy. "
-                                              "Encrypted or nonstandard installations may need manual inspection."}) + "\n")
+                                              "Encrypted or nonstandard installations may need manual inspection."}) + "\\n")
                 out.flush()
                 os.fsync(out.fileno())
             log("No readable existing Pacman installation was found for a separate inventory")
