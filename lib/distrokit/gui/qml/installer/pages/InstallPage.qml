@@ -84,6 +84,28 @@ ColumnLayout {
         }
     }
 
-    AppButton { text: page.showLog ? qsTr("Hide details") : qsTr("Show details"); iconName: "terminal"; onClicked: page.showLog = !page.showLog }
+    RowLayout {
+        Layout.fillWidth: true
+        AppButton { text: page.showLog ? qsTr("Hide details") : qsTr("Show details"); iconName: "terminal"; onClicked: page.showLog = !page.showLog }
+        Item { Layout.fillWidth: true }
+        AppButton {
+            visible: installer.busy && !page.cancelling
+            kind: "danger"
+            text: qsTr("Cancel installation")
+            iconName: "x"
+            onClicked: cancelDialog.open()
+        }
+    }
+    Dialog {
+        id: cancelDialog
+        modal: true
+        title: qsTr("Cancel installation?")
+        standardButtons: Dialog.Yes | Dialog.No
+        Label {
+            text: qsTr("Nexora will stop after the current operation, unmount the target, and restore the verified pre-install snapshot. Do not power off while rollback is running.")
+            wrapMode: Text.WordWrap
+        }
+        onAccepted: installer.cancel()
+    }
     LogView { id: log; visible: page.showLog; Layout.fillWidth: true; Layout.preferredHeight: 360 }
 }
