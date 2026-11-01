@@ -366,7 +366,10 @@ class Installation:
         nodes = list(walk(data.get("blockdevices", [])))
         mounted = [mount for node in nodes for mount in (node.get("mountpoints") or []) if mount]
         if mounted:
-            raise InstallError(f"{disk} has mounted partitions ({', '.join(mounted)}); unmount them before creating a consistent rollback snapshot.")
+            raise InstallError(
+                f"{disk} has mounted partitions ({', '.join(mounted)}); "
+                "unmount them before creating a consistent rollback snapshot."
+            )
         for n in nodes:
             if n.get("fstype") == "swap":
                 self.run(["swapoff", n["name"]], check=False)
@@ -383,7 +386,10 @@ class Installation:
             targets = ([v.device for v in self.disk_plan.volumes if v.device]
                        if self.disk_plan.mode == "manual" else [self.disk_plan.disk])
             self.log("verify a separate 256 GiB backup disk or sufficient RAM for " + ", ".join(targets))
-            self.log("create and verify a complete raw-disk rollback image, previous-system Pacman JSONL inventory, and optional visible-home copy")
+            self.log(
+                "create and verify a complete raw-disk rollback image, "
+                "previous-system Pacman JSONL inventory, and optional visible-home copy"
+            )
             return
         try:
             if self.disk_plan.mode == "manual":
