@@ -380,8 +380,10 @@ class Installation:
     def backup_snapshot(self) -> None:
         """Back up the entire target disk before its partition table is changed."""
         if self.runner.dry_run:
-            self.log(f"verify a separate 256 GiB backup disk or sufficient RAM for {self.disk_plan.disk}")
-            self.log("create and verify a complete raw-disk rollback image and JSONL package inventory")
+            targets = ([v.device for v in self.disk_plan.volumes if v.device]
+                       if self.disk_plan.mode == "manual" else [self.disk_plan.disk])
+            self.log("verify a separate 256 GiB backup disk or sufficient RAM for " + ", ".join(targets))
+            self.log("create and verify a complete raw-disk rollback image, previous-system Pacman JSONL inventory, and optional visible-home copy")
             return
         try:
             if self.disk_plan.mode == "manual":
