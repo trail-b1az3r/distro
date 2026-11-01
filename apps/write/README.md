@@ -16,6 +16,23 @@ Quick and C++.
   (`~/.local/state/quickshell/user/generated/colors.json`, followed live),
   dark copper without one; Material style, Google Sans Flex and JetBrains Mono.
 
+## Keyboard shortcuts
+
+| Shortcut | Action |
+|---|---|
+| Ctrl+N | New note |
+| Ctrl+O | Open a document or EPUB |
+| Ctrl+S | Save the current document |
+| Ctrl+Shift+S | Save as |
+| Ctrl+1 / 2 / 3 / 4 | Write / Notes / Books / Reading |
+| Ctrl+E | Cycle Edit, Both and Preview |
+| Ctrl+Shift+E | Toggle Preview and Both |
+| Ctrl+PageUp / PageDown | Previous / next section |
+| Ctrl+Alt+1 / 2 / 3 / 4 | Alternate navigation shortcuts |
+
+Reading shortcuts are available when an EPUB is open. Ctrl+4 and Ctrl+Alt+4
+are ignored when there is no open book.
+
 ```bash
 cmake -S apps/write -B build/write -G Ninja && cmake --build build/write
 WRITE_MDXL_RENDER=apps/write/data/mdxl-render.py MDXL_LIB=/path/to/mdxl build/write/nexora-write
