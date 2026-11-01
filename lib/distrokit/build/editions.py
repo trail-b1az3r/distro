@@ -21,7 +21,7 @@ NANO_EXCLUDE = {
     # Keep Nano within its strict size budget. The default firmware set covers
     # common consumer hardware; optional server, switch, and SoC firmware stays
     # available on the standard ISO.
-    "linux-firmware-liquidio", "linux-firmware-mellanox",
+    "linux-firmware-liquidio", "linux-firmware-marvell", "linux-firmware-mellanox",
     "linux-firmware-nfp", "linux-firmware-qcom", "linux-firmware-qlogic",
     # Optional SMB file sharing pulls in Samba and its large dependency set.
     "gvfs-smb",
