@@ -537,6 +537,8 @@ class InstallerBackend(QObject):
             self._summary["ok"] = True
             self._summary["confirmToken"] = inst.disk_plan.disk or "manual"
             self._summary["needsConfirm"] = inst.disk_plan.destructive
+            self._summary["rollbackRequired"] = bool(inst.disk_plan.destructive and inst.disk_plan.disk)
+            self._summary["rollbackPolicy"] = "A complete disk image is verified on a separate 256 GiB+ drive, or in RAM if enough memory is available, before formatting starts."
             self._commands = dry_run_commands(Installation(cfg, self.report, runner=util.Runner(dry_run=True),
                                                            online=self._online or self.demo))
         except (diskmod.DiskPlanError, ValueError, KeyError) as exc:
