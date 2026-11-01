@@ -28,7 +28,7 @@ DEPENDENCIES = {
     "installer": ("core", "installer"),
     "ai": ("core", "ai"),
 }
-MAX_ARTIFACT_BYTES = 2 * 1024 * 1024 * 1024
+MAX_ARTIFACT_BYTES = 8 * 1024 * 1024 * 1024
 
 
 class ExperimentError(RuntimeError):
@@ -119,7 +119,7 @@ def _download(url: str, destination: Path) -> None:
             while chunk := response.read(1024 * 1024):
                 total += len(chunk)
                 if total > MAX_ARTIFACT_BYTES:
-                    raise ExperimentError("CI package artifact exceeds the 2 GiB safety limit")
+                    raise ExperimentError("CI package artifact exceeds the 8 GiB safety limit")
                 output.write(chunk)
     except (OSError, urllib.error.URLError) as exc:
         destination.unlink(missing_ok=True)
