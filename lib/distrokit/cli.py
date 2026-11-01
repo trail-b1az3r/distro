@@ -242,9 +242,13 @@ def cmd_update(a) -> int:
         print(S.warn("Arch Linux news since your last update (read before updating):"))
         for n in news:
             print(f"    {n.title}\n      {n.link}")
+    from . import experiments
+    experimental_enabled = experiments.status(B)
+    if experimental_enabled:
+        print(S.info("Experimental CI packages enabled: " + ", ".join(experimental_enabled)))
     if a.check:
-        return 100 if total else 0
-    if not total:
+        return 100 if total or experimental_enabled else 0
+    if not total and not experimental_enabled:
         print(S.ok("Everything is up to date."))
         return 0
     runner = util.Runner(log=print)
@@ -264,7 +268,37 @@ def cmd_update(a) -> int:
         print(S.ok("Updated: " + ", ".join(update.apply_ai(runner, B))))
     if by_id.get("gpu") and by_id["gpu"].count:
         print(S.warn(f"Graphics configuration changed; run `sudo {B.cli} gpu configure` to review and apply."))
+    if experimental_enabled:
+        try:
+            installed = experiments.apply(runner, B, interactive=not a.yes)
+        except experiments.ExperimentError as exc:
+            print(S.fail(f"Experimental package update failed: {exc}"))
+            return 1
+        if installed:
+            print(S.ok("Installed experimental packages: " + ", ".join(installed)))
+        else:
+            print(S.ok("Experimental packages are already current."))
     print(S.ok("Update complete."))
+    return 0
+
+
+def cmd_experiments(a) -> int:
+    from . import experiments
+
+    try:
+        if a.action == "status":
+            enabled = experiments.status(B)
+            print("Experimental CI package source: " + (", ".join(enabled) if enabled else "disabled"))
+            if enabled:
+                print(f"Packages are taken from the latest successful CI run of {B.get('DISTRO_HOME_URL')}.")
+            return 0
+        enabled = experiments.set_enabled(a.action, a.component, B)
+    except experiments.ExperimentError as exc:
+        print(S.fail(str(exc)), file=sys.stderr)
+        return 1
+    state = "enabled" if a.action == "enable" else "disabled"
+    print(S.ok("Experimental CI packages " + state + (": " + ", ".join(enabled) if enabled else " for all components.")))
+    print(S.info(f"Run `{B.cli} update` to install the latest successful CI packages."))
     return 0
 
 
@@ -901,6 +935,12 @@ def build_parser() -> argparse.ArgumentParser:
     for src in ("aur", "flatpak", "desktop", "gpu", "ai"):
         s.add_argument(f"--no-{src}", action="store_true")
     s.set_defaults(func=cmd_update)
+
+    s = sub.add_parser("experiments", help="opt in to packages from successful CI builds")
+    s.add_argument("action", choices=["status", "enable", "disable"], nargs="?", default="status")
+    s.add_argument("component", choices=["all", "core", "branding", "desktop", "welcome", "installer", "ai"],
+                   nargs="?", default="all", help="package component (default: all)")
+    s.set_defaults(func=cmd_experiments)
 
     s = sub.add_parser("repo", help="the distribution's package repository in pacman.conf: status, on, off, auto")
     s.add_argument("action", nargs="?", default="status", choices=["status", "on", "off", "auto"],
