@@ -1,23 +1,19 @@
-# Tag v<version>[.N] -> build and test the ISO, publish it as a GitHub release,
-# and update the package repository installed systems use (release "repo").
-# Or run it by hand (Actions > Release > Run workflow) with a tag name: the
-# same, and the tag is created on the commit it ran on once the ISO passes.
-# A tag pushed by `./build.sh --publish` (scripts/publish-release.sh) comes
-# with its release and ISO already uploaded: nothing is rebuilt then.
+# Manually publish an ISO that was built and tested by the manual ISO workflow.
+# Start this only after a successful full-offline ISO run; provide its run ID.
 # See docs/release-process.md.
 name: Release
 
 on:
-  push:
-    tags: ["v*"]
-    # One-off branch trigger used for the v26.10.0.1.2 maintenance release.
-    # The workflow creates the actual v26.10.0.1.2 tag after its ISO passes QEMU.
-    branches: ["v26.10.0.1.2"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to create and publish, e.g. v26.10.0.1.0 (on the commit this runs on)"
+        description: "Tag to publish, e.g. v26.11.0.1.0"
         required: true
+        type: string
+      iso_run:
+        description: "Successful manual ISO workflow run ID containing the full offline artifacts"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -55,19 +51,9 @@ jobs:
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
 
-  iso:
+  publish:
     needs: check
     if: needs.check.outputs.published != 'true'
-    uses: ./.github/workflows/iso.yml
-    with:
-      # Release the same fully self-contained image users can install without Wi-Fi.
-      profile: developer
-      offline: full
-      qemu: true
-    secrets: inherit
-
-  publish:
-    needs: [check, iso]
     runs-on: ubuntu-24.04
     container: archlinux:base
     steps:
@@ -78,10 +64,14 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN || github.token }}
       - uses: actions/download-artifact@v4
         with:
-          name: iso
+          name: iso-full
+          run-id: ${{ inputs.iso_run }}
+          github-token: ${{ github.token }}
       - uses: actions/download-artifact@v4
         with:
-          name: repo
+          name: repo-full
+          run-id: ${{ inputs.iso_run }}
+          github-token: ${{ github.token }}
           path: build/repo
       - name: Publish the release and the package repository
         env:
