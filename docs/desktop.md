@@ -51,6 +51,15 @@ Alacritty (terminal; Konsole stays installed), Nexora Write (MDXL documents, not
 `~/.config/hypr/custom/variables.lua` (keybinds) and with the usual
 `xdg-mime` / *Default Applications* settings.
 
+### Dots and Nexora app unification
+
+On installation, Nexora compares the desktop's app roles with the packages selected for the system. It writes
+launch-first-available commands for the apps that are actually installed: terminal, file manager, browser, office
+suite, text editor, volume mixer and task manager. When one preferred app is absent, the next installed Nexora app
+is used; if no candidate is installed, that role is left to the dots' own cross-distro fallback list. The resolver
+does not install duplicate applications or overwrite an existing user-owned `custom/` configuration. The editor
+selected by `CODE_EDITOR` remains the authoritative code editor.
+
 ## The Plasma fallback session
 
 If you enabled *KDE Plasma fallback session*, the login screen offers
