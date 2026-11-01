@@ -202,3 +202,8 @@ def test_default_apps_unifies_installed_distro_replacements():
     assert apps["officeSoftware"] == f"{helper} libreoffice wps"
     assert apps["volumeMixer"] == f"{helper} pavucontrol-qt"
     assert apps["taskManager"] == f"{helper} 'plasma-systemmonitor --page-name Processes' gnome-system-monitor"
+
+def test_default_apps_wraps_terminal_resource_tools():
+    apps = deploy.default_apps({"foot", "btop"})
+    helper = "~/.config/hypr/hyprland/scripts/launch_first_available.sh"
+    assert apps["taskManager"] == f"{helper} 'foot -e btop'"
