@@ -56,7 +56,15 @@ ApplicationWindow {
     Connections {
         target: installer
         function onMessage(text) { win.toast = text; toastTimer.restart() }
-        function onEngineEvent(e) { if (e.type === "done") win.page = win.pageIds.indexOf("done") }
+        function onEngineEvent(e) {
+            if (e.type === "done") win.page = win.pageIds.indexOf("done")
+            else if (e.type === "cancelled-done") {
+                win.page = win.pageIds.indexOf("summary")
+                win.toast = e.restored ? qsTr("Installation cancelled. Your original disk was restored.")
+                                       : qsTr("Installation cancelled, but rollback needs attention. Check the installer log.")
+                toastTimer.restart()
+            }
+        }
     }
     Timer { id: toastTimer; interval: 5000; onTriggered: win.toast = "" }
 
