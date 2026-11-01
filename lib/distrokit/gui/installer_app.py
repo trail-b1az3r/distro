@@ -13,6 +13,7 @@ import copy
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import threading
@@ -83,6 +84,8 @@ class EngineThread(threading.Thread):
         self.backend = backend
         self.payload = payload
         self.demo = demo
+        self.proc = None
+        self.cancel_event = threading.Event()
 
     def run(self) -> None:
         if self.demo:
@@ -100,6 +103,7 @@ class EngineThread(threading.Thread):
         try:
             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                     text=True, bufsize=1, env=env)
+            self.proc = proc
         except OSError as exc:
             self.backend.engineEvent.emit({"type": "error", "step": "start", "label": "Start", "message": str(exc)})
             return
@@ -127,7 +131,7 @@ class EngineThread(threading.Thread):
 
         cfg = cfgmod.InstallConfig.from_dict(self.payload["config"])
         inst = Installation(cfg, backend.report, runner=util.Runner(dry_run=True), online=self.payload.get("online", True))
-        Engine(inst, emit).run()
+        Engine(inst, emit, cancel_check=self.cancel_event.is_set).run()
 
 
 class InstallerBackend(QObject):
@@ -164,6 +168,7 @@ class InstallerBackend(QObject):
         self._history: list[dict] = []
         self.engineEvent.connect(self._on_engine_event)
         self._installing = False
+        self._engine_thread = None
 
     # -- defaults -----------------------------------------------------------
     def _defaults(self) -> dict[str, Any]:
@@ -553,7 +558,8 @@ class InstallerBackend(QObject):
         self._busy = True
         self.busyChanged.emit()
         payload = {"config": self._cfg, "confirm_disk": confirm, "online": self._online or self.demo}
-        EngineThread(self, payload, self.demo).start()
+        self._engine_thread = EngineThread(self, payload, self.demo)
+        self._engine_thread.start()
         return True
 
     def _on_engine_event(self, event: dict) -> None:
