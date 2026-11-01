@@ -128,7 +128,7 @@ def test_first_deploy(deployer):
     assert f'fileManager = "{helper} dolphin"' in variables
     assert f'browser = "{helper} firefox"' in variables
     assert f'volumeMixer = "{helper} pavucontrol"' in variables
-    assert f'taskManager = "{helper} plasma-systemmonitor --page-name Processes"' in variables
+    assert f'taskManager = "{helper} \'plasma-systemmonitor --page-name Processes\'"' in variables
     assert 'codeEditor = "code"' in variables
     assert (home / ".config/quickshell/ii/shell.qml").is_file()
     assert (home / "Pictures/Wallpapers" / f"{b.id}-default.png").is_file()
