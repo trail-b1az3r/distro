@@ -90,6 +90,9 @@ class Engine:
                     self.emit({"type": "cancelled", "message": "Cancellation requested; restoring the original disk."})
                     ok = False
             except Exception as exc:  # noqa: BLE001
+                self.cancelled = self.cancel_check()
+                if self.cancelled:
+                    self.emit({"type": "cancelled", "message": "Cancellation requested; restoring the original disk."})
                 detail = str(exc) or exc.__class__.__name__
                 self.emit({"type": "log", "line": "".join(traceback.format_exception(exc)).rstrip()})
                 if step.critical:
