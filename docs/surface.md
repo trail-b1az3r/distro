@@ -55,8 +55,9 @@ recognised by its firmware SKU and shown as *Surface Pro (5th Gen)*. Notes:
   found, with or without the Surface kernel. Wi-Fi power saving is off for
   these cards (`/usr/lib/NetworkManager/conf.d/50-nexora-mwifiex.conf`): with
   it on, they drop the connection. The card also does not come back from
-  suspend, so the driver is unloaded before sleeping and loaded again on
-  waking (`/usr/lib/systemd/system-sleep/nexora-mwifiex`).
+  suspend, so the recovery hook stops NetworkManager and unloads the driver
+  before sleeping, then reloads it, waits for udev, and restores NetworkManager
+  after waking (`/usr/lib/systemd/system-sleep/nexora-mwifiex`).
 * **Saved Wi-Fi passwords**: members of `wheel` manage networks without a
   password prompt (`/usr/share/polkit-1/rules.d/50-nexora-networkmanager.rules`),
   which NetworkManager needs to keep the passwords the desktop gives it. On a
