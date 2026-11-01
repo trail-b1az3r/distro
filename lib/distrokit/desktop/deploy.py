@@ -467,6 +467,19 @@ def default_apps(installed: set[str], editor_command: str = "") -> dict[str, str
         command = _first_installed_launcher(installed, choices)
         if command:
             apps[role] = command
+
+    # If the distro has a terminal and a TUI monitor but no graphical monitor,
+    # wrap btop/htop in the terminal it actually installed.
+    if "taskManager" not in apps:
+        import shlex
+
+        terminal = next((command for package, command in candidates["terminal"] if package in installed), "")
+        monitor = next((command for package, command in (("btop", "btop"), ("htop", "htop"))
+                        if package in installed), "")
+        if terminal and monitor:
+            helper = "~/.config/hypr/hyprland/scripts/launch_first_available.sh"
+            apps["taskManager"] = helper + " " + shlex.quote(f"{terminal} -e {monitor}")
+
     # CODE_EDITOR is selected by distro configuration and installed as a feature,
     # so it is authoritative rather than a package-name guess.
     if editor_command:
