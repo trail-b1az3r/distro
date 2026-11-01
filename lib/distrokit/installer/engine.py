@@ -125,7 +125,8 @@ class Engine:
         elif snapshot and snapshot.get("mode") == "ram":
             from . import backup
             backup.discard_ram_snapshot(snapshot)
-        if ok:            self.emit({"type": "done", "warnings": inst.warnings})
+        if ok:
+            self.emit({"type": "done", "warnings": inst.warnings})
         if self._log_fh:
             self._log_fh.write(f"==== installation {'finished' if ok else 'FAILED'} {time.ctime()} ====\n")
             self._log_fh.close()
