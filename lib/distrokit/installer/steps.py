@@ -342,8 +342,12 @@ class Installation:
         # The ISO build bakes a populated keyring into the read-only live
         # image. Do not start pacman-init.service here: this profile removes
         # that unit deliberately, and the keyring is prepared at build time.
-        if self.disk_plan.disk:
-            self._release_disk(self.disk_plan.disk)
+        if self.disk_plan.mode == "manual":
+            target_disks = [backup.physical_disk(v.device) for v in self.disk_plan.volumes if v.format and v.device]
+        else:
+            target_disks = [self.disk_plan.disk] if self.disk_plan.destructive and self.disk_plan.disk else []
+        for target_disk in dict.fromkeys(target_disks):
+            self._release_disk(target_disk)
         self.log(f"Network: {'online' if self.online else 'offline (offline repository only)'}")
         if not self.runner.dry_run:
             self.t("").mkdir(parents=True, exist_ok=True)
@@ -360,6 +364,9 @@ class Installation:
                 yield from walk(n.get("children") or [])
 
         nodes = list(walk(data.get("blockdevices", [])))
+        mounted = [mount for node in nodes for mount in (node.get("mountpoints") or []) if mount]
+        if mounted:
+            raise InstallError(f"{disk} has mounted partitions ({', '.join(mounted)}); unmount them before creating a consistent rollback snapshot.")
         for n in nodes:
             if n.get("fstype") == "swap":
                 self.run(["swapoff", n["name"]], check=False)
@@ -368,10 +375,7 @@ class Installation:
                 self.run(["cryptsetup", "close", n["name"]], check=False)
             if n.get("type") == "lvm":
                 self.run(["vgchange", "-an"], check=False)
-        data = json.loads(self.runner.output(["lsblk", "-J", "-p", "-o", "NAME,MOUNTPOINTS", disk]) or "{}")
-        mounted = [m for n in walk(data.get("blockdevices", [])) for m in (n.get("mountpoints") or []) if m]
-        if self.cfg.disk.mode == "erase" and mounted:
-            raise InstallError(f"{disk} is in use (mounted at {', '.join(mounted)}). Unmount it and try again.")
+
 
     def backup_snapshot(self) -> None:
         """Back up the entire target disk before its partition table is changed."""
