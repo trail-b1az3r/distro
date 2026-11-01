@@ -452,7 +452,7 @@ def default_apps(installed: set[str], editor_command: str = "") -> dict[str, str
         ),
         "textEditor": (
             ("kate", "kate"), ("gnome-text-editor", "gnome-text-editor"),
-            ("mousepad", "mousepad"), ("micro", "micro"), ("emacs", "emacs"),
+            ("mousepad", "mousepad"), ("emacs", "emacs"),
         ),
         "volumeMixer": (
             ("pavucontrol-qt", "pavucontrol-qt"), ("pavucontrol", "pavucontrol"),
@@ -479,6 +479,26 @@ def default_apps(installed: set[str], editor_command: str = "") -> dict[str, str
         if terminal and monitor:
             helper = "~/.config/hypr/hyprland/scripts/launch_first_available.sh"
             apps["taskManager"] = helper + " " + shlex.quote(f"{terminal} -e {monitor}")
+
+    # TUI applications are valid replacements too, but only when a terminal
+    # is available. Never emit a bare TUI command into a graphical keybind.
+    if "fileManager" not in apps and "yazi" in installed:
+        import shlex
+
+        terminal = next((command for package, command in candidates["terminal"] if package in installed), "")
+        if terminal:
+            helper = "~/.config/hypr/hyprland/scripts/launch_first_available.sh"
+            apps["fileManager"] = helper + " " + shlex.quote(f"{terminal} -e yazi")
+
+    if "textEditor" not in apps:
+        import shlex
+
+        terminal = next((command for package, command in candidates["terminal"] if package in installed), "")
+        editor = next((command for package, command in (("micro", "micro"), ("neovim", "nvim"))
+                       if package in installed), "")
+        if terminal and editor:
+            helper = "~/.config/hypr/hyprland/scripts/launch_first_available.sh"
+            apps["textEditor"] = helper + " " + shlex.quote(f"{terminal} -e {editor}")
 
     # CODE_EDITOR is selected by distro configuration and installed as a feature,
     # so it is authoritative rather than a package-name guess.
