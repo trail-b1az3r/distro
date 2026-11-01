@@ -158,8 +158,8 @@ def test_fastfetch_logo_uses_at_most_nine_colours(tmp_path):
     image.save(png)
 
     ansi = ansi_logo(png, cols=24, max_colors=9)
-    colours = set(re.findall(r"(?:38|48);2;(\\d+);(\\d+);(\\d+)", ansi))
+    colours = set(re.findall(r"(?:38|48);2;(\d+);(\d+);(\d+)", ansi))
     assert 1 <= len(colours) <= 9
     assert len(ansi.splitlines()) == 12
-    assert "\\x1b[38;2;" in ansi
+    assert "\x1b[38;2;" in ansi
     assert " " in ansi  # transparent parts of the mark stay transparent
