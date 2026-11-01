@@ -24,7 +24,7 @@ _PACMAN_PROGRESS = re.compile(r"^\((\s*\d+)/(\d+)\) (installing|upgrading|reinst
 
 
 class Engine:
-    def __init__(self, installation: Installation, emit: Event, log_file: Path | None = None):
+    def __init__(self, installation: Installation, emit: Event, log_file: Path | None = None, cancel_check=None):
         self.inst = installation
         self._emit_cb = emit
         self.log_file = log_file
