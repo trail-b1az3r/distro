@@ -49,7 +49,7 @@ check() {
 }
 
 package_@DISTRO_ID@-core() {
-  pkgdesc="@DISTRO_PRETTY_NAME@ system tools: @DISTRO_CLI@ CLI, hardware detection, GPU manager, doctor and repair"
+  pkgdesc="@DISTRO_PRETTY_NAME@ system tools: @DISTRO_CLI@ CLI, hardware detection, GPU manager, doctor, repair and Fastfetch"
   depends=(
     python pacman pacman-contrib sudo polkit systemd util-linux kmod
     pciutils usbutils hwdata curl git micro fastfetch
@@ -78,7 +78,6 @@ package_@DISTRO_ID@-branding() {
     'plymouth: boot splash'
     'sddm: login screen theme (Qt 6 greeter)'
     'grub: boot menu theme'
-    'fastfetch: system information with the logo'
   )
   backup=(etc/xdg/fastfetch/config.jsonc)
   _stage branding
