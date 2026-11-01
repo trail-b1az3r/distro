@@ -428,7 +428,8 @@ def default_apps(installed: set[str], editor_command: str = "") -> dict[str, str
 
     Candidate order is the preference order. Only packages present in the
     installed-package inventory are emitted; when a role has no match, the
-    upstream launcher's cross-distro candidates remain in control.
+    upstream launcher's cross-distro candidates remain in control. TUI-only
+    replacements are used only when an installed terminal can host them.
     """
     candidates = {
         "terminal": (
