@@ -49,6 +49,13 @@ ColumnLayout {
             }
         }
 
+        Notice {
+            visible: page.s.rollbackRequired === true
+            Layout.fillWidth: true
+            kind: "warning"
+            title: qsTr("A verified rollback copy is required")
+            text: page.s.rollbackPolicy || ""
+        }
         GridLayout {
             Layout.fillWidth: true
             columns: width > 700 ? 2 : 1
@@ -140,6 +147,10 @@ ColumnLayout {
         RowLayout {
             Layout.fillWidth: true
             AppButton { text: qsTr("Back"); iconName: "arrow-left"; onClicked: win.back() }
+            AppButton {
+                text: qsTr("Cancel")
+                onClicked: { page.understood = false; page.typed = ""; win.page = 0 }
+            }
             Item { Layout.fillWidth: true }
             AppButton {
                 kind: page.s.needsConfirm ? "danger" : "primary"
