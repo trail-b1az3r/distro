@@ -139,9 +139,11 @@ def create(target_disk: str, branding_id: str, log) -> dict[str, Any]:
                     candidates.append((free, mount))
     base: Path
     mode: str
+    stamp = time.time_ns()
+    disk_label = target.name.replace("/", "_")
     if candidates:
         _, mount = max(candidates)
-        base = Path(mount) / f"{branding_id}-rollback-{int(time.time())}"
+        base = Path(mount) / f"{branding_id}-rollback-{disk_label}-{stamp}"
         mode = "external"
     else:
         run_free = shutil.disk_usage("/run").free
@@ -153,7 +155,7 @@ def create(target_disk: str, branding_id: str, log) -> dict[str, Any]:
                 f"RAM fallback needs {required // (1024**3)} GiB available but only "
                 f"{min(run_free, ram_free) // (1024**3)} GiB is available"
             )
-        base = Path("/run") / f"{branding_id}-rollback-{os.getpid()}"
+        base = Path("/run") / f"{branding_id}-rollback-{disk_label}-{os.getpid()}-{stamp}"
         mode = "ram"
     base.mkdir(parents=True, exist_ok=False)
     image = base / "disk.img"
