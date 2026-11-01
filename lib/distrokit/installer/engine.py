@@ -35,6 +35,8 @@ class Engine:
         self._weights: list[float] = []
         self._done_weight = 0.0
         self._current_weight = 0.0
+        self.cancel_check = cancel_check or (lambda: False)
+        self.cancelled = False
 
     # -- events ----------------------------------------------------------------
     def emit(self, event: dict[str, Any]) -> None:
@@ -71,6 +73,11 @@ class Engine:
         self.emit({"type": "plan", "steps": [{"id": s.id, "label": s.label, "critical": s.critical} for s in steps]})
         ok = True
         for i, step in enumerate(steps):
+            if self.cancel_check():
+                self.cancelled = True
+                self.emit({"type": "cancelled", "message": "Cancellation requested; restoring the original disk."})
+                ok = False
+                break
             self._step_index = i
             self._current_weight = step.weight
             self.emit({"type": "step", "id": step.id, "label": step.label, "index": i, "total": len(steps)})
@@ -78,6 +85,10 @@ class Engine:
             started = time.time()
             try:
                 step.func()
+                if self.cancel_check():
+                    self.cancelled = True
+                    self.emit({"type": "cancelled", "message": "Cancellation requested; restoring the original disk."})
+                    ok = False
             except Exception as exc:  # noqa: BLE001
                 detail = str(exc) or exc.__class__.__name__
                 self.emit({"type": "log", "line": "".join(traceback.format_exception(exc)).rstrip()})
@@ -92,6 +103,8 @@ class Engine:
             self._done_weight += step.weight
             self._current_weight = 0.0
             self._progress(0)
+            if self.cancelled:
+                break
         try:
             if ok and self.log_file is not None:
                 inst.install_log_copy(self.log_file)
