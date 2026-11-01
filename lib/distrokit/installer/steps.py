@@ -299,7 +299,7 @@ class Installation:
     # -- steps ----------------------------------------------------------------
     def steps(self) -> list[Step]:
         s = [Step("preflight", "Checking the system", self.preflight, 0.5)]
-        if self.disk_plan.destructive:
+        if self.disk_plan.destructive and self.cfg.backup:
             s.append(Step("backup", "Creating and verifying rollback snapshot", self.backup_snapshot, 5))
         s += [
             Step("mirrors", "Choosing fast mirrors", self.rank_mirrors, 1, critical=False),
