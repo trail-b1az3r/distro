@@ -368,7 +368,8 @@ class Deployer:
                     f'position = "auto", scale = {float(m["scale"]):g} }})\n'
                 )
         variables = head + "-- Default applications for the keybinds (Super+Enter, Super+E, ...).\n"
-        for key in ("terminal", "fileManager", "browser", "codeEditor", "officeSoftware", "textEditor"):
+        for key in ("terminal", "fileManager", "browser", "codeEditor", "officeSoftware", "textEditor",
+                    "volumeMixer", "taskManager"):
             if s.apps.get(key):
                 variables += f'{key} = "{_lua_str(s.apps[key])}"\n'
         for name, content in (("general.lua", general), ("variables.lua", variables)):
@@ -407,19 +408,67 @@ def _lua_str(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
+def _first_installed_launcher(installed: set[str], candidates: tuple[tuple[str, str], ...]) -> str:
+    """Build a launch_first_available command from installed distro packages.
+
+    The dots own the launcher and its fallback semantics; the distro only
+    supplies the candidates it actually has. This avoids duplicate installs.
+    """
+    import shlex
+
+    commands = [command for package, command in candidates if package in installed]
+    if not commands:
+        return ""
+    helper = "~/.config/hypr/hyprland/scripts/launch_first_available.sh"
+    return helper + " " + " ".join(shlex.quote(command) for command in commands)
+
+
 def default_apps(installed: set[str], editor_command: str = "") -> dict[str, str]:
-    """Keybind applications, only for what is actually installed. The file
-    manager is left to upstream, which opens the first one installed (Loaf,
-    then Dolphin, ...). The terminal is Alacritty, as upstream's since
-    Halcyon 2.0.3 (Ctrl+C always interrupts there, which kitty's
-    copy-on-selection broke on touchscreens), with Konsole as the fallback."""
-    apps = {"terminal": "alacritty" if "alacritty" in installed else "konsole"}
-    if "firefox" in installed:
-        apps["browser"] = "firefox"
+    """Unify dots app roles with the distro's installed tools and applications.
+
+    Candidate order is the preference order. Only packages present in the
+    installed-package inventory are emitted; when a role has no match, the
+    upstream launcher's cross-distro candidates remain in control.
+    """
+    candidates = {
+        "terminal": (
+            ("alacritty", "alacritty"), ("konsole", "konsole"), ("foot", "foot"),
+            ("kitty", "kitty -1"), ("wezterm", "wezterm"), ("gnome-console", "kgx"),
+            ("xterm", "xterm"),
+        ),
+        "fileManager": (
+            ("loaf", "loaf"), ("loaf-git", "loaf"), ("dolphin", "dolphin"),
+            ("nautilus", "nautilus"), ("nemo", "nemo"), ("thunar", "thunar"),
+        ),
+        "browser": (
+            ("firefox", "firefox"), ("zen-browser-bin", "zen-browser"),
+            ("librewolf", "librewolf"), ("brave-bin", "brave"),
+            ("chromium", "chromium"), ("microsoft-edge-stable-bin", "microsoft-edge-stable"),
+        ),
+        "officeSoftware": (
+            ("onlyoffice-bin", "onlyoffice-desktopeditors"),
+            ("libreoffice-fresh", "libreoffice"), ("libreoffice-still", "libreoffice"),
+            ("wps-office", "wps"),
+        ),
+        "textEditor": (
+            ("kate", "kate"), ("gnome-text-editor", "gnome-text-editor"),
+            ("mousepad", "mousepad"), ("micro", "micro"), ("emacs", "emacs"),
+        ),
+        "volumeMixer": (
+            ("pavucontrol-qt", "pavucontrol-qt"), ("pavucontrol", "pavucontrol"),
+        ),
+        "taskManager": (
+            ("plasma-systemmonitor", "plasma-systemmonitor --page-name Processes"),
+            ("gnome-system-monitor", "gnome-system-monitor"),
+        ),
+    }
+    apps = {}
+    for role, choices in candidates.items():
+        command = _first_installed_launcher(installed, choices)
+        if command:
+            apps[role] = command
+    # CODE_EDITOR is selected by distro configuration and installed as a feature,
+    # so it is authoritative rather than a package-name guess.
     if editor_command:
         apps["codeEditor"] = editor_command
-    if "onlyoffice-bin" in installed:
-        apps["officeSoftware"] = "onlyoffice-desktopeditors"
-    if "kate" in installed:
-        apps["textEditor"] = "kate"
     return apps
