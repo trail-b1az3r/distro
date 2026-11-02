@@ -18,7 +18,7 @@ key_file = "linux-surface.asc"
 kernel = ["linux-surface", "linux-surface-headers"]
 # iptsd: touchscreen and pen (Intel Precise Touch). libwacom-surface: pen and
 # touch device descriptions (replaces libwacom).
-support = ["iptsd", "libwacom-surface"]
+support = ["iptsd", "libwacom-surface", "touchd-dkms"]
 # Enroll linux-surface's Secure Boot MOK key (used with shim). Only offered
 # when Secure Boot is on.
 secureboot = ["linux-surface-secureboot-mok"]
