@@ -1,0 +1,31 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+# touchD Surface IPTS support, based on trail-b1az3r/hyprland-plus/touchD.
+pkgname=touchd-dkms
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="touchD: Surface IPTS DKMS driver, iptsd profile and control utility"
+arch=('x86_64')
+url="https://github.com/trail-b1az3r/hyprland-plus/tree/main/touchD"
+license=('BSD-3-Clause' 'GPL-2.0-or-later')
+depends=('dkms' 'iptsd')
+optdepends=(
+  'handwrite-input: local handwriting-to-text overlay (TrOCR)'
+  'hyprland-plus: per-application pen pressure curves, speed and tilt response'
+)
+makedepends=('git')
+install=touchd.install
+source=("intel-precise-touch::git+https://github.com/linux-surface/intel-precise-touch.git#commit=3b88a45360b4fdab85e2d4389fb4812f5867c1b7"
+        "touchdctl" "iptsd-surface-pro-5.conf")
+sha256sums=('SKIP' 'SKIP' 'SKIP')
+
+package() {
+  cd "$srcdir/intel-precise-touch"
+  install -d "$pkgdir/usr/src/ipts-$pkgver"
+  cp -a src "$pkgdir/usr/src/ipts-$pkgver/"
+  install -Dm644 Makefile "$pkgdir/usr/src/ipts-$pkgver/Makefile"
+  install -Dm644 dkms.conf "$pkgdir/usr/src/ipts-$pkgver/dkms.conf"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/intel-precise-touch/LICENSE"
+  install -Dm644 "$startdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm755 "$srcdir/touchdctl" "$pkgdir/usr/bin/touchdctl"
+  install -Dm644 "$srcdir/iptsd-surface-pro-5.conf" "$pkgdir/usr/share/touchD/iptsd-surface-pro-5.conf"
+}
