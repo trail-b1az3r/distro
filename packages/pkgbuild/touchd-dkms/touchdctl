@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONFIG="${TOUCHD_CONFIG:-/etc/iptsd.d/80-touchd-surface-pro-5.conf}"
+PROFILE="${TOUCHD_PROFILE:-/usr/share/touchD/iptsd-surface-pro-5.conf}"
+
+usage() {
+  cat <<'EOF'
+touchdctl — Surface IPTS control utility
+
+  status                 Show IPTS driver, daemon and device status
+  profile surface-pro-5  Back up and install the Surface Pro 5 iptsd profile
+  calibrate              Run iptsd-calibrate (interactive)
+  restart                Restart the detected iptsd service
+  handwriting            Launch an installed Wayland handwriting overlay
+  pen-buttons            Print the Hyprland Plus pen-button configuration guide
+EOF
+}
+
+need_root() {
+  if (( EUID != 0 )); then
+    echo "Run this command with sudo." >&2
+    exit 1
+  fi
+}
+
+case "${1:-}" in
+  status)
+    echo "Kernel: $(uname -r)"
+    if grep -qE '(^| )ipts( |$)' /proc/modules; then
+      echo "IPTS module: loaded"
+    elif grep -qE '^CONFIG_HID_IPTS=y' "/boot/config-$(uname -r)" 2>/dev/null; then
+      echo "IPTS module: built into kernel"
+    else
+      echo "IPTS module: not loaded (or built in)"
+    fi
+    if command -v iptsd-find-hidraw >/dev/null 2>&1; then
+      iptsd-find-hidraw || true
+    fi
+    if command -v iptsd-systemd >/dev/null 2>&1; then
+      iptsd-systemd -t touchscreen -i 0 -- --no-pager --full status || true
+    else
+      echo "iptsd-systemd is missing; update iptsd."
+    fi
+    ;;
+  profile)
+    [[ "${2:-}" == "surface-pro-5" ]] || { usage; exit 2; }
+    need_root
+    [[ -r "$PROFILE" ]] || { echo "touchD profile missing: $PROFILE" >&2; exit 1; }
+    install -d "$(dirname "$CONFIG")"
+    if [[ -e "$CONFIG" ]]; then
+      cp -a "$CONFIG" "$CONFIG.touchD-backup.$(date +%Y%m%d-%H%M%S)"
+    fi
+    install -Dm644 "$PROFILE" "$CONFIG"
+    echo "Installed Surface Pro 5 IPTSD profile at $CONFIG."
+    echo "Existing config was backed up if it existed. Restart with: sudo touchdctl restart"
+    ;;
+  calibrate)
+    need_root
+    command -v iptsd-calibrate >/dev/null 2>&1 || { echo "iptsd-calibrate is not installed; update iptsd." >&2; exit 1; }
+    command -v iptsd-foreach >/dev/null 2>&1 || { echo "iptsd-foreach is not installed; update iptsd." >&2; exit 1; }
+    command -v iptsd-systemd >/dev/null 2>&1 || { echo "iptsd-systemd is not installed; update iptsd." >&2; exit 1; }
+    device=$(iptsd-foreach -t touchscreen -i 0 -- echo {})
+    [[ -n "$device" ]] || { echo "Could not identify the IPTS touchscreen hidraw device." >&2; exit 1; }
+    echo "Stop the IPTS touchscreen service while collecting samples from $device."
+    iptsd-systemd -t touchscreen -i 0 -- stop
+    restart_iptsd() { iptsd-systemd -t touchscreen -i 0 -- start || true; }
+    trap restart_iptsd EXIT
+    iptsd-calibrate "$device"
+    echo
+    echo "Use the reported SizeMin, SizeMax, AspectMin and AspectMax values in:"
+    echo "  /etc/iptsd.d/90-calibration.conf"
+    echo "The IPTS service will be restarted when this command exits."
+    ;;
+  restart)
+    need_root
+    command -v iptsd-systemd >/dev/null 2>&1 || { echo "Update iptsd to get iptsd-systemd." >&2; exit 1; }
+    exec iptsd-systemd -t touchscreen -i 0 -- restart
+    ;;
+  handwriting)
+    if command -v handwrite-input-client >/dev/null 2>&1 && command -v handwrite-input >/dev/null 2>&1; then
+      if ! pgrep -u "$(id -u)" -f '[h]andwrite-input' >/dev/null 2>&1; then
+        nohup handwrite-input >/dev/null 2>&1 &
+        sleep 0.5
+      fi
+      exec handwrite-input-client show
+    elif command -v katip-ink >/dev/null 2>&1; then
+      exec katip-ink
+    else
+      echo "No handwriting overlay is installed."
+      echo "Install handwrite-input (recommended for Hyprland) or katip-ink, then run touchdctl handwriting."
+      exit 1
+    fi
+    ;;
+  pen-buttons)
+    cat <<'EOF'
+Hyprland Plus pen controls (add to ~/.config/hypr/custom/general.lua):
+
+hl.config({ input = { tablettool = {
+    eraser_button_mode = 1,
+    eraser_button_override = 331 -- BTN_STYLUS; use 332 for BTN_STYLUS2
+} } })
+
+Use hyprctl devices and wev to identify tool names and button codes.
+Other pen buttons remain available to applications.
+EOF
+    ;;
+  -h|--help|"")
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
