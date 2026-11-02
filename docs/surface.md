@@ -65,8 +65,10 @@ recognised by its firmware SKU and shown as *Surface Pro (5th Gen)*. Notes:
 * **Display**: 2736 × 1824 at 12.3"; the installer suggests a scale of 2
   (a 1368 × 912 desktop, like Windows' 200 %). Change it in
   `~/.config/hypr/custom/general.lua` (1.6 or 1.75 fit more on screen).
-* **Touchscreen and pen** (IPTS) need the Surface kernel, which the installer
-  pre-selects.
+* **Touchscreen and pen** (IPTS) use the Surface kernel and `iptsd`. Nexora also
+  installs `touchd-dkms`: the upstream IPTS DKMS fallback, `touchdctl`, and
+  the Surface Pro 5 tuning profile. If the selected kernel already contains
+  IPTS, the package detects that and skips the duplicate DKMS module.
 * **Secure Boot** can be turned back on after installing with your own keys:
   the installer's *Secure Boot* option sets that up with `sbctl`.
 
