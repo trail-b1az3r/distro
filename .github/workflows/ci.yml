@@ -76,9 +76,9 @@ jobs:
       - name: Build the distribution's packages (runs their check())
         run: |
           PYTHONPATH=lib python -m distrokit.build.packages render --out build/pkgbuild
-          # Ensure each CI snapshot outranks the same package from the stable
-          # release repository, even when PKGVER has not changed.
-          sed -i "s/^pkgrel=1$/pkgrel=${GITHUB_RUN_NUMBER}/" build/pkgbuild/distro/PKGBUILD
+          # Every rolling snapshot must outrank the stable release package,
+          # including templates whose stable pkgrel has been bumped above 1.
+          sed -i "s/^pkgrel=.*/pkgrel=${GITHUB_RUN_NUMBER}/" build/pkgbuild/distro/PKGBUILD
           chown -R builder build
           for dir in build/pkgbuild/*/; do
             case "$dir" in */python315-pip/|*/write/|*/touchd-dkms/) continue ;; esac
@@ -146,7 +146,7 @@ jobs:
       - name: Assemble repository files
         run: |
           mkdir -p build/experiments-input
-          find build/pkgbuild -type f -name '*.pkg.tar.zst' -exec cp {} build/experiments-input/ \;
+          find build/pkgbuild -type f -name '*.pkg.tar.zst' -exec cp {} build/experiments-input/ ;
           test -n "$(find build/experiments-input -name '*.pkg.tar.zst' -print -quit)"
           scripts/publish-repo.sh build/experiments-input build/experiments-assets nexora-experiments
       - name: Publish rolling experimental repository
