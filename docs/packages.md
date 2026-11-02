@@ -6,7 +6,8 @@
 2. **EndeavourOS** (`[endeavouros]`) — its keyring, mirror list and tools.
 3. **The distribution repository** (`[nexora]`) — this distribution's own
    packages (`nexora-core`, `-desktop`, `-branding`, `-welcome`, `-installer`,
-   `-ai`, the Google Sans Flex font) and prebuilt AUR packages the desktop and
+   `-ai`, the Google Sans Flex font, and `touchd-dkms` for Surface
+   touchscreen and pen support) and prebuilt AUR packages the desktop and
    drivers need (the illogical-impulse meta packages, Quickshell, fonts,
    themes, the NVIDIA 580 legacy driver, llama.cpp). Built reproducibly from
    this repository (see [iso-building.md](iso-building.md)).
