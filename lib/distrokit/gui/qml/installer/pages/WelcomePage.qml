@@ -29,6 +29,15 @@ ColumnLayout {
         }
         Text {
             Layout.alignment: Qt.AlignHCenter
+            visible: brandInfo.codename !== ""
+            text: qsTr("%1 release").arg(brandInfo.codename)
+            color: Theme.accent
+            font.pixelSize: Theme.textLarge
+            font.weight: Font.DemiBold
+            horizontalAlignment: Text.AlignHCenter
+        }
+        Text {
+            Layout.alignment: Qt.AlignHCenter
             Layout.maximumWidth: 640
             text: brandInfo.tagline
             color: Theme.muted
