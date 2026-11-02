@@ -148,7 +148,7 @@ jobs:
           mkdir -p build/experiments-input
           find build/pkgbuild -type f -name '*.pkg.tar.zst' -exec cp -t build/experiments-input -- {} +
           test -n "$(find build/experiments-input -name '*.pkg.tar.zst' -print -quit)"
-          scripts/publish-repo.sh build/experiments-input build/experiments-assets nexora-experiments
+          bash -x scripts/publish-repo.sh build/experiments-input build/experiments-assets nexora-experiments
       - name: Publish rolling experimental repository
         env:
           GH_TOKEN: ${{ github.token }}
