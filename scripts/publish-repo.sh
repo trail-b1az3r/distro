@@ -79,7 +79,8 @@ fi
 
 stage="repo-add"
 db_archive="$out/$repo.db.tar.gz"
-repo-add --wait-for-lock "${sign_args[@]}" "$db_archive" "${pkgs[@]}"
+# repo-add does not support --wait-for-lock; pass only its supported options.
+repo-add "${sign_args[@]}" "$db_archive" "${pkgs[@]}"
 [[ -s "$db_archive" ]] || {
     echo "repo-add completed without creating the required database: $db_archive" >&2
     exit 1
