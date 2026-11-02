@@ -17,7 +17,7 @@ for f in "$src"/*.pkg.tar.*; do
     [[ -e "$f.sig" ]] && cp "$f.sig" "$out/$safe.sig"
     pkgs+=("$out/$safe")
 done
-(("${#pkgs[@]}")) || { echo "no packages in $src" >&2; exit 1; }
+(( ${#pkgs[@]} )) || { echo "no packages in $src" >&2; exit 1; }
 sign=()
 [[ -n "${GPGKEY:-}" ]] && sign=(--sign --key "$GPGKEY")
 repo-add "${sign[@]}" "$out/$repo.db.tar.gz" "${pkgs[@]}"
