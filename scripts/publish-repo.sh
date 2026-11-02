@@ -2,9 +2,31 @@
 # Prepare a pacman repository for GitHub Releases (regular files, no symlinks).
 set -Eeuo pipefail
 
+stage="startup"
+on_error() {
+    local status=$?
+    local line="${BASH_LINENO[0]:-unknown}"
+    local source="${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}"
+    local command="${BASH_COMMAND:-unknown command}"
+
+    # Prevent recursive ERR handling while reporting the original failure.
+    trap - ERR
+    printf 'publish-repo.sh: ERROR: stage="%s" failed with exit status %d at %s:%s\n' \
+        "$stage" "$status" "$source" "$line" >&2
+    printf 'publish-repo.sh: command: %s\n' "$command" >&2
+    exit "$status"
+}
+trap on_error ERR
+
+fail() {
+    printf 'publish-repo.sh: ERROR: stage="%s": %s\n' "$stage" "$*" >&2
+    exit 1
+}
+
 src_arg="${1:?usage: publish-repo.sh <repo-dir> <out-dir> [repo-name]}"
 out_arg="${2:?usage: publish-repo.sh <repo-dir> <out-dir> [repo-name]}"
 
+stage="resolve paths"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 repo_root="$(cd -- "$script_dir/.." && pwd -P)"
 cd "$repo_root"
@@ -20,33 +42,17 @@ src="$(resolve_path "$src_arg")"
 out="$(resolve_path "$out_arg")"
 repo="${3:-}"
 
+stage="validate inputs"
 if [[ -z "$repo" ]]; then
     # shellcheck disable=SC1091
     . "$repo_root/distro.conf"
     repo="$DISTRO_REPO_NAME"
 fi
-[[ "$repo" =~ ^[A-Za-z0-9._-]+$ ]] || {
-    echo "invalid repository name: $repo" >&2
-    exit 1
-}
-[[ -d "$src" ]] || {
-    echo "package input directory does not exist: $src" >&2
-    exit 1
-}
-command -v repo-add >/dev/null 2>&1 || {
-    echo "repo-add is missing; install the pacman package before publishing" >&2
-    exit 1
-}
+[[ "$repo" =~ ^[A-Za-z0-9._-]+$ ]] || fail "invalid repository name: $repo"
+[[ -d "$src" ]] || fail "package input directory does not exist: $src"
+command -v repo-add >/dev/null 2>&1 || fail "repo-add is missing; install the pacman package before publishing"
 
 stage="prepare package files"
-on_error() {
-    local status=$?
-    printf 'publish-repo.sh: failed during %s (exit %s): %s\n' \
-        "$stage" "$status" "$BASH_COMMAND" >&2
-    exit "$status"
-}
-trap on_error ERR
-
 rm -rf -- "$out"
 mkdir -p -- "$out"
 
@@ -65,12 +71,8 @@ for f in "$src"/*.pkg.tar.*; do
     pkgs+=("$out/$safe")
 done
 
-if (( ${#pkgs[@]} == 0 )); then
-    echo "no package archives found in $src" >&2
-    exit 1
-fi
-
-printf 'Preparing %d package(s) for repository %s\n' "${#pkgs[@]}" "$repo"
+(( ${#pkgs[@]} > 0 )) || fail "no package archives found in $src"
+printf 'Prepared %d package(s) for repository %s\n' "${#pkgs[@]}" "$repo"
 
 sign_args=()
 if [[ -n "${GPGKEY:-}" ]]; then
@@ -79,12 +81,11 @@ fi
 
 stage="repo-add"
 db_archive="$out/$repo.db.tar.gz"
+printf 'Running repo-add; database: %s; package count: %d\n' "$db_archive" "${#pkgs[@]}"
 # repo-add does not support --wait-for-lock; pass only its supported options.
+# Keep repo-add's stdout/stderr visible in the Actions log for diagnosis.
 repo-add "${sign_args[@]}" "$db_archive" "${pkgs[@]}"
-[[ -s "$db_archive" ]] || {
-    echo "repo-add completed without creating the required database: $db_archive" >&2
-    exit 1
-}
+[[ -s "$db_archive" ]] || fail "repo-add returned success but did not create the required database: $db_archive"
 
 # Pacman needs the .db database. The .files database is useful to optional
 # clients, but is not required to install packages; do not fail publication
@@ -100,13 +101,12 @@ for kind in db files; do
             cp -f -- "$archive.sig" "$alias.sig"
         fi
     elif [[ "$kind" == db ]]; then
-        echo "required pacman database was not generated: $archive" >&2
-        exit 1
+        fail "required pacman database was not generated: $archive"
     else
-        echo "repo-add did not emit the optional file-list database; continuing" >&2
+        printf 'publish-repo.sh: warning: repo-add did not emit optional file-list database %s; continuing\n' "$archive" >&2
     fi
 done
 
 stage="count published files"
 count="$(find "$out" -maxdepth 1 -type f | wc -l)"
-echo "$count files ready in $out"
+printf '%s files ready in %s\n' "$count" "$out"
