@@ -146,7 +146,7 @@ jobs:
       - name: Assemble repository files
         run: |
           mkdir -p build/experiments-input
-          find build/pkgbuild -type f -name '*.pkg.tar.zst' -exec cp {} build/experiments-input/ \\;
+          find build/pkgbuild -type f -name '*.pkg.tar.zst' -exec cp -t build/experiments-input -- {} +
           test -n "$(find build/experiments-input -name '*.pkg.tar.zst' -print -quit)"
           scripts/publish-repo.sh build/experiments-input build/experiments-assets nexora-experiments
       - name: Publish rolling experimental repository
