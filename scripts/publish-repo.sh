@@ -1,20 +1,10 @@
 #!/usr/bin/env bash
-# Prepare the distribution repository for hosting as GitHub release assets
-# (DISTRO_REPO_SERVER in distro.conf points at a release named "repo").
-#
-#   scripts/publish-repo.sh build/repo out/repo-assets
-#
-# GitHub renames ':' in asset names, which package files with an epoch
-# (1:2.0-1) contain, and cannot store symlinks. This copies the packages
-# with ':' replaced, rebuilds the database for the new names (pacman only
-# needs the name recorded in the database), and writes real files for
-# <repo>.db and <repo>.files. With GPGKEY set, the database is signed.
+# Prepare a pacman repository for GitHub Releases (regular files, no symlinks).
 set -euo pipefail
+src="${1:?usage: publish-repo.sh <repo-dir> <out-dir> [repo-name]}"
+out="${2:?usage: publish-repo.sh <repo-dir> <out-dir> [repo-name]}"
 cd "$(dirname "$(readlink -f "$0")")/.."
-src="${1:?usage: publish-repo.sh <repo-dir> <out-dir>}"
-out="${2:?usage: publish-repo.sh <repo-dir> <out-dir>}"
-# shellcheck disable=SC1091
-repo="$(. ./distro.conf && echo "$DISTRO_REPO_NAME")"
+repo="${3:-$(. ./distro.conf && echo "$DISTRO_REPO_NAME")}"
 rm -rf "$out"
 mkdir -p "$out"
 shopt -s nullglob
@@ -27,7 +17,7 @@ for f in "$src"/*.pkg.tar.*; do
     [[ -e "$f.sig" ]] && cp "$f.sig" "$out/$safe.sig"
     pkgs+=("$out/$safe")
 done
-((${#pkgs[@]})) || { echo "no packages in $src" >&2; exit 1; }
+(("${#pkgs[@]}")) || { echo "no packages in $src" >&2; exit 1; }
 sign=()
 [[ -n "${GPGKEY:-}" ]] && sign=(--sign --key "$GPGKEY")
 repo-add "${sign[@]}" "$out/$repo.db.tar.gz" "${pkgs[@]}"
