@@ -23,7 +23,7 @@ depends=(
   aquamarine cairo glib2 glslang hyprcursor hyprgraphics hyprland-guiutils
   hyprlang hyprutils hyprwire lcms2 libcanberra libdrm libei libglvnd
   libinput libx11 libxcb libxcomposite libxcursor libxfixes libxkbcommon
-  libxrender lua mesa muparser opengl-driver pango pixman re2 sdbus-c++
+  libxrender lua mesa muparser pango pixman re2 sdbus-cpp
   tomlplusplus util-linux-libs wayland wayland-protocols xcb-proto xcb-util
   xcb-util-errors xcb-util-image xcb-util-keysyms xcb-util-renderutil
   xcb-util-wm xorg-xwayland
