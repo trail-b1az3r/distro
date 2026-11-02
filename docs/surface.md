@@ -32,7 +32,9 @@ When Surface support is enabled, Nexora installs `touchd-dkms` alongside
 installed kernel and skips DKMS when IPTS is already built in or supplied by
 the kernel, so it does not stack a second driver over the in-tree one.
 
-On a Surface Pro 5, apply the tuned contact/palm/pen profile and restart IPTSD:
+On a Surface Pro 5, package installation automatically enables the tuned
+contact/palm/pen profile if no administrator profile already exists. On an
+existing install, you can apply it manually and restart IPTSD:
 
 ```bash
 sudo touchdctl profile surface-pro-5
