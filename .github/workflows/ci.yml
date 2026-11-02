@@ -7,6 +7,12 @@ on:
     branches: [main, "claude/**"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      reuse_last_arch_packages:
+        description: "Reuse the latest successful CI run's Arch package artifact and only publish/check the upload"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -17,6 +23,7 @@ concurrency:
 
 jobs:
   lint:
+    if: if: github.event_name != 'workflow_dispatch' || inputs.reuse_last_arch_packages != true
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +41,7 @@ jobs:
         run: scripts/check.sh
 
   tests:
+    if: if: github.event_name != 'workflow_dispatch' || inputs.reuse_last_arch_packages != true
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +66,7 @@ jobs:
         run: PYTHONPATH=lib python -m distrokit.build.branding
 
   arch:
+    if: if: github.event_name != 'workflow_dispatch' || inputs.reuse_last_arch_packages != true
     name: Arch Linux packages
     runs-on: ubuntu-24.04
     container:
@@ -142,7 +151,14 @@ jobs:
   publish-experiments:
     name: Publish nexora-experiments pacman source
     needs: [lint, tests, arch]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: >-
+      always() &&
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
+      (
+        inputs.reuse_last_arch_packages == true ||
+        (needs.lint.result == 'success' && needs.tests.result == 'success' && needs.arch.result == 'success')
+      )
     runs-on: ubuntu-24.04
     container:
       image: archlinux:base-devel
@@ -153,10 +169,50 @@ jobs:
       - name: Install publishing tools
         run: pacman -Syu --noconfirm --needed git github-cli pacman-contrib
       - uses: actions/checkout@v4
+      - name: Find latest successful Arch package artifact
+        id: previous
+        if: inputs.reuse_last_arch_packages == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&status=success&per_page=30" --jq '.workflow_runs[].id')"
+          selected=""
+          for run_id in $runs; do
+            [ "$run_id" = "$GITHUB_RUN_ID" ] && continue
+            artifact_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts" \
+              --jq '.artifacts[] | select(.name == "packages" and .expired == false) | .id' | head -n1)"
+            if [ -n "$artifact_id" ]; then
+              selected="$run_id"
+              echo "Found packages artifact in successful run $run_id (artifact $artifact_id)."
+              break
+            fi
+          done
+          if [ -z "$selected" ]; then
+            echo "::error::No unexpired packages artifact found in the last 30 successful CI runs on main."
+            exit 1
+          fi
+          echo "run_id=$selected" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v4
+        if: inputs.reuse_last_arch_packages == true
         with:
           name: packages
           path: build/pkgbuild
+          run-id: ${{ steps.previous.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        if: inputs.reuse_last_arch_packages != true
+        with:
+          name: packages
+          path: build/pkgbuild
+      - name: Verify package artifact
+        run: |
+          count="$(find build/pkgbuild -type f -name '*.pkg.tar.zst' | wc -l)"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::The selected packages artifact contains no Arch package archives."
+            find build/pkgbuild -maxdepth 3 -type f -print
+            exit 1
+          fi
+          echo "Verified $count Arch package archives for publication."
       - name: Assemble repository files
         run: |
           mkdir -p build/experiments-input
