@@ -9,7 +9,6 @@ url="https://github.com/trail-b1az3r/hyprland-plus/tree/main/touchD"
 license=('BSD-3-Clause' 'GPL-2.0-or-later')
 depends=('dkms' 'iptsd')
 optdepends=(
-  'handwrite-input: local handwriting-to-text overlay (TrOCR)'
   'hyprland-plus: per-application pen pressure curves, speed and tilt response'
 )
 makedepends=('git')
