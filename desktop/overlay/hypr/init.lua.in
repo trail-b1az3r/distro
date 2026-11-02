@@ -22,6 +22,11 @@ local function load_env_file(path)
     f:close()
 end
 
+-- Halcyon dotfile installer: keep Nexora's distro-owned Fastfetch logo/config.
+-- Set this in the compositor environment so graphical apps and update helpers
+-- inherit it even when they are not launched from a login shell.
+hl.env("HALCYON_FASTFETCH_LOGO_OVERRIDE", "0")
+
 -- Graphics driver environment, written by `@DISTRO_CLI@ gpu configure`
 -- (for example AQ_DRM_DEVICES on hybrid laptops, LIBVA_DRIVER_NAME on NVIDIA).
 load_env_file("/etc/@DISTRO_ID@/gpu.env")
