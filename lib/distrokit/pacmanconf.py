@@ -10,7 +10,7 @@ import urllib.request
 
 from .branding import Branding, load as load_branding
 
-OPTIONS = """\\
+OPTIONS = """\
 [options]
 HoldPkg     = pacman glibc
 Architecture = auto
@@ -29,12 +29,12 @@ def distro_repo_block(branding: Branding, enabled: bool = True) -> str:
     if not server:
         return ""
     sig = "Required DatabaseOptional" if branding.get("DISTRO_REPO_KEY_ID") else branding.get("DISTRO_REPO_SIGLEVEL_UNSIGNED", "Optional TrustAll")
-    block = f"[{branding.repo_name}]\\nSigLevel = {sig}\\nServer = {server}\\n"
+    block = f"[{branding.repo_name}]\nSigLevel = {sig}\nServer = {server}\n"
     if enabled:
-        return block + "\\n"
-    return (f"# {server} has no {branding.repo_name}.db yet, so the {branding.repo_name} repository is off.\\n"
-            f"# `sudo {branding.cli} repair packages` turns it on once it is published.\\n"
-            + "".join(f"#{line}\\n" for line in block.splitlines()) + "\\n")
+        return block + "\n"
+    return (f"# {server} has no {branding.repo_name}.db yet, so the {branding.repo_name} repository is off.\n"
+            f"# `sudo {branding.cli} repair packages` turns it on once it is published.\n"
+            + "".join(f"#{line}\n" for line in block.splitlines()) + "\n")
 
 
 def experiments_repo_block(branding: Branding, enabled: bool = True) -> str:
@@ -42,8 +42,8 @@ def experiments_repo_block(branding: Branding, enabled: bool = True) -> str:
     if not home:
         return ""
     server = f"{home}/releases/download/nexora-experiments"
-    block = f"[nexora-experiments]\\nSigLevel = Optional TrustAll\\nServer = {server}\\n"
-    return block + ("\\n" if enabled else "")
+    block = f"[nexora-experiments]\nSigLevel = Optional TrustAll\nServer = {server}\n"
+    return block + ("\n" if enabled else "")
 
 
 def set_experiments_repo(text: str, enabled: bool, branding: Branding | None = None) -> str:
@@ -99,9 +99,9 @@ def set_distro_repo(text: str, enabled: bool, branding: Branding | None = None) 
     if at is None:
         at = next((i for i, line in enumerate(lines) if line.strip() == "[endeavouros]"), len(lines))
         if at == len(lines) and lines and lines[-1].strip():
-            block = "\\n" + block
+            block = "\n" + block
         return "".join(lines[:at]) + block + "".join(lines[at:])
-    notes = {line + "\\n" for line in distro_repo_block(branding, False).splitlines() if line.startswith("# ")}
+    notes = {line + "\n" for line in distro_repo_block(branding, False).splitlines() if line.startswith("# ")}
     start = at
     while start > 0 and lines[start - 1] in notes:
         start -= 1
@@ -120,20 +120,20 @@ def render(kind: str, branding: Branding | None = None, *, offline_repo: str = "
         raise ValueError(kind)
     options = OPTIONS
     if kind in ("target", "live", "offline"):
-        options = options.replace("ParallelDownloads = 5\\n", "ParallelDownloads = 5\\nDownloadUser = alpm\\n")
-    out = [f"# pacman configuration for {branding.pretty_name} ({kind}).\\n# See pacman.conf(5).\\n\\n", options, "\\n"]
+        options = options.replace("ParallelDownloads = 5\n", "ParallelDownloads = 5\nDownloadUser = alpm\n")
+    out = [f"# pacman configuration for {branding.pretty_name} ({kind}).\n# See pacman.conf(5).\n\n", options, "\n"]
     local_name = f"{branding.repo_name}-offline"
     if kind in ("live", "offline", "build") and offline_repo:
-        out.append(f"[{local_name}]\\nSigLevel = Optional TrustAll\\nServer = file://{offline_repo}\\n\\n")
+        out.append(f"[{local_name}]\nSigLevel = Optional TrustAll\nServer = file://{offline_repo}\n\n")
     if kind == "offline":
         return "".join(out)
     if kind == "target" or (kind == "live" and not offline_repo):
         out.append(distro_repo_block(branding, distro_repo))
-    out.append("[endeavouros]\\nSigLevel = PackageRequired\\nInclude = /etc/pacman.d/endeavouros-mirrorlist\\n\\n")
+    out.append("[endeavouros]\nSigLevel = PackageRequired\nInclude = /etc/pacman.d/endeavouros-mirrorlist\n\n")
     repos = ["core", "extra"] + (["multilib"] if multilib else [])
     for repo in repos:
         if kind == "build" and archive_date:
-            out.append(f"[{repo}]\\nServer = https://archive.archlinux.org/repos/{archive_date}/$repo/os/$arch\\n\\n")
+            out.append(f"[{repo}]\nServer = https://archive.archlinux.org/repos/{archive_date}/$repo/os/$arch\n\n")
         else:
-            out.append(f"[{repo}]\\nInclude = /etc/pacman.d/mirrorlist\\n\\n")
-    return "".join(out).rstrip("\\n") + "\\n"
+            out.append(f"[{repo}]\nInclude = /etc/pacman.d/mirrorlist\n\n")
+    return "".join(out).rstrip("\n") + "\n"
