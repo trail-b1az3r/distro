@@ -8,7 +8,7 @@ def test_surface_detected_and_recommended(machine):
     info = surface.detect(r)
     assert info.detected and info.recommended and not info.needs_marvell_firmware
     sp = surface.plan(info, enabled=True)
-    assert {"linux-surface", "linux-surface-headers", "iptsd"} <= set(sp.packages)
+    assert {"linux-surface", "linux-surface-headers", "iptsd", "libwacom-surface", "touchd-dkms"} <= set(sp.packages)
     assert sp.default_kernel == "linux-surface"
     assert "[linux-surface]" in sp.repo_block
 
