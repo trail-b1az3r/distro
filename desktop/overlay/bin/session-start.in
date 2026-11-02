@@ -32,7 +32,7 @@ if [[ -e /etc/@DISTRO_ID@/live ]]; then
 fi
 
 # Make the session's PATH (with ~/.local/bin) visible to user services.
-systemctl --user import-environment PATH WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE 2>/dev/null || true
+systemctl --user import-environment PATH HALCYON_FASTFETCH_LOGO_OVERRIDE WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE 2>/dev/null || true
 
 # Setup tasks left over from an offline installation (no-op when none).
 @DISTRO_CLI@ setup resume --background >/dev/null 2>&1 &
