@@ -28,7 +28,11 @@ def distro_repo_block(branding: Branding, enabled: bool = True) -> str:
     server = branding.get("DISTRO_REPO_SERVER")
     if not server:
         return ""
-    sig = "Required DatabaseOptional" if branding.get("DISTRO_REPO_KEY_ID") else branding.get("DISTRO_REPO_SIGLEVEL_UNSIGNED", "Optional TrustAll")
+    sig = (
+        "Required DatabaseOptional"
+        if branding.get("DISTRO_REPO_KEY_ID")
+        else branding.get("DISTRO_REPO_SIGLEVEL_UNSIGNED", "Optional TrustAll")
+    )
     block = f"[{branding.repo_name}]\nSigLevel = {sig}\nServer = {server}\n"
     if enabled:
         return block + "\n"
