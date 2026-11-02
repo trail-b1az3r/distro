@@ -304,8 +304,14 @@ def cmd_experiments(a) -> int:
         print(S.fail(str(exc)), file=sys.stderr)
         return 1
     state = "enabled" if a.action == "enable" else "disabled"
-    print(S.ok("Experimental CI packages " + state + (": " + ", ".join(enabled) if enabled else " for all components.")))
-    print(S.info(f"Run `{B.cli} update` to install the latest successful CI packages."))
+    if a.action == "enable":
+        sync = util.Runner(log=print).run(["pacman", "-Sy"], terminal=True)
+        if sync.returncode:
+            print(S.fail("The experimental source was enabled, but pacman could not refresh its databases."), file=sys.stderr)
+            return sync.returncode
+    print(S.ok("Experimental pacman source " + state + (": " + ", ".join(enabled) if enabled else " for all components.")))
+    if enabled:
+        print(S.info(f"Run `sudo pacman -Syu` or `{B.cli} update` to install packages from the experimental source."))
     return 0
 
 
