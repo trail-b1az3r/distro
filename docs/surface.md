@@ -24,6 +24,49 @@ sudo nexora surface enable --secure-boot   # also the MOK key package (for shim 
 sudo nexora surface disable        # back to the regular kernel (the repository is kept)
 ```
 
+## touchD controls
+
+When Surface support is enabled, Nexora installs `touchd-dkms` alongside
+`iptsd` and `libwacom-surface`. It provides the IPTS DKMS fallback, the
+`touchdctl` utility and a Surface Pro 5 profile. The package checks each
+installed kernel and skips DKMS when IPTS is already built in or supplied by
+the kernel, so it does not stack a second driver over the in-tree one.
+
+On a Surface Pro 5, apply the tuned contact/palm/pen profile and restart IPTSD:
+
+```bash
+sudo touchdctl profile surface-pro-5
+sudo touchdctl restart
+touchdctl status
+```
+
+Other controls:
+
+- `sudo touchdctl calibrate` runs the upstream IPTS calibration tool; put the
+  measured values in `/etc/iptsd.d/90-calibration.conf`.
+- `touchdctl pen-buttons` prints the Hyprland Plus pen-button mapping guide.
+- `touchdctl handwriting` opens an installed handwriting overlay. The
+  optional `handwrite-input` frontend uses local TrOCR recognition; its first
+  run downloads model weights. It is not installed by default.
+- Hyprland Plus 0.57.0.p2 supports app-scoped pen pressure curves and optional
+  speed/tilt modulation. These apply to Krita, GIMP, Inkscape, MyPaint and
+  Blender, not general desktop input. For example:
+
+```ini
+input {
+    tablettool {
+        pressure_curve = soft
+        pressure_speed = 0.15
+        pressure_tilt = 0.10
+    }
+}
+```
+
+The DKMS module is a fallback, not a promise that unsupported kernels can be
+patched at runtime. A kernel without the IPTS prerequisites may reject the
+build; in that case the existing input stack is left alone and DKMS reports
+the failure.
+
 ## Starting the ISO
 
 Surface firmware only starts unsigned systems with Secure Boot off:
