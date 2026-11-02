@@ -89,7 +89,7 @@ class InstallConfig:
     kernel_params: list[str] = field(default_factory=list)  # extra kernel parameters, e.g. console=ttyS0,115200
     rank_mirrors: bool = True
     offline: bool = False  # never touch the network (offline repository only)
-    backup: bool = True  # create a verified rollback image before destructive installs
+    backup: bool = False  # backups are opt-in; never block installation by default
 
     # -- (de)serialisation ---------------------------------------------------
     def to_dict(self, redact: bool = False) -> dict[str, Any]:
