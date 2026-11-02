@@ -1,0 +1,33 @@
+post_install() {
+  # Install for every kernel already present in the target, not just uname -r:
+  # package installation may be running inside the live ISO's chroot.
+  local module_dir kernel module_path
+  dkms add -m ipts -v 1.0.0 >/dev/null 2>&1 || true
+  for module_dir in /usr/lib/modules/*; do
+    [[ -d "$module_dir" ]] || continue
+    kernel="${module_dir##*/}"
+    if grep -q '^CONFIG_HID_IPTS=y' "/boot/config-$kernel" 2>/dev/null; then
+      echo "touchD: IPTS is built into $kernel; DKMS build skipped."
+      continue
+    fi
+    module_path="$(modinfo -k "$kernel" -F filename ipts 2>/dev/null || true)"
+    if [[ -n "$module_path" && "$module_path" == *"/kernel/"* ]]; then
+      echo "touchD: using the kernel-provided IPTS module for $kernel; DKMS build skipped."
+      continue
+    fi
+    if [[ -d "$module_dir/build" ]]; then
+      dkms install -m ipts -v 1.0.0 -k "$kernel" || \
+        echo "touchD: IPTS DKMS build failed for $kernel; check linux-surface patches and headers."
+    else
+      echo "touchD: headers missing for $kernel; install matching headers and run: sudo dkms install -m ipts -v 1.0.0 -k $kernel"
+    fi
+  done
+}
+
+post_upgrade() {
+  post_install
+}
+
+pre_remove() {
+  dkms remove -m ipts -v 1.0.0 --all >/dev/null 2>&1 || true
+}
