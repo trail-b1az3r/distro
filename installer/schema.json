@@ -114,8 +114,8 @@
     },
     "backup": {
       "type": "boolean",
-      "description": "Create a verified rollback disk image before destructive installation",
-      "default": true
+      "description": "Optionally create a verified rollback disk image before destructive installation; disabled by default",
+      "default": false
     }
   },
   "$defs": {
