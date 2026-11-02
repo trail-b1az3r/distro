@@ -1,7 +1,17 @@
 post_install() {
   # Install for every kernel already present in the target, not just uname -r:
   # package installation may be running inside the live ISO's chroot.
-  local module_dir kernel module_path
+  local module_dir kernel module_path sku
+  # Enable the tuned drop-in automatically on the Surface Pro 5 family only.
+  # Never replace an existing administrator configuration.
+  sku="$(cat /sys/class/dmi/id/product_sku 2>/dev/null || true)"
+  if [[ "$sku" == "Surface_Pro_1796" || "$sku" == "Surface_Pro_1807" ]]; then
+    if [[ ! -e /etc/iptsd.d/80-touchd-surface-pro-5.conf ]]; then
+      install -Dm644 /usr/share/touchD/iptsd-surface-pro-5.conf \
+        /etc/iptsd.d/80-touchd-surface-pro-5.conf
+      echo "touchD: enabled the Surface Pro 5 IPTSD profile."
+    fi
+  fi
   dkms add -m ipts -v 1.0.0 >/dev/null 2>&1 || true
   for module_dir in /usr/lib/modules/*; do
     [[ -d "$module_dir" ]] || continue
