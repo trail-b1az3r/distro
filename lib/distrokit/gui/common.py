@@ -57,6 +57,7 @@ def brand_info(b: Branding) -> dict[str, str]:
     return {
         "name": b.name,
         "prettyName": b.pretty_name,
+        "codename": b.get("ISO_CODENAME"),
         "id": b.id,
         "cli": b.cli,
         "tagline": b.get("DISTRO_TAGLINE"),
