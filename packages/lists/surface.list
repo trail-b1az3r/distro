@@ -1,0 +1,2 @@
+# Microsoft Surface support package set; enabled only by the Surface hardware plan.
+touchd-dkms
