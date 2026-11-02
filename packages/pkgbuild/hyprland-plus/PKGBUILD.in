@@ -6,13 +6,15 @@
 # is the one the dots' release notes name (desktop/dots/docs/releases), pinned
 # by commit; bump _commit and pkgver with the dots submodule. Dependencies and
 # build follow Arch's hyprland package for the same Hyprland release.
+# Rebuild this package when Aquamarine changes its SONAME: the compositor must
+# be linked against the same libaquamarine ABI that pacman installs.
 # Generated from packages/pkgbuild/hyprland-plus/PKGBUILD.in.
 
 pkgname=hyprland-plus
 _commit=1e1ba0b83d4112702e83b20b31219199b8609588
 _udis86=5336633af70f3917760a6d441ff02d93477b0c86
 pkgver=0.57.0.p2
-pkgrel=1
+pkgrel=2
 pkgdesc="Hyprland with Halcyon windows, renderer effects, app-scoped pen pressure curves and touchD support"
 arch=(x86_64)
 url="https://github.com/trail-b1az3r/hyprland-plus"
@@ -21,7 +23,7 @@ depends=(
   aquamarine cairo glib2 glslang hyprcursor hyprgraphics hyprland-guiutils
   hyprlang hyprutils hyprwire lcms2 libcanberra libdrm libei libglvnd
   libinput libx11 libxcb libxcomposite libxcursor libxfixes libxkbcommon
-  libxrender lua mesa muparser opengl-driver pango pixman re2 sdbus-cpp
+  libxrender lua mesa muparser opengl-driver pango pixman re2 sdbus-c++ 
   tomlplusplus util-linux-libs wayland wayland-protocols xcb-proto xcb-util
   xcb-util-errors xcb-util-image xcb-util-keysyms xcb-util-renderutil
   xcb-util-wm xorg-xwayland
