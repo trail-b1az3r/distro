@@ -2,7 +2,7 @@
 # touchD Surface IPTS support, based on trail-b1az3r/hyprland-plus/touchD.
 pkgname=touchd-dkms
 pkgver=1.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc="touchD: Surface IPTS DKMS driver, iptsd profile and control utility"
 arch=('x86_64')
 url="https://github.com/trail-b1az3r/hyprland-plus/tree/main/touchD"
@@ -24,6 +24,8 @@ package() {
   cp -a src "$pkgdir/usr/src/ipts-$pkgver/"
   install -Dm644 Makefile "$pkgdir/usr/src/ipts-$pkgver/Makefile"
   install -Dm644 dkms.conf "$pkgdir/usr/src/ipts-$pkgver/dkms.conf"
+  # Never build for a kernel that has its own IPTS driver (linux-surface): the copy in /updates would shadow it.
+  echo 'BUILD_EXCLUSIVE_CONFIG="!CONFIG_HID_IPTS"' >> "$pkgdir/usr/src/ipts-$pkgver/dkms.conf"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/intel-precise-touch/LICENSE"
   install -Dm644 "$startdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm755 "$srcdir/touchdctl" "$pkgdir/usr/bin/touchdctl"

@@ -1,37 +1,43 @@
-post_install() {
-  # Install for every kernel already present in the target, not just uname -r:
-  # package installation may be running inside the live ISO's chroot.
-  local module_dir kernel module_path sku
-  # Enable the tuned drop-in automatically on the Surface Pro 5 family only.
-  # Never replace an existing administrator configuration.
-  sku="$(cat /sys/class/dmi/id/product_sku 2>/dev/null || true)"
-  if [[ "$sku" == "Surface_Pro_1796" || "$sku" == "Surface_Pro_1807" ]]; then
-    if [[ ! -e /etc/iptsd.d/80-touchd-surface-pro-5.conf ]]; then
-      install -Dm644 /usr/share/touchD/iptsd-surface-pro-5.conf \
-        /etc/iptsd.d/80-touchd-surface-pro-5.conf
-      echo "touchD: enabled the Surface Pro 5 IPTSD profile."
-    fi
-  fi
-  dkms add -m ipts -v 1.0.0 >/dev/null 2>&1 || true
-  for module_dir in /usr/lib/modules/*; do
-    [[ -d "$module_dir" ]] || continue
-    kernel="${module_dir##*/}"
-    if grep -q '^CONFIG_HID_IPTS=y' "/boot/config-$kernel" 2>/dev/null; then
-      echo "touchD: IPTS is built into $kernel; DKMS build skipped."
-      continue
-    fi
-    module_path="$(modinfo -k "$kernel" -F filename ipts 2>/dev/null || true)"
-    if [[ -n "$module_path" && "$module_path" == *"/kernel/"* ]]; then
-      echo "touchD: using the kernel-provided IPTS module for $kernel; DKMS build skipped."
-      continue
-    fi
-    if [[ -d "$module_dir/build" ]]; then
-      dkms install -m ipts -v 1.0.0 -k "$kernel" || \
-        echo "touchD: IPTS DKMS build failed for $kernel; check linux-surface patches and headers."
-    else
-      echo "touchD: headers missing for $kernel; install matching headers and run: sudo dkms install -m ipts -v 1.0.0 -k $kernel"
-    fi
+# touchD: build the IPTS module only for kernels that lack one, and turn on the profile on supported Surfaces.
+
+kernel_has_ipts() {
+  # Built in, or the kernel's own module (linux-surface ships one): touchD's DKMS copy must not shadow it.
+  local kernel="$1" config=""
+  for config in "/usr/lib/modules/$kernel/build/.config" "/boot/config-$kernel"; do
+    [[ -r "$config" ]] && grep -qE '^CONFIG_HID_IPTS=(y|m)' "$config" && return 0
   done
+  local module_path
+  module_path="$(modinfo -k "$kernel" -F filename ipts 2>/dev/null || true)"
+  [[ -n "$module_path" && "$module_path" == *"/kernel/"* ]]
+}
+
+post_install() {
+  # Every kernel present, not only uname -r: this may run in an installer's chroot.
+  local module_dir kernel
+  for module_dir in /usr/lib/modules/*; do
+    [[ -d "$module_dir/kernel" ]] || continue
+    kernel="${module_dir##*/}"
+    if kernel_has_ipts "$kernel"; then
+      echo "touchD: $kernel has its own IPTS driver; no DKMS build for it."
+      dkms remove -m ipts -v 1.0.0 -k "$kernel" >/dev/null 2>&1 || true
+      continue
+    fi
+    if [[ ! -d "$module_dir/build" ]]; then
+      echo "touchD: no headers for $kernel; install them (e.g. linux-headers), then: sudo dkms autoinstall"
+      continue
+    fi
+    if dkms status -m ipts -v 1.0.0 -k "$kernel" 2>/dev/null | grep -q installed; then
+      continue
+    fi
+    dkms install -m ipts -v 1.0.0 -k "$kernel" ||
+      echo "touchD: the IPTS module did not build for $kernel. touchdctl doctor says what to do next."
+  done
+
+  # A supported Surface gets the tuned profile, once; an existing one is never replaced.
+  if [[ ! -e /etc/iptsd.d/80-touchd-surface-pro-5.conf ]] && [[ -n "$(TOUCHD_DMI=/sys/class/dmi/id touchdctl model 2>/dev/null)" ]]; then
+    install -Dm644 /usr/share/touchD/iptsd-surface-pro-5.conf /etc/iptsd.d/80-touchd-surface-pro-5.conf
+    echo "touchD: turned on the IPTSD profile for this $(touchdctl model). Check everything with: touchdctl doctor"
+  fi
 }
 
 post_upgrade() {
