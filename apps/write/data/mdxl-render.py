@@ -15,7 +15,7 @@ except Exception as exc:  # noqa: BLE001
 
 
 def add_before_body_end(document, fragment):
-    match = re.search(r"</body\\s*>", document, re.IGNORECASE)
+    match = re.search(r"</body\s*>", document, re.IGNORECASE)
     if match:
         return document[:match.start()] + fragment + document[match.start():]
     return document + fragment
@@ -34,21 +34,21 @@ for line in sys.stdin:
         comments = []
         kept = []
         for source_line in source.splitlines():
-            match = re.fullmatch(r"\\s*<!-- WRITE_HEADER:(.*?) -->\\s*", source_line)
+            match = re.fullmatch(r"\s*<!-- WRITE_HEADER:(.*?) -->\s*", source_line)
             if match:
                 header = match.group(1)
                 continue
-            match = re.fullmatch(r"\\s*<!-- WRITE_FOOTER:(.*?) -->\\s*", source_line)
+            match = re.fullmatch(r"\s*<!-- WRITE_FOOTER:(.*?) -->\s*", source_line)
             if match:
                 footer = match.group(1)
                 continue
-            match = re.fullmatch(r"\\s*<!-- WRITE_COMMENT:(.*?) -->\\s*", source_line)
+            match = re.fullmatch(r"\s*<!-- WRITE_COMMENT:(.*?) -->\s*", source_line)
             if match:
                 comments.append(match.group(1))
                 continue
             kept.append(source_line)
-        document = render_mdxl("\\n".join(kept))
-        fragments = ['<style>.write-header,.write-footer{font-size:.82em;color:#666;border-bottom:1px solid #aaa;padding:0 0 8px;margin:0 0 22px}.write-footer{border:0;border-top:1px solid #aaa;padding:8px 0 0;margin:22px 0 0}.write-comments{margin:28px 0;padding:12px 16px;border-left:3px solid #888;background:#8881}.write-comment{margin:5px 0}.write-insert{background:#b9e8c4;text-decoration:underline}.write-delete{background:#f3c2c2;text-decoration:line-through}</style>']
+        document = render_mdxl("\n".join(kept))
+        fragments = ['<style>.write-header,.write-footer{font-size:.82em;color:#666;border-bottom:1px solid #aaa;padding:0 0 8px;margin:0 0 22px}.write-footer{border:0;border-top:1px solid #aaa;padding:8px 0 0;margin:22px 0 0}.write-comments{margin:28px 0;padding:12px 16px;border-left:3px solid #888;background:#8881}.write-comment{margin:5px 0}ins{background:#b9e8c4;text-decoration:underline}del{background:#f3c2c2;text-decoration:line-through}</style>']
         if header:
             fragments.append('<div class="write-header">' + html.escape(header) + '</div>')
         if footer:
@@ -61,5 +61,5 @@ for line in sys.stdin:
         out = {"id": req.get("id", 0), "html": document}
     except Exception as exc:  # noqa: BLE001
         out = {"id": req.get("id", 0), "error": str(exc)}
-    sys.stdout.write(json.dumps(out) + "\\n")
+    sys.stdout.write(json.dumps(out) + "\n")
     sys.stdout.flush()
