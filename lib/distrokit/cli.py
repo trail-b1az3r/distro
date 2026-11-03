@@ -274,7 +274,7 @@ def cmd_update(a) -> int:
         for n in news:
             print(f"    {n.title}\n      {n.link}")
     from . import experiments
-    experimental_enabled = experiments.status(B)
+    experimental_enabled = experiments.status(B) if "packages" in wanted else []
     if experimental_enabled:
         print(S.info("Experimental CI packages enabled: " + ", ".join(experimental_enabled)))
     if a.check:
