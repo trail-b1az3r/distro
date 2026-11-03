@@ -94,13 +94,25 @@ class UpdaterBackend(QObject):
             return
         self._set_busy(True)
         helper = f"/usr/lib/{self.b.id}/bin/{self.b.id}-privileged"
+        halcyon_script = Path.home() / ".config/hypr/hyprland/halcyon/update"
+        halcyon_state = Path.home() / ".local/state/halcyon/repo"
 
         def work():
             ok = True
+            # Keep Nexora's desktop layer in step with Halcyon's own updater.
+            # This is optional on non-Halcyon installs and never blocks packages.
+            if any(s["id"] == "packages" for s in wanted) and halcyon_script.is_file() and halcyon_state.is_file():
+                self.log.emit("== Halcyon desktop updates ==")
+                if self._stream(["bash", str(halcyon_script), "apply", "halcyon"]) != 0:
+                    self.log.emit("Halcyon updater failed; continuing with Nexora packages.")
+
             for s in wanted:
                 self.log.emit(f"== {s['label']} ==")
                 if s["id"] == "packages":
-                    ok &= self._stream(["pkexec", helper, "update-system"]) == 0
+                    # Generic pkexec authorization works without Nexora's custom
+                    # helper/polkit policy on manually assembled installations.
+                    # Full upgrade includes all installed Nexora packages too.
+                    ok &= self._stream(["pkexec", "pacman", "-Syu", "--noconfirm"]) == 0
                 elif s["id"] == "aur":
                     ok &= self._stream(["yay", "-Sua", "--noconfirm", "--sudo", "pkexec", "--answerdiff", "None",
                                         "--answerclean", "None"]) == 0
