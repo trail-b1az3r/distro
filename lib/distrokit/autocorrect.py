@@ -44,7 +44,9 @@ def _require_safe_graphical_app() -> None:
     if not os.environ.get("WAYLAND_DISPLAY") or not os.environ.get("XDG_SESSION_TYPE") == "wayland":
         raise AutocorrectError("Autocorrect is available only in a Wayland desktop session, never on a TTY.")
     app_class = _active_window_class()
-    if not app_class or app_class in TERMINAL_CLASSES or any(
+    if not app_class:
+        raise AutocorrectError("Could not identify the active application; refusing to type.")
+    if app_class in TERMINAL_CLASSES or any(
         token in app_class for token in ("terminal", "console", "konsole", "kitty", "alacritty", "wezterm", "foot", "ghostty", "xterm")
     ):
         raise AutocorrectError("Autocorrect is disabled in terminal applications and TTYs.")
