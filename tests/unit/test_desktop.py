@@ -88,7 +88,7 @@ def test_keybind_parser_sees_upstream_binds():
 def test_layer_binds_do_not_collide_with_upstream():
     b = load_branding()
     ours = layer_chords(b)
-    assert ours == {"CTRL + SUPER + a", "SHIFT + SUPER + u", "SUPER + f1"}
+    assert ours == {"CTRL + SUPER + a", "CTRL + SHIFT + SUPER + c", "SHIFT + SUPER + u", "SUPER + f1"}
     clashes = ours & upstream_chords()
     assert not clashes, f"already bound upstream: {sorted(clashes)} (Hyprland would run both actions)"
 
