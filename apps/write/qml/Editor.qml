@@ -17,6 +17,7 @@ Item {
     readonly property string syntax: highlighter.definition
     readonly property string renderError: renderer.error
     signal saveAsRequested()
+    signal exportRequested()
 
     function open(p) {
         saveNow()
@@ -40,6 +41,12 @@ Item {
             path = p
             modified = false
         }
+    }
+
+    function exportWord(p) {
+        exportError.text = Files.exportDocx(p, area.text)
+                    ? qsTr("Exported Word document.")
+                    : qsTr("Could not export this document.")
     }
 
     function wrapSelection(before, after) {
@@ -77,7 +84,7 @@ Item {
     MdxlRenderer {
         id: renderer
         css: root.documentMode
-             ? Theme.css(1.0) + "body{box-sizing:border-box!important;max-width:820px!important;min-height:1060px!important;margin:28px auto!important;padding:76px 82px!important;background:#fff!important;color:#202124!important;box-shadow:0 8px 36px #0003!important;line-height:1.75!important}body a{color:#315fba!important}@media(max-width:900px){body{padding:32px 24px!important;margin:8px!important}}"
+             ? Theme.css(1.0) + "body{box-sizing:border-box!important;width:794px!important;min-height:1123px!important;margin:28px auto!important;padding:76px 82px!important;background:#fff!important;color:#202124!important;box-shadow:0 8px 36px #0003!important;line-height:1.75!important}body a{color:#315fba!important}@media(max-width:900px){body{padding:32px 24px!important;margin:8px!important}}"
              : Theme.css(1.0)
         onHtmlChanged: if (html) preview.loadHtml(html, Files.toUrl(Files.dirOf(root.path) + "/"))
     }
@@ -109,6 +116,12 @@ Item {
                     highlighted: root.viewMode === index
                     onClicked: root.viewMode = index
                 }
+            }
+            Button {
+                text: qsTr("Export DOCX")
+                flat: true
+                enabled: root.path !== ""
+                onClicked: root.exportRequested()
             }
             Button {
                 text: qsTr("Save")
@@ -148,6 +161,7 @@ Item {
                 ToolButton { text: qsTr("Inline code"); onClicked: root.wrapSelection("`", "`") }
                 ToolButton { text: qsTr("Code block"); onClicked: root.insertAtCursor("\n\n```\n\n```\n") }
                 ToolButton { text: qsTr("Table"); onClicked: root.insertAtCursor("\n| Column 1 | Column 2 |\n| --- | --- |\n| | |\n") }
+                ToolButton { text: qsTr("Page break"); onClicked: root.insertAtCursor("\n\n<!-- WRITE_PAGE_BREAK -->\n\n") }
                 ToolButton { text: qsTr("Undo"); onClicked: area.undo() }
                 ToolButton { text: qsTr("Redo"); onClicked: area.redo() }
             }
@@ -236,6 +250,11 @@ Item {
             Label { text: qsTr("%1 characters").arg(area.length); color: Theme.c.onSurfaceVariant }
             Label { text: highlighter.definition; color: Theme.c.onSurfaceVariant }
             Label { text: root.documentMode ? qsTr("Document layout") : ""; color: Theme.c.onSurfaceVariant }
+            Label {
+                id: exportError
+                text: ""
+                color: Theme.c.primary
+            }
             Label {
                 Layout.fillWidth: true
                 text: renderer.error
