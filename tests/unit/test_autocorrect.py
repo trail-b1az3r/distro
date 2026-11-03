@@ -30,6 +30,10 @@ def test_correct_text_uses_local_openai_compatible_endpoint(monkeypatch):
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
+    # Isolate the HTTP contract from the user's configured model runner. The
+    # endpoint is replaced with the local test server, so no GGUF model or
+    # background llama-server process should be required for this unit test.
+    monkeypatch.setattr(autocorrect.runtime, "is_running", lambda: True)
     monkeypatch.setattr(
         "distrokit.autocorrect.runtime.endpoint",
         lambda: f"http://127.0.0.1:{server.server_address[1]}/v1",
