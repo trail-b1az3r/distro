@@ -4,7 +4,8 @@ The distribution's writer and e-book reader (packaged as `<id>-write`): Qt Quick
 
 * **Write**: MDXL documents with KDE syntax highlighting and a live preview rendered by MDXL itself. Choose Edit, Both, Preview, or Document layout. The formatting ribbon inserts headings, bold, italic, strike-through, links, quotes, bullet and numbered lists, checklists, inline/block code and tables. Undo/redo and autosave are included.
 * **Document view**: an A4-sized paper layout with print-oriented page dimensions. The application chrome continues to use the active Halcyon color theme.
-* **Word documents**: import `.docx` into an editable MDXL note and export notes as `.docx`, including paragraphs, headings and explicit page breaks. Complex Word objects and formatting are not yet fully round-tripped.
+* **Word documents**: import `.docx` into an editable MDXL note and export notes as `.docx`, including paragraphs, headings, basic tables and explicit page breaks. Complex Word objects and rich formatting are not yet fully round-tripped.
+* **PDF export**: export the current rendered document from the paper layout to a PDF.
 * **Page breaks**: insert a page break from the formatting ribbon; the marker remains in MDXL, renders as a page break in Document view, and exports as a Word page break.
 * **Notes**: `~/Documents/Notes`, newest first, searchable. Ctrl+N starts one.
 * **Books**: a book is a folder of MDXL chapters in `~/Documents/Books` (`01-…`, `02-…`); **Reading** opens EPUB books a chapter at a time with their table of contents, remembers where you were, and sizes the text.
