@@ -30,6 +30,14 @@ ApplicationWindow {
         if (path.toLowerCase().endsWith(".epub")) {
             reader.open(path)
             page = 3
+        } else if (path.toLowerCase().endsWith(".docx")) {
+            const imported = Files.importDocx(path)
+            if (imported.length) {
+                const note = Files.newNote(Files.baseName(path))
+                Files.write(note, imported)
+                editor.open(note)
+                page = 0
+            }
         } else {
             editor.open(path)
             page = 0
@@ -69,8 +77,16 @@ ApplicationWindow {
     FileDialog {
         id: openDialog
         title: qsTr("Open")
-        nameFilters: [qsTr("Documents and books (*.mdxl *.md *.txt *.epub)"), qsTr("All files (*)")]
+        nameFilters: [qsTr("Documents and books (*.mdxl *.md *.txt *.docx *.epub)"), qsTr("All files (*)")]
         onAccepted: win.openFile(Files.toPath(selectedFile))
+    }
+    FileDialog {
+        id: docxExportDialog
+        title: qsTr("Export Word document")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "docx"
+        nameFilters: [qsTr("Word document (*.docx)")]
+        onAccepted: editor.exportWord(Files.toPath(selectedFile))
     }
     FileDialog {
         id: saveAsDialog
@@ -150,7 +166,7 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.fillHeight: true
             currentIndex: win.page
-            Editor { id: editor; onSaveAsRequested: saveAsDialog.open() }
+            Editor { id: editor; onSaveAsRequested: saveAsDialog.open(); onExportRequested: docxExportDialog.open() }
             LibraryView { mode: "notes"; onOpenRequested: path => win.openFile(path) }
             LibraryView { mode: "books"; onOpenRequested: path => win.openFile(path); onOpenEpubRequested: openDialog.open() }
             Reader { id: reader }
