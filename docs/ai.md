@@ -44,8 +44,8 @@ Wayland applications that support normal clipboard copy/paste.
 The feature uses only the selected text; it does not record keystrokes or run
 as a background keyboard hook. It refuses to operate in terminal windows and
 outside a Wayland desktop session, including TTYs. Install and select a local
-GGUF model first, then start the model server with `nexora model serve` or
-the AI launcher. Required Wayland clipboard/typing tools are installed with
+GGUF model first, the shortcut starts the user model service automatically when a default
+model is configured. Required Wayland clipboard/typing tools are installed with
 the desktop profile.
 
 ## Claude Code
