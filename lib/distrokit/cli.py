@@ -553,6 +553,16 @@ def _install_desktop_entry(tool_id: str) -> None:
         dest.write_text(B.render(src.read_text()))
 
 
+def cmd_autocorrect(_a) -> int:
+    from . import autocorrect
+
+    try:
+        return autocorrect.correct_selection()
+    except autocorrect.AutocorrectError as exc:
+        print(S.fail(str(exc)), file=sys.stderr)
+        return 1
+
+
 # ---------------------------------------------------------------------------
 # model
 # ---------------------------------------------------------------------------
@@ -1033,6 +1043,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--json", action="store_true")
     s.add_argument("-y", "--yes", action="store_true")
     s.set_defaults(func=cmd_model)
+
+    s = sub.add_parser("autocorrect", help="correct selected text with the local AI model (graphical apps only)")
+    s.set_defaults(func=cmd_autocorrect)
 
     s = sub.add_parser("logs", help="diagnostic logs: status, save (local), on/off sharing, send")
     s.add_argument("action", nargs="?", default="status", choices=["status", "save", "on", "off", "send"])
