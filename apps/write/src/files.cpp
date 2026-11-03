@@ -137,9 +137,9 @@ QVariantList Files::recentBooks() const
 
 static QString escapeXml(QString s)
 {
-    s.replace('&', "&amp;");
-    s.replace('<', "&lt;");
-    s.replace('>', "&gt;");
+    s.replace("&", "&amp;");
+    s.replace("<", "&lt;");
+    s.replace(">", "&gt;");
     return s;
 }
 
@@ -171,12 +171,13 @@ QString Files::importDocx(const QString &path) const
     QXmlStreamReader x(xml);
     QString out, paragraph, cell;
     QStringList cells;
+    int tableRows = 0;
     bool inParagraph = false, inTable = false, inRow = false, inCell = false;
     while (!x.atEnd()) {
         x.readNext();
         if (x.isStartElement()) {
             const QString n = x.name().toString();
-            if (n == "tbl") { inTable = true; out += '\n'; }
+            if (n == "tbl") { inTable = true; tableRows = 0; out += '\n'; }
             else if (n == "tr" && inTable) { inRow = true; cells.clear(); }
             else if (n == "tc" && inRow) { inCell = true; cell.clear(); }
             else if (n == "p") { inParagraph = true; paragraph.clear(); }
@@ -198,8 +199,9 @@ QString Files::importDocx(const QString &path) const
                 inCell = false;
             } else if (n == "tr" && inRow) {
                 out += "| " + cells.join(" | ") + " |\n";
-                if (out.count('\n') <= 1)
+                if (tableRows == 0)
                     out += "| " + QStringList(cells.size(), "---").join(" | ") + " |\n";
+                ++tableRows;
                 inRow = false;
             } else if (n == "tbl") {
                 out += '\n';
