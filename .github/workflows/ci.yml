@@ -231,6 +231,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # gh release view consults git metadata; this job runs inside a container,
+          # where checkout's safe.directory setting may not be present.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           if ! gh release view nexora-experiments >/dev/null 2>&1; then
             gh release create nexora-experiments --title "Nexora Experimental Packages" \
               --notes "Rolling pacman repository built from the latest successful CI run on main." \
