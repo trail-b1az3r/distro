@@ -6,6 +6,8 @@ on:
   push:
     branches: [main, "claude/**"]
   pull_request:
+  schedule:
+    - cron: "17 6 * * *"
   workflow_dispatch:
     inputs:
       reuse_last_arch_packages:
@@ -250,7 +252,7 @@ jobs:
           manifest = {
               "schema": 1,
               "repository": "nexora-experiments",
-              "source": "latest successful Arch package build on main",
+              "source": "latest successful Arch package build on main; refreshed nightly and on main pushes",
               "packages": packages,
           }
           Path("build/experiments-assets/packages.json").write_text(
