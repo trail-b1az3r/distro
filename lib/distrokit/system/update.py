@@ -24,7 +24,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from .. import paths, pkg, util
+from .. import pacmanconf, paths, pkg, util
 from ..branding import Branding, load as load_branding
 
 ARCH_NEWS = "https://archlinux.org/feeds/news/"
@@ -69,7 +69,8 @@ def _parse_updates(text: str) -> list[Item]:
     return items
 
 
-def check_packages() -> Source:
+def check_packages(branding: Branding | None = None) -> Source:
+    branding = branding or load_branding()
     src = Source("packages", "System & Nexora packages (pacman)", needs_root=True, command=["pacman", "-Syu"])
     if util.which("checkupdates"):
         # checkupdates syncs a private copy of the databases: no root, no partial upgrades.
@@ -85,6 +86,13 @@ def check_packages() -> Source:
             src.error = "could not read available package updates; run a full system upgrade to refresh package databases"
             return src
     src.items = _parse_updates(out)
+    # Manual installs may have Nexora packages but no active Nexora repository.
+    # Surface this as an actionable update when the repository is published.
+    conf = Path("/etc/pacman.conf")
+    if (conf.is_file() and branding.get("DISTRO_REPO_SERVER")
+            and not pacmanconf.distro_repo_enabled(conf.read_text())
+            and pacmanconf.distro_repo_published(branding, timeout=4) is True):
+        src.items.append(Item("Nexora repository", "disabled", "enable"))
     return src
 
 
@@ -223,7 +231,7 @@ def check_ai(home: Path | None = None, branding: Branding | None = None) -> Sour
 def check_all(branding: Branding | None = None, sources: list[str] | None = None) -> list[Source]:
     branding = branding or load_branding()
     checks: dict[str, Callable[[], Source]] = {
-        "packages": check_packages,
+        "packages": lambda: check_packages(branding),
         "aur": check_aur,
         "flatpak": check_flatpak,
         "desktop": lambda: check_desktop(branding=branding),
