@@ -76,3 +76,18 @@ def test_empty_active_window_is_rejected(monkeypatch):
     monkeypatch.setattr(autocorrect, "_active_window_class", lambda: "")
     with pytest.raises(autocorrect.AutocorrectError, match="refusing to type"):
         autocorrect._require_safe_graphical_app()
+
+def test_runner_backend_defaults_to_legacy_and_can_be_changed(tmp_path, monkeypatch):
+    from distrokit.ai import runtime
+
+    class FakeBranding:
+        id = "nexora"
+
+    monkeypatch.setattr(runtime, "runner_config_path", lambda _branding=None: tmp_path / "ai-runtime.toml")
+    assert runtime.runner_backend(FakeBranding()) == "legacy"
+    runtime.set_runner_backend("ggml-hnx", FakeBranding())
+    assert runtime.runner_backend(FakeBranding()) == "ggml-hnx"
+    runtime.set_runner_backend("t1", FakeBranding())
+    assert runtime.runner_backend(FakeBranding()) == "t1"
+    with pytest.raises(ValueError):
+        runtime.set_runner_backend("invalid", FakeBranding())

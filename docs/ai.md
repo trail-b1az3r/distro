@@ -62,13 +62,24 @@ newer Node.js than installed, the error says which package to install.
 
 ## Using local models with the assistants
 
-The local model server speaks the OpenAI API at `http://127.0.0.1:8081/v1`
-(only on this computer). Point Hermis, OpenClaw or any OpenAI-compatible tool
-at it:
+Nexora supports three selectable inference runners: `t1` delegates to
+HyperNix T1's built-in runner; `ggml-hnx` uses HyperNix's patched llama.cpp
+through `hnx runtime serve`; `legacy` uses the standard upstream
+`llama-server`. Select one with `nexora model backend t1|ggml-hnx|legacy`.
+The selection is stored per-user in `~/.config/nexora/ai-runtime.toml`.
+T1 must already be installed and its local API running.
+
+The local OpenAI-compatible endpoint for the standalone runners is
+`http://127.0.0.1:8081/v1`. Point Hermis, OpenClaw or any compatible tool
+at the endpoint reported by `nexora model serve --status`:
 
 ```bash
-nexora model serve          # starts the user service with the default model
+nexora model serve             # starts the selected runner with the default model
 nexora model serve --status
+nexora model backend           # show selected runner
+nexora model backend t1        # HyperNix T1 built-in runner
+nexora model backend ggml-hnx  # HyperNix patched llama.cpp
+nexora model backend legacy    # upstream llama.cpp
 ```
 
 Hermis and OpenClaw can equally use cloud providers; you choose during their

@@ -20,3 +20,7 @@ rocm = "llama.cpp-hip"
 xpu = "llama.cpp-vulkan"
 cpu = "llama.cpp"
 default_gpu = "vulkan"
+
+[runner]
+# t1: HyperNix T1; ggml-hnx: HyperNix patched llama.cpp; legacy: upstream llama.cpp.
+default = "legacy"

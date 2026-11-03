@@ -591,6 +591,18 @@ def cmd_model(a) -> int:
 
     catalog = models.load_catalog()
     reg = models.Registry(B.id)
+    if a.action == "backend":
+        if a.id is None:
+            print(f"Selected inference runner: {runtime.runner_backend(B)}")
+            print("Available: " + ", ".join(runtime.RUNNERS))
+            return 0
+        try:
+            runtime.set_runner_backend(a.id, B)
+        except ValueError as exc:
+            print(S.fail(str(exc)))
+            return 1
+        print(S.ok(f"Inference runner set to {a.id}. Restart the local model service for the change to take effect."))
+        return 0
     if a.action in ("list", "recommend"):
         report, plan, backends = _backend()
         be = backends.select(report, plan)
@@ -1026,7 +1038,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_ai)
 
     s = sub.add_parser("model", help="local AI models")
-    s.add_argument("action", choices=["list", "recommend", "installed", "info", "install", "add", "remove", "default", "serve"],
+    s.add_argument("action", choices=["list", "recommend", "installed", "info", "install", "add", "remove", "default", "serve", "backend"],
                    nargs="?", default="list")
     s.add_argument("id", nargs="?")
     s.add_argument("--hf", metavar="OWNER/REPO", help="add: Hugging Face repository")
