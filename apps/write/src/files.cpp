@@ -299,6 +299,11 @@ bool Files::exportDocx(const QString &path, const QString &text) const
     return ok;
 }
 
+bool Files::betterbirdInstalled() const
+{
+    return !QStandardPaths::findExecutable(QStringLiteral("betterbird")).isEmpty();
+}
+
 int Files::words(const QString &text) const
 {
     static const QRegularExpression word(QStringLiteral(R"(\w[\w'’-]*)"),
