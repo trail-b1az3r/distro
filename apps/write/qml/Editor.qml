@@ -55,6 +55,24 @@ Item {
         exportError.text = qsTr("PDF export started.")
     }
 
+    function sendEmail() {
+        const url = "mailto:" + encodeURIComponent(emailTo.text)
+            + "?subject=" + encodeURIComponent(emailSubject.text)
+            + "&body=" + encodeURIComponent(emailBody.text)
+        Qt.openUrlExternally(url)
+        emailDialog.close()
+    }
+
+    function acceptChanges() {
+        area.text = area.text.replace(/<ins>([\s\S]*?)<\/ins>/g, "$1")
+                             .replace(/<del>[\s\S]*?<\/del>/g, "")
+    }
+
+    function rejectChanges() {
+        area.text = area.text.replace(/<del>([\s\S]*?)<\/del>/g, "$1")
+                             .replace(/<ins>[\s\S]*?<\/ins>/g, "")
+    }
+
     function wrapSelection(before, after) {
         const start = area.selectionStart >= 0 ? area.selectionStart : area.cursorPosition
         const end = area.selectionStart >= 0 ? area.selectionEnd : start
@@ -79,6 +97,54 @@ Item {
     onDocumentModeChanged: renderer.render(area.text, true)
 
     Timer { id: autosave; interval: 1500; onTriggered: root.saveNow() }
+
+    Dialog {
+        id: headerDialog
+        title: qsTr("Document header")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentItem: TextField { id: headerText; placeholderText: qsTr("Text shown at the top of the document") }
+        onAccepted: root.insertAtCursor("\n<!-- WRITE_HEADER:" + headerText.text.replace(/-->/g, "") + " -->\n")
+    }
+    Dialog {
+        id: footerDialog
+        title: qsTr("Document footer")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentItem: TextField { id: footerText; placeholderText: qsTr("Text shown at the bottom of the document") }
+        onAccepted: root.insertAtCursor("\n<!-- WRITE_FOOTER:" + footerText.text.replace(/-->/g, "") + " -->\n")
+    }
+    Dialog {
+        id: commentDialog
+        title: qsTr("Add comment")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentItem: TextField { id: commentText; placeholderText: qsTr("Write a review comment") }
+        onAccepted: if (commentText.text.trim().length)
+                        root.insertAtCursor("\n<!-- WRITE_COMMENT:" + commentText.text.replace(/-->/g, "") + " -->\n")
+    }
+    Dialog {
+        id: emailDialog
+        title: qsTr("Send document by email")
+        standardButtons: Dialog.Cancel
+        modal: true
+        contentItem: ColumnLayout {
+            width: 420
+            TextField { id: emailTo; Layout.fillWidth: true; placeholderText: qsTr("Recipient email address") }
+            TextField { id: emailSubject; Layout.fillWidth: true; text: root.path ? Files.baseName(root.path) : ""; placeholderText: qsTr("Subject") }
+            TextArea { id: emailBody; Layout.fillWidth: true; Layout.preferredHeight: 140; wrapMode: TextEdit.Wrap; text: qsTr("Please find the document below.\n\n") + area.text }
+            Button {
+                Layout.alignment: Qt.AlignRight
+                text: qsTr("Send with Betterbird")
+                enabled: Files.betterbirdInstalled() && emailTo.text.trim().length > 0
+                onClicked: root.sendEmail()
+            }
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: Files.betterbirdInstalled() ? qsTr("Opens a message in Betterbird; review and send it there.")
+                                                  : qsTr("Install Betterbird to enable email sending.")
+                color: Theme.c.onSurfaceVariant
+            }
+        }
+    }
 
     Highlighter {
         id: highlighter
@@ -174,6 +240,14 @@ Item {
                 ToolButton { text: qsTr("Code block"); onClicked: root.insertAtCursor("\n\n```\n\n```\n") }
                 ToolButton { text: qsTr("Table"); onClicked: root.insertAtCursor("\n| Column 1 | Column 2 |\n| --- | --- |\n| | |\n") }
                 ToolButton { text: qsTr("Page break"); onClicked: root.insertAtCursor("\n\n<!-- WRITE_PAGE_BREAK -->\n\n") }
+                ToolButton { text: qsTr("Header"); onClicked: headerDialog.open() }
+                ToolButton { text: qsTr("Footer"); onClicked: footerDialog.open() }
+                ToolButton { text: qsTr("Comment"); onClicked: commentDialog.open() }
+                ToolButton { text: qsTr("Track insertion"); onClicked: root.wrapSelection("<ins>", "</ins>") }
+                ToolButton { text: qsTr("Track deletion"); onClicked: root.wrapSelection("<del>", "</del>") }
+                ToolButton { text: qsTr("Accept changes"); onClicked: root.acceptChanges() }
+                ToolButton { text: qsTr("Reject changes"); onClicked: root.rejectChanges() }
+                ToolButton { text: qsTr("Email"); enabled: Files.betterbirdInstalled(); onClicked: emailDialog.open() }
                 ToolButton { text: qsTr("Undo"); onClicked: area.undo() }
                 ToolButton { text: qsTr("Redo"); onClicked: area.redo() }
             }
