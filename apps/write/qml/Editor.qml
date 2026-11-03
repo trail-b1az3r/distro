@@ -11,7 +11,31 @@ Item {
     id: root
     property string path: ""
     property bool modified: false
-    property int viewMode: 1   // 0 edit, 1 edit and preview, 2 preview
+    property int viewMode: 1   // 0 edit, 1 edit and preview, 2 preview, 3 document page
+    readonly property bool documentMode: viewMode === 3
+
+    function wrapSelection(before, after) {
+        const start = area.selectionStart >= 0 ? area.selectionStart : area.cursorPosition
+        const end = area.selectionEnd >= start ? area.selectionEnd : start
+        const selected = area.selectedText
+        const replacement = before + (selected || qsTr("text")) + after
+        area.remove(start, end)
+        area.insert(start, replacement)
+        area.select(start + before.length, start + before.length + (selected || qsTr("text")).length)
+        area.forceActiveFocus()
+    }
+
+    function prefixLine(prefix) {
+        const start = area.cursorPosition
+        const lineStart = area.text.lastIndexOf("\\n", Math.max(0, start - 1)) + 1
+        area.insert(lineStart, prefix)
+        area.forceActiveFocus()
+    }
+
+    function insertAtCursor(value) {
+        area.insert(area.cursorPosition, value)
+        area.forceActiveFocus()
+    }
     property bool loading: false
     readonly property int renderedLength: renderer.html.length
     readonly property string syntax: highlighter.definition
@@ -50,7 +74,9 @@ Item {
     }
     MdxlRenderer {
         id: renderer
-        css: Theme.css(1.0)
+        css: root.documentMode
+             ? Theme.css(1.0) + "body{box-sizing:border-box!important;max-width:820px!important;min-height:1060px!important;margin:28px auto!important;padding:76px 82px!important;background:#fff!important;color:#202124!important;box-shadow:0 8px 36px #0003!important;line-height:1.75!important}body a{color:#315fba!important}@media(max-width:900px){body{padding:32px 24px!important;margin:8px!important}}"
+             : Theme.css(1.0)
         onHtmlChanged: if (html) preview.loadHtml(html, Files.toUrl(Files.dirOf(root.path) + "/"))
     }
 
@@ -73,7 +99,7 @@ Item {
                 color: Theme.c.onSurface
             }
             Repeater {
-                model: [qsTr("Edit"), qsTr("Both"), qsTr("Preview")]
+                model: [qsTr("Edit"), qsTr("Both"), qsTr("Preview"), qsTr("Document")]
                 delegate: Button {
                     required property int index
                     required property string modelData
@@ -175,6 +201,7 @@ Item {
             Label { text: qsTr("%1 words").arg(Files.words(area.text)); color: Theme.c.onSurfaceVariant }
             Label { text: qsTr("%1 characters").arg(area.length); color: Theme.c.onSurfaceVariant }
             Label { text: highlighter.definition; color: Theme.c.onSurfaceVariant }
+            Label { text: root.documentMode ? qsTr("Document layout") : ""; color: Theme.c.onSurfaceVariant }
             Label {
                 Layout.fillWidth: true
                 text: renderer.error
