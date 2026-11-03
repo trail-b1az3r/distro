@@ -218,7 +218,6 @@ def _apply_halcyon_desktop_update() -> None:
         home = Path.home()
         command_prefix = []
     script = home / ".config/hypr/hyprland/halcyon/update"
-    state = home / ".local/state/halcyon"
     if not script.is_file():
         return
     # Halcyon's updater self-registers a source checkout for Nexora/manual
