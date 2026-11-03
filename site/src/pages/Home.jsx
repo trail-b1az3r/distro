@@ -47,8 +47,8 @@ function Hero() {
           </h1>
           <p className="mt-8 space-y-1 font-sans text-2xl font-semibold leading-snug sm:text-[1.7rem]">
             <span className="block">Detects your <span className="text-band-soft">hardware</span>.</span>
-            <span className="block">Explains every <span className="text-band-soft">change</span>.</span>
-            <span className="block">Phones <span className="text-band-soft">nobody</span> home.</span>
+            <span className="block"> fills it with the best <span className="text-band-soft"> bloat </span>.</span>
+            <span className="block"> and install it <span className="text-band-soft">anyware</span>.</span>
           </p>
         </div>
         <div className="space-y-3">
