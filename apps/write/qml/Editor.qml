@@ -5,60 +5,14 @@ import QtQuick.Layouts
 import QtWebEngine
 import Write
 
-// The writing view: the MDXL source with syntax colours, and its live
-// preview rendered by MDXL itself. Saved automatically while typing.
+// MDXL editor with a Material-inspired command ribbon and page preview.
 Item {
     id: root
     property string path: ""
     property bool modified: false
-    property int viewMode: 1   // 0 edit, 1 edit and preview, 2 preview, 3 document
-    readonly property bool documentMode: viewMode === 3
-
-    function wrapSelection(before, after) {
-        const start = area.selectionStart >= 0 ? area.selectionStart : area.cursorPosition
-        const end = area.selectionEnd >= start ? area.selectionEnd : start
-        const selected = area.selectedText || qsTr("text")
-        area.remove(start, end)
-        area.insert(start, before + selected + after)
-        area.select(start + before.length, start + before.length + selected.length)
-        area.forceActiveFocus()
-    }
-
-    function prefixLine(prefix) {
-        const lineStart = area.text.lastIndexOf("\\n", Math.max(0, area.cursorPosition - 1)) + 1
-        area.insert(lineStart, prefix)
-        area.forceActiveFocus()
-    }
-
-    function insertAtCursor(value) {
-        area.insert(area.cursorPosition, value)
-        area.forceActiveFocus()
-    }, 3 document page
-    readonly property bool documentMode: viewMode === 3
-
-    function wrapSelection(before, after) {
-        const start = area.selectionStart >= 0 ? area.selectionStart : area.cursorPosition
-        const end = area.selectionEnd >= start ? area.selectionEnd : start
-        const selected = area.selectedText
-        const replacement = before + (selected || qsTr("text")) + after
-        area.remove(start, end)
-        area.insert(start, replacement)
-        area.select(start + before.length, start + before.length + (selected || qsTr("text")).length)
-        area.forceActiveFocus()
-    }
-
-    function prefixLine(prefix) {
-        const start = area.cursorPosition
-        const lineStart = area.text.lastIndexOf("\\n", Math.max(0, start - 1)) + 1
-        area.insert(lineStart, prefix)
-        area.forceActiveFocus()
-    }
-
-    function insertAtCursor(value) {
-        area.insert(area.cursorPosition, value)
-        area.forceActiveFocus()
-    }
+    property int viewMode: 1   // 0 edit, 1 both, 2 preview, 3 document page
     property bool loading: false
+    readonly property bool documentMode: viewMode === 3
     readonly property int renderedLength: renderer.html.length
     readonly property string syntax: highlighter.definition
     readonly property string renderError: renderer.error
@@ -75,16 +29,41 @@ Item {
         renderer.render(area.text, true)
         area.forceActiveFocus()
     }
+
     function saveNow() {
         if (path && modified && Files.write(path, area.text))
             modified = false
     }
+
     function saveAs(p) {
         if (Files.write(p, area.text)) {
             path = p
             modified = false
         }
     }
+
+    function wrapSelection(before, after) {
+        const start = area.selectionStart >= 0 ? area.selectionStart : area.cursorPosition
+        const end = area.selectionStart >= 0 ? area.selectionEnd : start
+        const selected = area.selectedText || qsTr("text")
+        area.remove(start, end)
+        area.insert(start, before + selected + after)
+        area.select(start + before.length, start + before.length + selected.length)
+        area.forceActiveFocus()
+    }
+
+    function prefixLine(prefix) {
+        const lineStart = area.text.lastIndexOf("\n", Math.max(0, area.cursorPosition - 1)) + 1
+        area.insert(lineStart, prefix)
+        area.forceActiveFocus()
+    }
+
+    function insertAtCursor(value) {
+        area.insert(area.cursorPosition, value)
+        area.forceActiveFocus()
+    }
+
+    onDocumentModeChanged: renderer.render(area.text, true)
 
     Timer { id: autosave; interval: 1500; onTriggered: root.saveNow() }
 
@@ -94,6 +73,7 @@ Item {
         dark: Theme.dark
         fileName: root.path
     }
+
     MdxlRenderer {
         id: renderer
         css: root.documentMode
@@ -106,12 +86,11 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // Title and view mode
         RowLayout {
             Layout.fillWidth: true
             Layout.margins: 12
             Layout.leftMargin: 20
-            spacing: 12
+            spacing: 8
             Label {
                 Layout.fillWidth: true
                 text: root.path ? Files.baseName(root.path) : qsTr("Nothing open")
@@ -132,10 +111,45 @@ Item {
                 }
             }
             Button {
+                text: qsTr("Save")
+                flat: true
+                enabled: root.path !== ""
+                onClicked: root.saveNow()
+            }
+            Button {
                 text: qsTr("Save as…")
                 flat: true
                 enabled: root.path !== ""
                 onClicked: root.saveAsRequested()
+            }
+        }
+
+        // Formatting commands use MDXL, so documents remain portable and
+        // render identically in the MDXL previewer and other compatible apps.
+        Flickable {
+            Layout.fillWidth: true
+            implicitHeight: 48
+            contentWidth: ribbon.implicitWidth
+            clip: true
+            visible: root.path !== "" && root.viewMode !== 2 && root.viewMode !== 3
+            RowLayout {
+                id: ribbon
+                height: 44
+                spacing: 2
+                ToolButton { text: qsTr("Heading"); onClicked: root.prefixLine("## ") }
+                ToolButton { text: qsTr("Bold"); onClicked: root.wrapSelection("**", "**") }
+                ToolButton { text: qsTr("Italic"); onClicked: root.wrapSelection("*", "*") }
+                ToolButton { text: qsTr("Strike"); onClicked: root.wrapSelection("~~", "~~") }
+                ToolButton { text: qsTr("Link"); onClicked: root.wrapSelection("[", "](https://)") }
+                ToolButton { text: qsTr("Quote"); onClicked: root.prefixLine("> ") }
+                ToolButton { text: qsTr("Bullets"); onClicked: root.prefixLine("- ") }
+                ToolButton { text: qsTr("Numbered"); onClicked: root.prefixLine("1. ") }
+                ToolButton { text: qsTr("Checklist"); onClicked: root.prefixLine("- [ ] ") }
+                ToolButton { text: qsTr("Inline code"); onClicked: root.wrapSelection("`", "`") }
+                ToolButton { text: qsTr("Code block"); onClicked: root.insertAtCursor("\n\n```\n\n```\n") }
+                ToolButton { text: qsTr("Table"); onClicked: root.insertAtCursor("\n| Column 1 | Column 2 |\n| --- | --- |\n| | |\n") }
+                ToolButton { text: qsTr("Undo"); onClicked: area.undo() }
+                ToolButton { text: qsTr("Redo"); onClicked: area.redo() }
             }
         }
 
@@ -147,7 +161,7 @@ Item {
             Rectangle {
                 SplitView.fillWidth: root.viewMode === 0
                 SplitView.preferredWidth: parent.width / 2
-                visible: root.viewMode !== 2
+                visible: root.viewMode !== 2 && root.viewMode !== 3
                 color: Theme.c.surfaceContainerLow
                 radius: 16
                 ScrollView {
@@ -182,7 +196,7 @@ Item {
             Rectangle {
                 SplitView.fillWidth: true
                 visible: root.viewMode !== 0
-                color: Theme.c.surface
+                color: root.documentMode ? Theme.c.surfaceContainer : Theme.c.surface
                 radius: 16
                 clip: true
                 WebEngineView {
@@ -191,7 +205,6 @@ Item {
                     anchors.margins: 4
                     backgroundColor: Theme.c.surface
                     onNavigationRequested: function(request) {
-                        // Links leave for the browser; the preview stays put.
                         if (request.navigationType === WebEngineNavigationRequest.LinkClickedNavigation) {
                             Qt.openUrlExternally(request.url)
                             request.reject()
@@ -211,7 +224,6 @@ Item {
             color: Theme.c.onSurfaceVariant
         }
 
-        // Status bar
         RowLayout {
             Layout.fillWidth: true
             Layout.leftMargin: 20
@@ -222,7 +234,7 @@ Item {
             visible: root.path !== ""
             Label { text: qsTr("%1 words").arg(Files.words(area.text)); color: Theme.c.onSurfaceVariant }
             Label { text: qsTr("%1 characters").arg(area.length); color: Theme.c.onSurfaceVariant }
-            Label { text: highlighter.definition; color: Theme.c.onSurfaceVariant }\n            Label { text: root.documentMode ? qsTr("Document layout") : ""; color: Theme.c.onSurfaceVariant }
+            Label { text: highlighter.definition; color: Theme.c.onSurfaceVariant }
             Label { text: root.documentMode ? qsTr("Document layout") : ""; color: Theme.c.onSurfaceVariant }
             Label {
                 Layout.fillWidth: true
