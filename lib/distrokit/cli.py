@@ -218,7 +218,7 @@ def _apply_halcyon_desktop_update() -> None:
         home = Path.home()
         command_prefix = []
     script = home / ".config/hypr/hyprland/halcyon/update"
-    state = Path(os.environ.get("XDG_STATE_HOME", str(home / ".local/state"))) / "halcyon"
+    state = home / ".local/state/halcyon"
     if not script.is_file() or not (state / "repo").is_file():
         return
     print(S.header("Updating Halcyon desktop files with Halcyon's updater"))
