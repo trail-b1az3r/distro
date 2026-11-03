@@ -24,6 +24,7 @@ saved connections over.
 from __future__ import annotations
 
 import getpass
+import os
 import sys
 from collections.abc import Callable
 
@@ -256,7 +257,11 @@ def cmd_radio(args: list[str], opts: Options) -> int:
     return 0
 
 
+SECRET_ARGS = {"password", "username", "key-password", "psk", "wifi-sec.psk", "802-1x.password", "802-1x.identity"}
+
+
 def parse_pairs(args: list[str], allowed: set[str] | None = None) -> dict[str, str]:
+    """KEY VALUE pairs. A secret given as env:NAME is read from the environment, so it never shows in ps."""
     out = {}
     while args:
         key = args.pop(0)
@@ -266,7 +271,10 @@ def parse_pairs(args: list[str], allowed: set[str] | None = None) -> dict[str, s
             raise Usage(f"value for '{key}' is missing.")
         if allowed is not None and key not in allowed:
             raise Usage(f"invalid extra argument '{key}'.")
-        out[key] = args.pop(0)
+        value = args.pop(0)
+        if key in SECRET_ARGS and value.startswith("env:"):
+            value = os.environ.get(value[4:], "")
+        out[key] = value
     return out
 
 

@@ -477,6 +477,12 @@ def test_connect_passes_enterprise_arguments(fake_nmxd):
     assert req["ca-cert"] == "system" and req["domain-suffix-match"] == "uni.example"
 
 
+def test_secrets_from_the_environment(fake_nmxd, monkeypatch):
+    monkeypatch.setenv("NMX_PASSWORD", "hunter22")
+    run("device", "wifi", "connect", "Home", "password", "env:NMX_PASSWORD")
+    assert fake_nmxd[-1]["password"] == "hunter22"
+
+
 def test_abbreviations_and_errors(fake_nmxd):
     assert cli.pick("c", list(cli.OBJECTS)) == "connection"
     assert cli.pick("d", list(cli.OBJECTS)) == "device"
