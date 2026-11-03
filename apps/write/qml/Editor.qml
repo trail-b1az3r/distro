@@ -18,6 +18,7 @@ Item {
     readonly property string renderError: renderer.error
     signal saveAsRequested()
     signal exportRequested()
+    signal pdfRequested()
 
     function open(p) {
         saveNow()
@@ -47,6 +48,11 @@ Item {
         exportError.text = Files.exportDocx(p, area.text)
                     ? qsTr("Exported Word document.")
                     : qsTr("Could not export this document.")
+    }
+
+    function exportPdf(p) {
+        preview.printToPdf(p)
+        exportError.text = qsTr("PDF export started.")
     }
 
     function wrapSelection(before, after) {
@@ -84,7 +90,7 @@ Item {
     MdxlRenderer {
         id: renderer
         css: root.documentMode
-             ? Theme.css(1.0) + "body{box-sizing:border-box!important;width:794px!important;min-height:1123px!important;margin:28px auto!important;padding:76px 82px!important;background:#fff!important;color:#202124!important;box-shadow:0 8px 36px #0003!important;line-height:1.75!important}.write-page-break{break-before:page;page-break-before:always;height:1px}body a{color:#315fba!important}@media(max-width:900px){body{padding:32px 24px!important;margin:8px!important}}"
+             ? Theme.css(1.0) + "@page{size:A4;margin:0}body{box-sizing:border-box!important;width:794px!important;min-height:1123px!important;margin:28px auto!important;padding:76px 82px!important;background:#fff!important;color:#202124!important;box-shadow:0 8px 36px #0003!important;line-height:1.75!important}.write-page-break{break-before:page;page-break-before:always;height:1px}body a{color:#315fba!important}@media(max-width:900px){body{padding:32px 24px!important;margin:8px!important}}"
              : Theme.css(1.0)
         onHtmlChanged: if (html) preview.loadHtml(html, Files.toUrl(Files.dirOf(root.path) + "/"))
     }
@@ -116,6 +122,12 @@ Item {
                     highlighted: root.viewMode === index
                     onClicked: root.viewMode = index
                 }
+            }
+            Button {
+                text: qsTr("Export PDF")
+                flat: true
+                enabled: root.path !== ""
+                onClicked: root.pdfRequested()
             }
             Button {
                 text: qsTr("Export DOCX")
