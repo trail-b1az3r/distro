@@ -4,15 +4,12 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 from . import pacmanconf
 from .branding import Branding, load as load_branding
 
 COMPONENTS = ("core", "branding", "desktop", "welcome", "installer", "ai")
-MANIFEST_URL = "https://github.com/trail-b1az3r/distro/releases/download/nexora-experiments/packages.json"
 
 
 class ExperimentError(RuntimeError):
@@ -78,54 +75,40 @@ def status(branding: Branding | None = None) -> list[str]:
     return read_enabled(branding)
 
 
-def fetch_manifest(timeout: float = 15.0) -> dict:
-    """Read the public rolling package manifest; never use the Actions artifacts API."""
-    request = urllib.request.Request(
-        MANIFEST_URL,
-        headers={"User-Agent": "Nexora-updater/1", "Accept": "application/json"},
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            data = json.load(response)
-    except (OSError, ValueError, urllib.error.URLError) as exc:
-        raise ExperimentError(f"could not fetch the public CI package list: {exc}") from exc
-    if not isinstance(data, dict) or data.get("schema") != 1 or not isinstance(data.get("packages"), list):
-        raise ExperimentError("the published CI package list is invalid or unsupported")
-    return data
-
-
 def check(branding: Branding | None = None) -> list[str]:
-    """Compare installed packages with the versions in the latest CI release manifest."""
+    """Compare installed experimental packages with the enabled pacman source.
+
+    Use pacman's synchronized repository databases directly. GitHub Actions
+    artifacts are private to their workflow run and cannot be downloaded by an
+    installed machine without an Actions token; the public rolling pacman
+    repository is the supported distribution mechanism.
+    """
     if not read_enabled(branding):
         return []
-    manifest = fetch_manifest()
+    repo = "nexora-experiments"
     try:
-        installed_result = subprocess.run(
-            ["pacman", "-Q"], check=True, text=True, capture_output=True, timeout=30
+        repo_result = subprocess.run(
+            ["pacman", "-Sl", repo], check=True, text=True, capture_output=True, timeout=30
+        )
+        updates_result = subprocess.run(
+            ["pacman", "-Qu"], check=True, text=True, capture_output=True, timeout=60
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        raise ExperimentError(f"could not read installed pacman packages: {exc}") from exc
-    installed = {}
-    for line in installed_result.stdout.splitlines():
-        fields = line.split(None, 1)
-        if len(fields) == 2:
-            installed[fields[0]] = fields[1]
+        raise ExperimentError(
+            f"could not query {repo}; refresh pacman databases and verify the repository is enabled: {exc}"
+        ) from exc
+
+    available = set()
+    for line in repo_result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) >= 2 and fields[0] == repo:
+            available.add(fields[1])
+
     updates = []
-    for package in manifest["packages"]:
-        if not isinstance(package, dict):
-            continue
-        name, new = package.get("name"), package.get("version")
-        current = installed.get(name) if isinstance(name, str) else None
-        if not current or not isinstance(new, str) or current == new:
-            continue
-        try:
-            comparison = subprocess.run(
-                ["vercmp", current, new], check=True, text=True, capture_output=True, timeout=5
-            )
-            if int(comparison.stdout.strip()) < 0:
-                updates.append(f"{name} {current} -> {new}")
-        except (OSError, ValueError, subprocess.SubprocessError) as exc:
-            raise ExperimentError(f"could not compare {name} versions ({current}, {new}): {exc}") from exc
+    for line in updates_result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) >= 4 and fields[0] in available and fields[2] == "->":
+            updates.append(f"{fields[0]} {fields[1]} -> {fields[3]}")
     return sorted(updates)
 
 
