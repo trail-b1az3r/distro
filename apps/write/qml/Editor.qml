@@ -73,6 +73,18 @@ Item {
                              .replace(/<ins>[\s\S]*?<\/ins>/g, "")
     }
 
+    function addComment(value) {
+        const start = area.selectionStart >= 0 ? area.selectionStart : area.cursorPosition
+        const end = area.selectionStart >= 0 ? area.selectionEnd : start
+        if (end > start) {
+            const selected = area.text.slice(start, end)
+            area.remove(start, end)
+            area.insert(start, "<mark>" + selected + "</mark>")
+        }
+        area.insert(area.text.length, "\\n<!-- WRITE_COMMENT:" + value.replace(/-->/g, "") + " -->\\n")
+        area.forceActiveFocus()
+    }
+
     function wrapSelection(before, after) {
         const start = area.selectionStart >= 0 ? area.selectionStart : area.cursorPosition
         const end = area.selectionStart >= 0 ? area.selectionEnd : start
