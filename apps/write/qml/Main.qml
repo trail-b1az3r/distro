@@ -106,7 +106,7 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+2"; onActivated: win.page = 1 }
     Shortcut { sequence: "Ctrl+3"; onActivated: win.page = 2 }
     Shortcut { sequence: "Ctrl+4"; onActivated: if (reader.hasBook) win.page = 3 }
-    Shortcut { sequence: "Ctrl+E"; onActivated: editor.viewMode = (editor.viewMode + 1) % 3 }
+    Shortcut { sequence: "Ctrl+E"; onActivated: editor.viewMode = (editor.viewMode + 1) % 4 }
     Shortcut { sequence: "Ctrl+Shift+E"; onActivated: win.togglePreview() }
     Shortcut { sequence: "Ctrl+PageDown"; onActivated: win.movePage(1) }
     Shortcut { sequence: "Ctrl+PageUp"; onActivated: win.movePage(-1) }
