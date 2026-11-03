@@ -19,7 +19,8 @@ from .ai import runtime
 TERMINAL_CLASSES = {
     "alacritty", "foot", "footclient", "kitty", "konsole", "org.kde.konsole",
     "gnome-terminal", "kgx", "xfce4-terminal", "xterm", "urxvt", "wezterm",
-    "com.mitchellh.ghostty", "tilix", "terminator", "ptyxis", "com.raggesilver.blackbox",\n    "org.gnome.console", "gnome-console", "io.elementary.terminal",
+    "com.mitchellh.ghostty", "tilix", "terminator", "ptyxis", "com.raggesilver.blackbox",
+    "org.gnome.console", "gnome-console", "io.elementary.terminal",
 }
 
 
