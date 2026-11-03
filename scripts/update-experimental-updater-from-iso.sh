@@ -98,7 +98,7 @@ fi
 printf '\nLatest ISO release: %s\n' "$tag"
 printf 'Installed nexora-core: %s\n' "$installed_version"
 printf 'ISO nexora-core:       %s\n' "$package_version"
-printf '\nThis updates ONLY nexora-core, which contains the `nexora experiments` experimental updater logic.\n'
+printf '\nThis updates ONLY nexora-core, which contains the nexora experiments experimental updater logic.\n'
 printf 'It does not reinstall Nexora, update other packages, change repositories, or touch user files.\n'
 read -r -p "Install the newer experimental updater now? [y/N] " answer
 [[ "$answer" =~ ^[Yy]$ ]] || { log "Cancelled; nothing was installed."; exit 0; }
