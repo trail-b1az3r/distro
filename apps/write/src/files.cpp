@@ -7,6 +7,7 @@
 #include <QSaveFile>
 #include <QSettings>
 #include <QStandardPaths>
+#include <algorithm>
 #include <QXmlStreamReader>
 #include <archive.h>
 #include <archive_entry.h>
@@ -227,7 +228,10 @@ bool Files::exportDocx(const QString &path, const QString &text) const
                 QStringList cells = lines[i].trimmed().mid(1, lines[i].trimmed().size() - 2).split('|');
                 for (QString &cell : cells) cell = cell.trimmed();
                 const bool separator = std::all_of(cells.cbegin(), cells.cend(), [](const QString &v) {
-                    return !v.isEmpty() && v.remove('-').remove(':').trimmed().isEmpty();
+                    QString normalized = v;
+                    normalized.remove('-');
+                    normalized.remove(':');
+                    return !v.isEmpty() && normalized.trimmed().isEmpty();
                 });
                 if (!separator) {
                     QString row = "<w:tr>";
