@@ -1,0 +1,24 @@
+[Unit]
+Description=nmx network manager
+Documentation=https://github.com/trail-b1az3r/distro/tree/main/apps/nmx
+Wants=network.target systemd-networkd.service systemd-resolved.service
+After=systemd-udevd.service systemd-networkd.service systemd-resolved.service
+Before=network.target
+# nmx keeps managing the network until a device is handed back with `sudo nmxcli device unmanage`:
+# `systemctl stop nmx` is refused, and a crash or kill brings it straight back.
+RefuseManualStop=yes
+
+[Service]
+Type=notify
+NotifyAccess=main
+ExecStart=/usr/bin/nmxd
+Restart=always
+# `nmxcli --internal exit` (the package's removal) exits 75: not restarted.
+RestartPreventExitStatus=75
+RestartSec=1
+KillMode=mixed
+# Package upgrades load the new code without dropping the network for long: nmxcli general reload (root).
+ExecReload=/usr/bin/nmxcli --internal reexec
+
+[Install]
+WantedBy=multi-user.target

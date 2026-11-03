@@ -71,6 +71,8 @@ zram-generator
 plymouth
 
 # Networking and Bluetooth
+# nmx (apps/nmx) manages the network; NetworkManager stays for apps that use its API.
+nmx
 networkmanager
 wpa_supplicant
 bluez

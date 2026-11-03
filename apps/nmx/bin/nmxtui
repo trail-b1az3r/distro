@@ -1,0 +1,6 @@
+#!/usr/bin/python3 -I
+import sys
+
+from nmx.tui import main
+
+sys.exit(main())

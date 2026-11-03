@@ -80,7 +80,8 @@ class WelcomeBackend(QObject):
         return items
 
     def _network_ok(self) -> bool:
-        rc, out = util.run_quiet(["nmcli", "-t", "-f", "STATE", "general"], timeout=5)
+        tool = "nmxcli" if util.which("nmxcli") else "nmcli"
+        rc, out = util.run_quiet([tool, "-t", "-f", "STATE", "general"], timeout=5)
         return rc == 0 and out.strip().startswith("connected")
 
     @Property("QVariant", notify=tasksChanged)

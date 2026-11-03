@@ -94,6 +94,8 @@ class Doctor:
         return Check("Vulkan", OK, f"drivers: {', '.join(names)}")
 
     def network(self) -> Check:
+        if util.which("nmxcli"):
+            return self.network_nmx()
         if not self.live:
             enabled = self.p("/etc/systemd/system/multi-user.target.wants/NetworkManager.service").exists()
             return Check("Network", OK if enabled else FAIL, "NetworkManager enabled" if enabled else "NetworkManager is not enabled",
@@ -108,6 +110,23 @@ class Doctor:
         if state in ("portal", "limited"):
             return Check("Network", WARN, f"Connectivity: {state} (captive portal or no internet)", critical=False)
         return Check("Network", WARN, "Not connected", fix="nmtui", critical=False)
+
+    def network_nmx(self) -> Check:
+        """nmx (apps/nmx) manages the network."""
+        if not self.live:
+            enabled = self.p("/etc/systemd/system/multi-user.target.wants/nmx.service").exists()
+            return Check("Network", OK if enabled else FAIL, "nmx enabled" if enabled else "nmx is not enabled",
+                         fix="" if enabled else "sudo systemctl enable nmx")
+        rc, _ = util.run_quiet(["systemctl", "is-active", "--quiet", "nmx"])
+        if rc != 0:
+            return Check("Network", FAIL, "nmx is not running", fix="sudo systemctl enable --now nmx")
+        rc, out = util.run_quiet(["nmxcli", "networking", "connectivity", "check"], timeout=15)
+        state = out.strip() or "unknown"
+        if state == "full":
+            return Check("Network", OK, "Connected to the internet")
+        if state in ("portal", "limited"):
+            return Check("Network", WARN, f"Connectivity: {state} (captive portal or no internet)", critical=False)
+        return Check("Network", WARN, "Not connected", fix="nmxtui", critical=False)
 
     def audio(self) -> Check:
         if not self.live:

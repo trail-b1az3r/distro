@@ -1,0 +1,40 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+#
+# nmx (apps/nmx): @DISTRO_NAME@'s network manager. nmxd keeps Wi-Fi and Ethernet connected (wpa_supplicant for
+# Wi-Fi, systemd-networkd for addressing, systemd-resolved for DNS) across suspends; nmxcli speaks nmcli's commands;
+# nmxtui is its terminal interface. Built from the same source tarball as the distribution's other packages.
+# Generated from packages/pkgbuild/nmx/PKGBUILD.in.
+
+pkgname=nmx
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc="@DISTRO_NAME@'s network manager: nmxd, nmxcli (nmcli-compatible) and nmxtui"
+arch=(any)
+url="@DISTRO_HOME_URL@"
+license=(GPL-3.0-or-later)
+depends=(python wpa_supplicant systemd iproute2 util-linux)
+optdepends=('networkmanager: for apps that use its API, and to hand devices back to it')
+install=nmx.install
+source=("@DISTRO_ID@-$pkgver.tar.gz")
+sha256sums=('@SOURCE_SHA256@')
+
+check() {
+  cd "@DISTRO_ID@-$pkgver/apps/nmx"
+  python -c 'import nmx.cli, nmx.daemon, nmx.tui; print("nmx", nmx.__version__)'
+}
+
+package() {
+  cd "@DISTRO_ID@-$pkgver/apps/nmx"
+  local site
+  site="$(python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')"
+  install -d "$pkgdir$site/nmx"
+  install -m644 nmx/*.py "$pkgdir$site/nmx/"
+  python -m compileall -q -d "$site/nmx" "$pkgdir$site/nmx"
+  install -Dm755 bin/nmxd "$pkgdir/usr/bin/nmxd"
+  install -Dm755 bin/nmxcli "$pkgdir/usr/bin/nmxcli"
+  install -Dm755 bin/nmxtui "$pkgdir/usr/bin/nmxtui"
+  install -Dm644 data/nmx.service "$pkgdir/usr/lib/systemd/system/nmx.service"
+  install -Dm755 data/nmx.sleep "$pkgdir/usr/lib/systemd/system-sleep/nmx"
+  install -Dm644 data/90-nmx-networkmanager.conf "$pkgdir/usr/lib/NetworkManager/conf.d/90-nmx.conf"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/nmx/README.md"
+}

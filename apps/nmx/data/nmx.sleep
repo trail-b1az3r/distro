@@ -1,0 +1,7 @@
+#!/bin/sh
+# nmx: put Wi-Fi down cleanly before sleep, and bring every device back after (systemd-sleep runs this).
+case "$1" in
+    pre) /usr/bin/nmxcli --internal suspend >/dev/null 2>&1 ;;
+    post) /usr/bin/nmxcli --internal resume >/dev/null 2>&1 ;;
+esac
+exit 0

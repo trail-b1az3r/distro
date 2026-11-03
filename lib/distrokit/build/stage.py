@@ -169,6 +169,8 @@ class Stage:
             'case "$1" in\n'
             "    pre)\n"
             "        if grep -q '^mwifiex_pcie ' /proc/modules; then\n"
+            "            # nmx: put Wi-Fi down cleanly before the driver goes.\n"
+            "            [ -x /usr/bin/nmxcli ] && /usr/bin/nmxcli --internal suspend >/dev/null 2>&1\n"
             "            # Stop NM before removing the interface, but preserve its\n"
             "            # previous active state so we do not start a disabled service.\n"
             "            if systemctl is-active --quiet NetworkManager.service; then\n"
@@ -190,6 +192,8 @@ class Stage:
             '            rm -f "$mark"\n'
             "            if modprobe mwifiex_pcie; then\n"
             "                udevadm settle --timeout=10 || true\n"
+            "                # nmx: the card is back; reconnect now rather than at the next check.\n"
+            "                [ -x /usr/bin/nmxcli ] && /usr/bin/nmxcli --internal resume >/dev/null 2>&1\n"
             "            else\n"
             '                logger -t nexora-mwifiex "could not reload mwifiex_pcie after resume"\n'
             "            fi\n"

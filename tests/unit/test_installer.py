@@ -133,8 +133,11 @@ def test_encrypted_btrfs_uefi_plan_on_hybrid_laptop(machine):
     useradd = find(cmds, "useradd -m")[0]
     assert "-s /usr/bin/fish" in useradd and "wheel" in useradd and useradd.endswith("alex")
     assert find(cmds, "passwd --lock root")
-    for unit in ("NetworkManager.service", "sddm.service", "systemd-boot-update.service", "bluetooth.service"):
+    for unit in ("nmx.service", "systemd-networkd.service", "systemd-resolved.service", "sddm.service",
+                 "systemd-boot-update.service", "bluetooth.service"):
         assert find(cmds, "systemctl enable", unit), unit
+    assert not find(cmds, "systemctl enable", "NetworkManager.service"), "nmx manages the network"
+    assert find(cmds, "ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf")
     s = summary(inst)
     assert s["bootloader"] == "systemd-boot" and s["ai"]["hypernix"] is True
     assert any(line.startswith("ERASE") for line in s["destructive"])
