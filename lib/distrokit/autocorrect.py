@@ -19,7 +19,7 @@ from .ai import runtime
 TERMINAL_CLASSES = {
     "alacritty", "foot", "footclient", "kitty", "konsole", "org.kde.konsole",
     "gnome-terminal", "kgx", "xfce4-terminal", "xterm", "urxvt", "wezterm",
-    "com.mitchellh.ghostty", "tilix", "terminator", "ptyxis", "com.raggesilver.blackbox",
+    "com.mitchellh.ghostty", "tilix", "terminator", "ptyxis", "com.raggesilver.blackbox",\n    "org.gnome.console", "gnome-console", "io.elementary.terminal",
 }
 
 
@@ -44,7 +44,7 @@ def _require_safe_graphical_app() -> None:
         raise AutocorrectError("Autocorrect is available only in a Wayland desktop session, never on a TTY.")
     app_class = _active_window_class()
     if not app_class or app_class in TERMINAL_CLASSES or any(
-        token in app_class for token in ("terminal", "konsole", "kitty", "alacritty", "wezterm", "foot")
+        token in app_class for token in ("terminal", "console", "konsole", "kitty", "alacritty", "wezterm", "foot", "ghostty", "xterm")
     ):
         raise AutocorrectError("Autocorrect is disabled in terminal applications and TTYs.")
 
@@ -121,7 +121,7 @@ def correct_selection() -> int:
             ["wl-paste", "--no-newline"], check=True, capture_output=True, timeout=3
         ).stdout
         subprocess.run(
-            ["wtype", "-M", "CTRL", "-P", "c", "-m", "CTRL"], check=True, timeout=3
+            ["wtype", "-M", "ctrl", "-P", "c", "-m", "ctrl"], check=True, timeout=3
         )
         time.sleep(0.15)
         selected = subprocess.run(
@@ -134,7 +134,7 @@ def correct_selection() -> int:
             subprocess.run(["wl-copy"], input=corrected.encode("utf-8"), check=True, timeout=3)
             time.sleep(0.08)
             subprocess.run(
-                ["wtype", "-M", "CTRL", "-P", "v", "-m", "CTRL"], check=True, timeout=3
+                ["wtype", "-M", "ctrl", "-P", "v", "-m", "ctrl"], check=True, timeout=3
             )
             time.sleep(0.15)
         subprocess.run(["wl-copy"], input=original_clipboard, check=True, timeout=3)
