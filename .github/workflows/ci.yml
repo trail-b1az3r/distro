@@ -169,7 +169,7 @@ jobs:
       actions: read
     steps:
       - name: Install publishing tools
-        run: pacman -Syu --noconfirm --needed git github-cli pacman-contrib
+        run: pacman -Syu --noconfirm --needed git github-cli pacman-contrib python
       - uses: actions/checkout@v4
       - name: Find latest successful Arch package artifact
         id: previous
