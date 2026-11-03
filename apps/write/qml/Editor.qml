@@ -11,7 +11,29 @@ Item {
     id: root
     property string path: ""
     property bool modified: false
-    property int viewMode: 1   // 0 edit, 1 edit and preview, 2 preview, 3 document page
+    property int viewMode: 1   // 0 edit, 1 edit and preview, 2 preview, 3 document
+    readonly property bool documentMode: viewMode === 3
+
+    function wrapSelection(before, after) {
+        const start = area.selectionStart >= 0 ? area.selectionStart : area.cursorPosition
+        const end = area.selectionEnd >= start ? area.selectionEnd : start
+        const selected = area.selectedText || qsTr("text")
+        area.remove(start, end)
+        area.insert(start, before + selected + after)
+        area.select(start + before.length, start + before.length + selected.length)
+        area.forceActiveFocus()
+    }
+
+    function prefixLine(prefix) {
+        const lineStart = area.text.lastIndexOf("\\n", Math.max(0, area.cursorPosition - 1)) + 1
+        area.insert(lineStart, prefix)
+        area.forceActiveFocus()
+    }
+
+    function insertAtCursor(value) {
+        area.insert(area.cursorPosition, value)
+        area.forceActiveFocus()
+    }, 3 document page
     readonly property bool documentMode: viewMode === 3
 
     function wrapSelection(before, after) {
@@ -200,7 +222,7 @@ Item {
             visible: root.path !== ""
             Label { text: qsTr("%1 words").arg(Files.words(area.text)); color: Theme.c.onSurfaceVariant }
             Label { text: qsTr("%1 characters").arg(area.length); color: Theme.c.onSurfaceVariant }
-            Label { text: highlighter.definition; color: Theme.c.onSurfaceVariant }
+            Label { text: highlighter.definition; color: Theme.c.onSurfaceVariant }\n            Label { text: root.documentMode ? qsTr("Document layout") : ""; color: Theme.c.onSurfaceVariant }
             Label { text: root.documentMode ? qsTr("Document layout") : ""; color: Theme.c.onSurfaceVariant }
             Label {
                 Layout.fillWidth: true
