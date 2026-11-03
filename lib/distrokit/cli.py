@@ -219,8 +219,10 @@ def _apply_halcyon_desktop_update() -> None:
         command_prefix = []
     script = home / ".config/hypr/hyprland/halcyon/update"
     state = home / ".local/state/halcyon"
-    if not script.is_file() or not (state / "repo").is_file():
+    if not script.is_file():
         return
+    # Halcyon's updater self-registers a source checkout for Nexora/manual
+    # installs that never ran ./setup install.
     print(S.header("Updating Halcyon desktop files with Halcyon's updater"))
     result = util.Runner(log=print).run(
         [*command_prefix, "bash", str(script), "apply", "halcyon"],
