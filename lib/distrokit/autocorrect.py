@@ -49,10 +49,26 @@ def _require_safe_graphical_app() -> None:
         raise AutocorrectError("Autocorrect is disabled in terminal applications and TTYs.")
 
 
+def _ensure_server() -> None:
+    if runtime.is_running():
+        return
+    runtime.start()
+    deadline = time.monotonic() + 20
+    while time.monotonic() < deadline:
+        if runtime.is_running():
+            return
+        time.sleep(0.25)
+    raise AutocorrectError(
+        "The local model server did not start. Install a GGUF model and make it the default "
+        "with nexora model default MODEL, then try again."
+    )
+
+
 def correct_text(text: str, timeout: float = 20.0) -> str:
     """Correct spelling and grammar through the configured local llama-server."""
     if not text.strip():
         return text
+    _ensure_server()
     payload = {
         "model": "local",
         "messages": [
@@ -99,24 +115,28 @@ def correct_selection() -> int:
     missing = [name for name in required if not shutil.which(name)]
     if missing:
         raise AutocorrectError("Missing Wayland tools: " + ", ".join(missing))
+
     try:
-        original_clipboard = subprocess.run(["wl-paste", "--no-newline"], check=True,
-                                            capture_output=True, timeout=3).stdout
-        subprocess.run(["wtype", "-M", "CTRL", "-P", "c", "-m", "CTRL"],
-                       check=True, timeout=3)
+        original_clipboard = subprocess.run(
+            ["wl-paste", "--no-newline"], check=True, capture_output=True, timeout=3
+        ).stdout
+        subprocess.run(
+            ["wtype", "-M", "CTRL", "-P", "c", "-m", "CTRL"], check=True, timeout=3
+        )
         time.sleep(0.15)
-        selected = subprocess.run(["wl-paste", "--no-newline"], check=True,
-                                  capture_output=True, timeout=3).stdout.decode("utf-8")
+        selected = subprocess.run(
+            ["wl-paste", "--no-newline"], check=True, capture_output=True, timeout=3
+        ).stdout.decode("utf-8")
         if not selected.strip():
             raise AutocorrectError("Select some text first.")
         corrected = correct_text(selected)
-        if corrected == selected:
-            return 0
-        subprocess.run(["wl-copy"], input=corrected.encode("utf-8"), check=True, timeout=3)
-        time.sleep(0.08)
-        subprocess.run(["wtype", "-M", "CTRL", "-P", "v", "-m", "CTRL"],
-                       check=True, timeout=3)
-        time.sleep(0.15)
+        if corrected != selected:
+            subprocess.run(["wl-copy"], input=corrected.encode("utf-8"), check=True, timeout=3)
+            time.sleep(0.08)
+            subprocess.run(
+                ["wtype", "-M", "CTRL", "-P", "v", "-m", "CTRL"], check=True, timeout=3
+            )
+            time.sleep(0.15)
         subprocess.run(["wl-copy"], input=original_clipboard, check=True, timeout=3)
         return 0
     except AutocorrectError:
