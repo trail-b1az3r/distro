@@ -56,7 +56,7 @@ Item {
     }
 
     function sendEmail() {
-        const url = "mailto:" + encodeURIComponent(emailTo.text)
+        const url = "mailto:" + emailTo.text.trim()
             + "?subject=" + encodeURIComponent(emailSubject.text)
             + "&body=" + encodeURIComponent(emailBody.text)
         Qt.openUrlExternally(url)
@@ -81,7 +81,7 @@ Item {
             area.remove(start, end)
             area.insert(start, "<mark>" + selected + "</mark>")
         }
-        area.insert(area.text.length, "\\n<!-- WRITE_COMMENT:" + value.replace(/-->/g, "") + " -->\\n")
+        area.insert(area.text.length, "\n<!-- WRITE_COMMENT:" + value.replace(/-->/g, "") + " -->\n")
         area.forceActiveFocus()
     }
 
