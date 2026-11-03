@@ -44,6 +44,7 @@ public:
     QVariantList recentBooks() const;
 
     Q_INVOKABLE int words(const QString &text) const;
+    Q_INVOKABLE bool betterbirdInstalled() const;
 
 signals:
     void recentBooksChanged();
