@@ -70,15 +70,20 @@ def _parse_updates(text: str) -> list[Item]:
 
 
 def check_packages() -> Source:
-    src = Source("packages", "System packages (pacman)", needs_root=True, command=["pacman", "-Syu"])
-    if not util.which("checkupdates"):
-        src.available, src.error = False, "checkupdates (pacman-contrib) is not installed"
-        return src
-    # checkupdates syncs a private copy of the databases: no root, no partial upgrades.
-    rc, out = util.run_quiet(["checkupdates", "--nocolor"], timeout=180)
-    if rc not in (0, 2):  # 2 = no updates
-        src.error = "could not reach the package mirrors"
-        return src
+    src = Source("packages", "System & Nexora packages (pacman)", needs_root=True, command=["pacman", "-Syu"])
+    if util.which("checkupdates"):
+        # checkupdates syncs a private copy of the databases: no root, no partial upgrades.
+        rc, out = util.run_quiet(["checkupdates", "--nocolor"], timeout=180)
+        if rc not in (0, 2):  # 2 = no updates
+            src.error = "could not reach the package mirrors"
+            return src
+    else:
+        # Minimal/manual installs may not have pacman-contrib. Read the already
+        # synchronized databases instead of disabling the updater entirely.
+        rc, out = util.run_quiet(["pacman", "-Qu", "--color", "never"], timeout=180)
+        if rc != 0:
+            src.error = "could not read available package updates; run a full system upgrade to refresh package databases"
+            return src
     src.items = _parse_updates(out)
     return src
 
