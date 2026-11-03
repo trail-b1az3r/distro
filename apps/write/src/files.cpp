@@ -168,13 +168,17 @@ QString Files::importDocx(const QString &path) const
         return {};
 
     QXmlStreamReader x(xml);
-    QString out, paragraph;
-    bool inParagraph = false;
+    QString out, paragraph, cell;
+    QStringList cells;
+    bool inParagraph = false, inTable = false, inRow = false, inCell = false;
     while (!x.atEnd()) {
         x.readNext();
         if (x.isStartElement()) {
             const QString n = x.name().toString();
-            if (n == "p") { inParagraph = true; paragraph.clear(); }
+            if (n == "tbl") { inTable = true; out += '\n'; }
+            else if (n == "tr" && inTable) { inRow = true; cells.clear(); }
+            else if (n == "tc" && inRow) { inCell = true; cell.clear(); }
+            else if (n == "p") { inParagraph = true; paragraph.clear(); }
             else if (n == "t" && inParagraph) paragraph += x.readElementText();
             else if (n == "tab" && inParagraph) paragraph += '\t';
             else if (n == "br" && inParagraph) {
@@ -182,10 +186,24 @@ QString Files::importDocx(const QString &path) const
                     paragraph += "\n\n<!-- WRITE_PAGE_BREAK -->\n\n";
                 else paragraph += '\n';
             }
-        } else if (x.isEndElement() && x.name() == "p") {
-            if (!paragraph.trimmed().isEmpty())
-                out += paragraph.trimmed() + "\n\n";
-            inParagraph = false;
+        } else if (x.isEndElement()) {
+            const QString n = x.name().toString();
+            if (n == "p") {
+                if (inCell) cell += paragraph.trimmed() + ' ';
+                else if (!paragraph.trimmed().isEmpty()) out += paragraph.trimmed() + "\n\n";
+                inParagraph = false;
+            } else if (n == "tc" && inCell) {
+                cells << cell.simplified();
+                inCell = false;
+            } else if (n == "tr" && inRow) {
+                out += "| " + cells.join(" | ") + " |\n";
+                if (out.count('\n') <= 1)
+                    out += "| " + QStringList(cells.size(), "---").join(" | ") + " |\n";
+                inRow = false;
+            } else if (n == "tbl") {
+                out += '\n';
+                inTable = false;
+            }
         }
     }
     if (x.hasError())
