@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import subprocess
 import time
+from pathlib import Path
 
 from PySide6.QtCore import Property, QObject, Signal, Slot
 
