@@ -11,16 +11,16 @@
 # Generated from packages/pkgbuild/hyprland-plus/PKGBUILD.in.
 
 pkgname=hyprland-plus
-_commit=890435832e0a0a011d14249707974f06ba7089a1
+_commit=ba52d8495ea819ef1e0adb39c18fc1564b1089b9
 _udis86=5336633af70f3917760a6d441ff02d93477b0c86
-pkgver=0.57.0.p3
+pkgver=0.57.1.p1
 pkgrel=1
 pkgdesc="Hyprland with Halcyon windows, renderer effects, app-scoped pen pressure curves and touchD support"
 arch=(x86_64)
 url="https://github.com/trail-b1az3r/hyprland-plus"
 license=(BSD-3-Clause)
 depends=(
-  aquamarine cairo glib2 glslang hyprcursor hyprgraphics hyprland-guiutils
+  "aquamarine>=0.16.0" cairo glib2 glslang hyprcursor hyprgraphics hyprland-guiutils
   hyprlang hyprutils hyprwire lcms2 libcanberra libdrm libei libglvnd
   libinput libx11 libxcb libxcomposite libxcursor libxfixes libxkbcommon
   libxrender lua mesa muparser pango pixman re2 sdbus-cpp
