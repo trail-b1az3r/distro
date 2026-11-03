@@ -7,6 +7,8 @@
 # (packages/pkgbuild/hyprland-plus). It provides hyprland, so it takes the
 # place of the stock package illogical-impulse-hyprland asks for.
 hyprland-plus
+wl-clipboard
+wtype
 illogical-impulse-audio
 illogical-impulse-backlight
 illogical-impulse-basic
