@@ -109,6 +109,11 @@ class UpdaterBackend(QObject):
             for s in wanted:
                 self.log.emit(f"== {s['label']} ==")
                 if s["id"] == "packages":
+                    # Turn on the Nexora repository when it is published. This
+                    # matters on manual installs that never ran installer setup.
+                    repo_rc = self._stream(["pkexec", f"/usr/bin/{self.b.cli}", "repo", "auto"])
+                    if repo_rc != 0:
+                        self.log.emit("Could not auto-enable the Nexora repository; continuing with configured repositories.")
                     # Generic pkexec authorization works without Nexora's custom
                     # helper/polkit policy on manually assembled installations.
                     # Full upgrade includes all installed Nexora packages too.
