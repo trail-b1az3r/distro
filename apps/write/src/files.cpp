@@ -215,9 +215,37 @@ bool Files::exportDocx(const QString &path, const QString &text) const
 {
     QString body;
     const QStringList lines = text.split('\n');
-    for (const QString &line : lines) {
+    for (qsizetype i = 0; i < lines.size(); ++i) {
+        const QString line = lines[i];
         if (line.trimmed() == "<!-- WRITE_PAGE_BREAK -->") {
             body += "<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>";
+            continue;
+        }
+        if (line.trimmed().startsWith('|') && line.trimmed().endsWith('|')) {
+            QStringList tableRows;
+            while (i < lines.size() && lines[i].trimmed().startsWith('|') && lines[i].trimmed().endsWith('|')) {
+                QStringList cells = lines[i].trimmed().mid(1, lines[i].trimmed().size() - 2).split('|');
+                for (QString &cell : cells) cell = cell.trimmed();
+                const bool separator = std::all_of(cells.cbegin(), cells.cend(), [](const QString &v) {
+                    return !v.isEmpty() && v.remove('-').remove(':').trimmed().isEmpty();
+                });
+                if (!separator) {
+                    QString row = "<w:tr>";
+                    for (const QString &cell : cells)
+                        row += "<w:tc><w:tcPr><w:tcW w:w=\"2400\" w:type=\"dxa\"/></w:tcPr><w:p><w:r><w:t xml:space=\"preserve\">"
+                            + escapeXml(cell) + "</w:t></w:r></w:p></w:tc>";
+                    row += "</w:tr>";
+                    tableRows << row;
+                }
+                ++i;
+            }
+            --i;
+            if (!tableRows.isEmpty())
+                body += "<w:tbl><w:tblPr><w:tblBorders>"
+                    "<w:top w:val=\"single\" w:sz=\"4\"/><w:left w:val=\"single\" w:sz=\"4\"/>"
+                    "<w:bottom w:val=\"single\" w:sz=\"4\"/><w:right w:val=\"single\" w:sz=\"4\"/>"
+                    "<w:insideH w:val=\"single\" w:sz=\"4\"/><w:insideV w:val=\"single\" w:sz=\"4\"/>"
+                    "</w:tblBorders></w:tblPr>" + tableRows.join(QString()) + "</w:tbl>";
             continue;
         }
         QString value = line;
