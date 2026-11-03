@@ -221,6 +221,20 @@ def test_networkd_file_dhcp_and_static():
     assert "DHCP=no" in static and "IPv6AcceptRA=no" in static
 
 
+def test_take_over_once(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(net, "run", lambda cmd, timeout=15: calls.append(cmd) or __import__("subprocess").CompletedProcess(cmd, 0, "", ""))
+    resolv = tmp_path / "resolv.conf"
+    resolv.write_text("nameserver 192.0.2.1\n")
+    marker = tmp_path / "state/took-over"
+    done = net.take_over(marker, resolv)
+    assert resolv.is_symlink() and os.readlink(resolv) == net.RESOLVED_STUB
+    assert (tmp_path / "resolv.conf.before-nmx").read_text() == "nameserver 192.0.2.1\n"
+    assert ["systemctl", "disable", "--now", "NetworkManager.service"] in calls and len(done) == 2
+    calls.clear()
+    assert net.take_over(marker, resolv) == [] and calls == [], "only the first start"
+
+
 def test_device_kinds(tmp_path):
     for name, files in {"wlan0": ["device", "wireless"], "eth0": ["device"], "lo": [], "br0": ["bridge"]}.items():
         d = tmp_path / name
@@ -494,6 +508,13 @@ def test_not_running(tmp_path, monkeypatch):
     monkeypatch.setattr(cli.client, "SOCKET", str(tmp_path / "none.sock"))
     code, _, err = run("general")
     assert code == 8 and "not running" in err
+
+
+def test_installing_the_package_changes_nothing():
+    script = (ROOT / "packages/pkgbuild/nmx/nmx.install").read_text()
+    post_install = script.split("post_install() {", 1)[1].split("}", 1)[0]
+    commands = [line.strip() for line in post_install.splitlines() if line.strip() and not line.strip().startswith("echo")]
+    assert commands == [], "it only says how to switch"
 
 
 def test_unit_refuses_stop_and_comes_back():

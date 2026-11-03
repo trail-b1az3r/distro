@@ -121,6 +121,17 @@ label = "Btrfs snapshots"
 description = "Automatic snapshots before and after every pacman transaction, bootable from GRUB. Btrfs only."
 lists = ["snapshots"]
 
+[network_manager]
+kind = "choice"
+group = "System"
+order = 10
+label = "Network manager"
+description = "NetworkManager, the usual one; or nmx, Nexora's own (nmcli-compatible, Wi-Fi back after every suspend, enterprise Wi-Fi with automatic certificates). Both are installed: switch later with `sudo systemctl enable --now nmx`."
+default = "networkmanager"
+[network_manager.choices]
+networkmanager = []
+nmx = []
+
 [firewall]
 kind = "bool"
 group = "System"

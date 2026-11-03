@@ -94,7 +94,8 @@ class Doctor:
         return Check("Vulkan", OK, f"drivers: {', '.join(names)}")
 
     def network(self) -> Check:
-        if util.which("nmxcli"):
+        if util.which("nmxcli") and (self.p("/etc/systemd/system/multi-user.target.wants/nmx.service").exists()
+                                     or util.run_quiet(["systemctl", "is-active", "--quiet", "nmx"])[0] == 0):
             return self.network_nmx()
         if not self.live:
             enabled = self.p("/etc/systemd/system/multi-user.target.wants/NetworkManager.service").exists()

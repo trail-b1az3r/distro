@@ -1,7 +1,15 @@
 # nmx
 
-Nexora's network manager. **nmxd** keeps Wi-Fi and Ethernet connected; **nmxcli** controls it with nmcli's
-commands; **nmxtui** is its terminal interface, like nmtui.
+Nexora's own network manager, the alternative to NetworkManager. **nmxd** keeps Wi-Fi and Ethernet connected;
+**nmxcli** controls it with nmcli's commands; **nmxtui** is its terminal interface, like nmtui.
+
+It is opt-in: the installer asks (Network manager: networkmanager or nmx), and on an installed system
+
+```sh
+sudo systemctl enable --now nmx       # switch: NetworkManager's saved networks come over, DNS goes through
+                                      # systemd-resolved, NetworkManager is turned off (once)
+sudo nmxcli device unmanage && sudo systemctl enable --now NetworkManager   # and back
+```
 
 ```sh
 nmxcli                                   # overview

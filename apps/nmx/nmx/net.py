@@ -231,6 +231,40 @@ def give_back_to_networkmanager(iface: str) -> None:
         run(["nmcli", "device", "set", iface, "managed", "yes"])
 
 
+RESOLV = Path(os.environ.get("NMX_RESOLV", "/etc/resolv.conf"))
+RESOLVED_STUB = "/run/systemd/resolve/stub-resolv.conf"
+
+
+def take_over(marker: Path, resolv: Path = RESOLV) -> list[str]:
+    """The first start after `systemctl enable --now nmx`: DNS through systemd-resolved (the old resolv.conf kept as
+    resolv.conf.before-nmx), systemd-networkd and -resolved on at boot, and NetworkManager off, since a
+    NetworkManager that manages nothing tells apps the computer is offline. Once: after `sudo nmxcli device
+    unmanage` hands things back, NetworkManager is never turned off again. Returns what it did."""
+    if marker.exists():
+        return []
+    done = []
+    try:
+        if not (resolv.is_symlink() and os.readlink(resolv) == RESOLVED_STUB):
+            if resolv.exists() and not resolv.is_symlink():
+                shutil.copy2(resolv, resolv.with_name(resolv.name + ".before-nmx"))
+            tmp = resolv.with_name(resolv.name + ".nmx-tmp")
+            if tmp.is_symlink() or tmp.exists():
+                tmp.unlink()
+            tmp.symlink_to(RESOLVED_STUB)
+            os.replace(tmp, resolv)
+            done.append("DNS now goes through systemd-resolved")
+    except OSError as error:
+        done.append(f"could not point {resolv} at systemd-resolved: {error}")
+    run(["systemctl", "enable", "systemd-networkd.service", "systemd-resolved.service"], timeout=30)
+    if run(["systemctl", "is-enabled", "--quiet", "NetworkManager.service"]).returncode == 0 or \
+            run(["systemctl", "is-active", "--quiet", "NetworkManager.service"]).returncode == 0:
+        run(["systemctl", "disable", "--now", "NetworkManager.service"], timeout=60)
+        done.append("NetworkManager turned off (its saved connections were imported)")
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.touch()
+    return done
+
+
 def reload_driver(module: str) -> bool:
     """The last resort after a suspend that left the card dead (Marvell mwifiex, some Realtek and Intel cards)."""
     if not module:

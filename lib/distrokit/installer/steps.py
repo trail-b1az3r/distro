@@ -95,9 +95,7 @@ def _make_gpg_keyring_writable(gpgdir: Path, owner: tuple[int, int] | None = Non
     gpgdir.chmod(0o700)
 
 MKINITCPIO_HOOKS = "base systemd plymouth autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck"
-# nmx manages the network (apps/nmx): systemd-networkd does its addressing and systemd-resolved its DNS.
-SYSTEM_SERVICES = ["nmx.service", "systemd-networkd.service", "systemd-resolved.service", "bluetooth.service",
-                   "sddm.service", "fstrim.timer",
+SYSTEM_SERVICES = ["bluetooth.service", "sddm.service", "fstrim.timer",
                    "systemd-timesyncd.service", "power-profiles-daemon.service", "paccache.timer"]
 USER_GROUPS = ["wheel", "video", "audio", "input", "i2c"]
 ZRAM_SYSCTL = "vm.swappiness = 180\nvm.watermark_boost_factor = 0\nvm.watermark_scale_factor = 125\nvm.page-cluster = 0\n"
@@ -518,7 +516,7 @@ class Installation:
         conf = self.pacman_conf("live" if self.online else "offline")
         wanted = self.packages()
         available, missing = self.split_available(wanted, conf)
-        essential = {"base", "linux", "mkinitcpio", "sudo", "nmx", f"{self.branding.id}-core",
+        essential = {"base", "linux", "mkinitcpio", "sudo", "networkmanager", f"{self.branding.id}-core",
                      "archlinux-keyring", "endeavouros-keyring"}
         fatal = [p for p in missing if p in essential or p in self.cfg.kernels]
         if fatal:
@@ -789,7 +787,11 @@ class Installation:
         self.chroot(["chown", "-R", f"{self.user}:{self.user}", self.home])
 
     def services(self) -> None:
-        units = list(SYSTEM_SERVICES)
+        nmx = self.features.get("network_manager", "networkmanager") == "nmx"
+        # The network: NetworkManager, or nmx (apps/nmx), whose addressing is systemd-networkd's and DNS
+        # systemd-resolved's. The installer's choice; both are installed either way.
+        units = (["nmx.service", "systemd-networkd.service", "systemd-resolved.service"] if nmx
+                 else ["NetworkManager.service"]) + list(SYSTEM_SERVICES)
         if self.features.get("firewall"):
             units.append("nftables.service")
         if self.features.get("containers") == "docker":
@@ -809,9 +811,10 @@ class Installation:
         units.append(f"{self.branding.id}-auto-update.timer")
         for unit in units:
             self.chroot(["systemctl", "enable", unit], check=False)
-        # DNS through systemd-resolved, which nmx's addressing (systemd-networkd) feeds.
-        self.chroot(["ln", "-sf", "/run/systemd/resolve/stub-resolv.conf", "/etc/resolv.conf"], check=False)
-        # The live system's Wi-Fi: nmxd imports NetworkManager's saved connections on its first start.
+        if nmx:
+            # DNS through systemd-resolved, which nmx's addressing (systemd-networkd) feeds.
+            self.chroot(["ln", "-sf", "/run/systemd/resolve/stub-resolv.conf", "/etc/resolv.conf"], check=False)
+        # The live system's Wi-Fi, kept either way (nmxd imports NetworkManager's saved connections on first start).
         live = Path("/etc/NetworkManager/system-connections")
         if live.is_dir() and not self.runner.dry_run:
             target = self.t("/etc/NetworkManager/system-connections")

@@ -988,10 +988,13 @@ class Daemon:
             STATE.parent.mkdir(parents=True, exist_ok=True)
             (STATE.parent / "imported-networkmanager").touch()
         net.ensure_services()
-        if self.state["wifi"]:
-            net.set_rfkill(True)
         self.serve()
         self.reconcile()
+        # Opting in (systemctl enable --now nmx): the first start switches the system over, once.
+        for line in net.take_over(STATE.parent / "took-over"):
+            log(line)
+        if self.state["wifi"]:
+            net.set_rfkill(True)
         notify_ready()
         log(f"nmxd {__version__} running; managing " + (", ".join(i for i, d in self.devices.items() if d.managed) or "nothing yet"))
         while not self.stopping:

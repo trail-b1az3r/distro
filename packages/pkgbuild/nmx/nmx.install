@@ -1,26 +1,9 @@
-# nmx takes over from NetworkManager on a running system: saved connections come over (nmxd imports them on its
-# first start) and NetworkManager is turned off. While packages are installed into an image or a new system (no
-# systemd running), nothing is enabled here: the installer enables nmx itself, and the live ISO keeps NetworkManager.
+# nmx is opt-in: installing it changes nothing. `sudo systemctl enable --now nmx` switches over; nmxd then imports
+# NetworkManager's saved connections, points DNS at systemd-resolved and turns NetworkManager off, once.
 
 post_install() {
-  [ -d /run/systemd/system ] || return 0
-  # DNS through systemd-resolved, which nmx (via systemd-networkd) feeds. The old resolv.conf is kept.
-  if [ ! -L /etc/resolv.conf ] || [ "$(readlink /etc/resolv.conf)" != "/run/systemd/resolve/stub-resolv.conf" ]; then
-    [ -e /etc/resolv.conf ] && cp -a /etc/resolv.conf /etc/resolv.conf.before-nmx 2>/dev/null
-    ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
-  fi
-  systemctl enable systemd-networkd.service systemd-resolved.service nmx.service >/dev/null 2>&1 || true
-  if [ -d /run/systemd/system ]; then
-    systemctl start systemd-networkd.service systemd-resolved.service >/dev/null 2>&1 || true
-    systemctl start nmx.service >/dev/null 2>&1 || true
-    # NetworkManager stays installed but stops: nmx has imported its saved connections. A running
-    # NetworkManager that manages nothing would tell apps the computer is offline.
-    if systemctl is-enabled --quiet NetworkManager.service 2>/dev/null; then
-      systemctl disable --now NetworkManager.service >/dev/null 2>&1 || true
-      echo "nmx: NetworkManager is now off (its saved networks were imported). Back: sudo nmxcli device unmanage && sudo systemctl enable --now NetworkManager"
-    fi
-  fi
-  echo "nmx: managing the network. nmxcli and nmxtui control it; \`sudo nmxcli device unmanage\` hands a device back."
+  echo "nmx is installed but not in use. To switch from NetworkManager: sudo systemctl enable --now nmx"
+  echo "(saved networks come over; back again: sudo nmxcli device unmanage && sudo systemctl enable --now NetworkManager)"
 }
 
 post_upgrade() {
@@ -30,9 +13,10 @@ post_upgrade() {
 }
 
 pre_remove() {
-  if [ -d /run/systemd/system ]; then
+  if [ -d /run/systemd/system ] && systemctl is-active --quiet nmx.service; then
     /usr/bin/nmxcli device unmanage >/dev/null 2>&1 || true
     /usr/bin/nmxcli --internal exit >/dev/null 2>&1 || true
+    echo "nmx: removed. Turn NetworkManager back on: sudo systemctl enable --now NetworkManager"
   fi
   systemctl disable nmx.service >/dev/null 2>&1 || true
   rm -f /etc/NetworkManager/conf.d/90-nmx.conf

@@ -71,7 +71,8 @@ zram-generator
 plymouth
 
 # Networking and Bluetooth
-# nmx (apps/nmx) manages the network; NetworkManager stays for apps that use its API.
+# NetworkManager manages the network by default; nmx (apps/nmx) is the opt-in alternative
+# (the installer asks; `sudo systemctl enable --now nmx` switches an installed system).
 nmx
 networkmanager
 wpa_supplicant

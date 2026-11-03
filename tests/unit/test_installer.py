@@ -102,6 +102,21 @@ def find(cmds, *words):
     return [c for c in cmds if all(w in c for w in words)]
 
 
+def test_nmx_when_chosen(machine):
+    cfg = make_cfg(features={"network_manager": "nmx"})
+    _inst, cmds = plan(machine, "hybrid_gtx1080_laptop", cfg)
+    for unit in ("nmx.service", "systemd-networkd.service", "systemd-resolved.service"):
+        assert find(cmds, "systemctl enable", unit), unit
+    assert not find(cmds, "systemctl enable", "NetworkManager.service")
+    assert find(cmds, "ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf")
+
+
+def test_network_manager_is_a_choice_in_the_installer():
+    feature = load_features()["network_manager"]
+    assert feature.kind == "choice" and feature.default == "networkmanager"
+    assert set(feature.choices) == {"networkmanager", "nmx"}
+
+
 def test_encrypted_btrfs_uefi_plan_on_hybrid_laptop(machine):
     b = load_branding()
     cfg = make_cfg(profile="ai", disk={"encrypt": True, "passphrase": "disk-secret-123"},
@@ -133,11 +148,9 @@ def test_encrypted_btrfs_uefi_plan_on_hybrid_laptop(machine):
     useradd = find(cmds, "useradd -m")[0]
     assert "-s /usr/bin/fish" in useradd and "wheel" in useradd and useradd.endswith("alex")
     assert find(cmds, "passwd --lock root")
-    for unit in ("nmx.service", "systemd-networkd.service", "systemd-resolved.service", "sddm.service",
-                 "systemd-boot-update.service", "bluetooth.service"):
+    for unit in ("NetworkManager.service", "sddm.service", "systemd-boot-update.service", "bluetooth.service"):
         assert find(cmds, "systemctl enable", unit), unit
-    assert not find(cmds, "systemctl enable", "NetworkManager.service"), "nmx manages the network"
-    assert find(cmds, "ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf")
+    assert not find(cmds, "systemctl enable", "nmx.service"), "nmx is opt-in"
     s = summary(inst)
     assert s["bootloader"] == "systemd-boot" and s["ai"]["hypernix"] is True
     assert any(line.startswith("ERASE") for line in s["destructive"])
