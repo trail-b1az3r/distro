@@ -235,10 +235,10 @@ jobs:
           packages = []
           for archive in sorted(Path("build/experiments-input").glob("*.pkg.tar.zst")):
               result = subprocess.run(
-                  ["pacman", "-Qp", "--print-format", "%n\\t%v\\t%a", str(archive)],
+                  ["pacman", "-Qp", "--print-format", "%n|%v|%a", str(archive)],
                   check=True, text=True, capture_output=True,
               )
-              name, version, arch = result.stdout.strip().split("\\t")
+              name, version, arch = result.stdout.strip().split("|")
               packages.append({
                   "name": name,
                   "version": version,
@@ -254,7 +254,7 @@ jobs:
               "packages": packages,
           }
           Path("build/experiments-assets/packages.json").write_text(
-              json.dumps(manifest, indent=2, sort_keys=True) + "\\n"
+              json.dumps(manifest, indent=2, sort_keys=True) + chr(10)
           )
           print(f"Wrote public manifest for {len(packages)} CI packages.")
           PY
