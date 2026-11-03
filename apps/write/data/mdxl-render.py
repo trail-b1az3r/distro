@@ -21,7 +21,11 @@ for line in sys.stdin:
     except ValueError:
         continue
     try:
-        out = {"id": req.get("id", 0), "html": render_mdxl(req.get("text", ""))}
+        source = req.get("text", "").replace(
+            "<!-- WRITE_PAGE_BREAK -->",
+            '<div class="write-page-break"></div>',
+        )
+        out = {"id": req.get("id", 0), "html": render_mdxl(source)}
     except Exception as exc:  # noqa: BLE001
         out = {"id": req.get("id", 0), "error": str(exc)}
     sys.stdout.write(json.dumps(out) + "\n")
