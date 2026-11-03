@@ -201,6 +201,35 @@ def cmd_surface(a) -> int:
 # ---------------------------------------------------------------------------
 
 
+def _apply_halcyon_desktop_update() -> None:
+    """Use Halcyon's own selective updater before Nexora's package update."""
+    username = os.environ.get("SUDO_USER") if os.geteuid() == 0 else ""
+    if username:
+        try:
+            passwd = subprocess.run(["getent", "passwd", username], check=True, text=True,
+                                    capture_output=True, timeout=5).stdout.strip()
+            home_text = passwd.split(":")[5]
+            home = Path(home_text)
+        except (OSError, subprocess.SubprocessError, IndexError):
+            print(S.warn("Could not locate the invoking user's home; skipping the Halcyon updater."))
+            return
+        command_prefix = ["sudo", "-u", username, "-H"]
+    else:
+        home = Path.home()
+        command_prefix = []
+    script = home / ".config/hypr/hyprland/halcyon/update"
+    state = Path(os.environ.get("XDG_STATE_HOME", str(home / ".local/state"))) / "halcyon"
+    if not script.is_file() or not (state / "repo").is_file():
+        return
+    print(S.header("Updating Halcyon desktop files with Halcyon's updater"))
+    result = util.Runner(log=print).run(
+        [*command_prefix, "bash", str(script), "apply", "halcyon"],
+        terminal=True, check=False,
+    )
+    if result.returncode:
+        print(S.warn(f"Halcyon desktop update failed (exit {result.returncode}); continuing with Nexora packages."))
+
+
 def cmd_update(a) -> int:
     from .system import update
 
@@ -208,6 +237,8 @@ def cmd_update(a) -> int:
         for line in update.apply_desktop(B, log=lambda m: None):
             print(S.ok(line))
         return 0
+    if not a.check:
+        _apply_halcyon_desktop_update()
     wanted = [s for s in ("packages", "aur", "flatpak", "desktop", "gpu", "ai")
               if not getattr(a, f"no_{s}", False)]
     print(S.header("Checking for updates…"))
