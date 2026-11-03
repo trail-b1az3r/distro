@@ -12,7 +12,7 @@ Quick and C++.
 * **Books**: a book is a folder of MDXL chapters in `~/Documents/Books`
   (`01-…`, `02-…`); **Reading** opens EPUB books a chapter at a time with
   their table of contents, remembers where you were, and sizes the text.
-* **Theme**: the colours of the desktop's current Halcyon theme
+* **Document view**: a centered, paper-like reading layout while retaining the desktop UI theme.\n* **Theme**: the colours of the desktop's current Halcyon theme
   (`~/.local/state/quickshell/user/generated/colors.json`, followed live),
   dark copper without one; Material style, Google Sans Flex and JetBrains Mono.
 
@@ -25,7 +25,7 @@ Quick and C++.
 | Ctrl+S | Save the current document |
 | Ctrl+Shift+S | Save as |
 | Ctrl+1 / 2 / 3 / 4 | Write / Notes / Books / Reading |
-| Ctrl+E | Cycle Edit, Both and Preview |
+| Ctrl+E | Cycle Edit, Both, Preview and Document |
 | Ctrl+Shift+E | Toggle Preview and Both |
 | Ctrl+PageUp / PageDown | Previous / next section |
 | Ctrl+Alt+1 / 2 / 3 / 4 | Alternate navigation shortcuts |
