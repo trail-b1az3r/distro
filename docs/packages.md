@@ -57,9 +57,17 @@ the mode, in `/etc/nexora/auto-update.conf`:
 | `off` | Nothing runs. |
 
 ```bash
-nexora auto-update                 # the mode and the last run
+nexora auto-update                 # the mode, the timers and the last run
 sudo nexora auto-update mode apply # or notify, or off
+sudo nexora auto-update enable     # set the timers up on any install (disable turns them off)
 ```
+
+It works however the system was installed, not only from the installer or
+the distribution's packages: `sudo nexora auto-update enable` writes any
+missing timers to `/etc/systemd`, pointing at the `nexora` you ran (a
+packaged one, or a source checkout), and turns them on. The first
+`sudo nexora update` does the same on a system that has none yet, and
+`sudo nexora auto-update disable` turns them off again.
 
 An unattended install holds back, and notifies instead, when the computer is
 on battery, when there is Arch Linux news since the last update (it often

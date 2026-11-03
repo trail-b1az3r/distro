@@ -66,3 +66,45 @@ def test_cli_parses():
     assert (a.action, a.value) == ("mode", "apply")
     a = build_parser().parse_args(["auto-update", "run", "--user"])
     assert a.user and not a.system
+
+
+def test_units_follow_the_tool_wherever_it_lives(monkeypatch):
+    monkeypatch.setattr(autoupdate.util, "which", lambda name: None)
+    monkeypatch.setattr(autoupdate.Path, "exists", lambda self: False if str(self) == f"/usr/bin/{B.cli}" else Path.exists(self))
+    line = autoupdate.command_line(B)
+    assert "-m distrokit" in line and "PYTHONPATH=" in line
+    units = autoupdate.system_units(B, line)
+    assert f"ExecStart={line} auto-update run --system" in units[f"system/{B.id}-auto-update.service"]
+
+
+def test_install_units_fills_in_only_what_the_packages_did_not(tmp_path):
+    packaged = tmp_path / f"usr/lib/systemd/system/{B.id}-auto-update.timer"
+    packaged.parent.mkdir(parents=True)
+    packaged.write_text("from the package\n")
+    written = autoupdate.install_units(B, tmp_path, command="/opt/nexora/bin/nexora")
+    names = sorted(p.relative_to(tmp_path).as_posix() for p in written)
+    assert names == [f"etc/systemd/system/{B.id}-auto-update.service",
+                     f"etc/systemd/user/{B.id}-update-notify.service",
+                     f"etc/systemd/user/{B.id}-update-notify.timer"]
+    service = (tmp_path / f"etc/systemd/system/{B.id}-auto-update.service").read_text()
+    assert "ExecStart=/opt/nexora/bin/nexora auto-update run --system" in service
+    # Run again: nothing to write.
+    assert autoupdate.install_units(B, tmp_path, command="/opt/nexora/bin/nexora") == []
+
+
+def test_enable_turns_both_timers_on(tmp_path):
+    from distrokit import util
+
+    runner = util.Runner(dry_run=True)
+    lines = autoupdate.enable(B, runner, tmp_path)
+    cmds = [" ".join(c) for c in runner.recorded]
+    assert f"systemctl enable --now {B.id}-auto-update.timer" in cmds
+    assert f"systemctl --global enable {B.id}-update-notify.timer" in cmds
+    assert any("are on" in line for line in lines)
+
+
+def test_cli_has_enable_and_disable():
+    from distrokit.cli import build_parser
+
+    assert build_parser().parse_args(["auto-update", "enable"]).action == "enable"
+    assert build_parser().parse_args(["auto-update", "disable"]).action == "disable"

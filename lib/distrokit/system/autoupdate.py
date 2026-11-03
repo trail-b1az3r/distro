@@ -22,6 +22,7 @@ update. Both only act on the mode in the configuration file, so `auto-update mod
 from __future__ import annotations
 
 import json
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -165,9 +166,23 @@ def run_user(branding: Branding | None = None, runner: util.Runner | None = None
     return 0
 
 
-def system_units(branding: Branding) -> dict[str, str]:
-    """systemd units, by path under /usr/lib/systemd: the system timer and the per-user one."""
+def command_line(branding: Branding) -> str:
+    """How the timers start this tool. Installed from the distribution's packages it is /usr/bin/<cli>; set up any other
+    way (a source checkout, another install), it is this very Python running this copy of distrokit."""
+    packaged = Path(f"/usr/bin/{branding.cli}")
+    if packaged.exists():
+        return str(packaged)
+    which = util.which(branding.cli)
+    if which:
+        return which
+    lib = Path(__file__).resolve().parents[2]  # .../lib, holding distrokit/
+    return f"/usr/bin/env PYTHONPATH={lib} {sys.executable} -m distrokit"
+
+
+def system_units(branding: Branding, command: str | None = None) -> dict[str, str]:
+    """systemd units, by path under /usr/lib/systemd (or /etc/systemd): the system timer and the per-user one."""
     b = branding
+    command = command or f"/usr/bin/{b.cli}"
     return {
         f"system/{b.id}-auto-update.service": (
             "[Unit]\n"
@@ -175,7 +190,7 @@ def system_units(branding: Branding) -> dict[str, str]:
             "After=network-online.target\nWants=network-online.target\n"
             f"ConditionPathExists=!/etc/{b.id}/auto-update.disabled\n\n"
             "[Service]\nType=oneshot\n"
-            f"ExecStart=/usr/bin/{b.cli} auto-update run --system\n"
+            f"ExecStart={command} auto-update run --system\n"
             "Nice=10\nIOSchedulingClass=idle\n"),
         f"system/{b.id}-auto-update.timer": (
             "[Unit]\n"
@@ -186,7 +201,7 @@ def system_units(branding: Branding) -> dict[str, str]:
             "[Unit]\n"
             f"Description={b.pretty_name}: tell me when updates are waiting\n\n"
             "[Service]\nType=oneshot\n"
-            f"ExecStart=/usr/bin/{b.cli} auto-update run --user\n"),
+            f"ExecStart={command} auto-update run --user\n"),
         f"user/{b.id}-update-notify.timer": (
             "[Unit]\n"
             f"Description=Daily {b.pretty_name} update check\n\n"
@@ -195,11 +210,63 @@ def system_units(branding: Branding) -> dict[str, str]:
     }
 
 
+def timer_names(branding: Branding) -> tuple[str, str]:
+    return f"{branding.id}-auto-update.timer", f"{branding.id}-update-notify.timer"
+
+
+def install_units(branding: Branding, root: Path | str = "/", command: str | None = None) -> list[Path]:
+    """Make the timers exist on this system, however it was installed. Units the distribution's packages ship in
+    /usr/lib/systemd are left alone; any that are missing are written to /etc/systemd, pointing at this tool."""
+    root = Path(root)
+    written = []
+    for unit, text in system_units(branding, command or command_line(branding)).items():
+        if (root / "usr/lib/systemd" / unit).exists():
+            continue
+        path = root / "etc/systemd" / unit
+        if path.exists() and path.read_text() == text:
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        written.append(path)
+    return written
+
+
+def enable(branding: Branding | None = None, runner: util.Runner | None = None, root: Path | str = "/") -> list[str]:
+    """Set up and start automatic updates (root): units where missing, the system timer on, the user timer on for
+    every account."""
+    branding = branding or load_branding()
+    runner = runner or util.Runner()
+    written = install_units(branding, root)
+    system_timer, user_timer = timer_names(branding)
+    runner.run(["systemctl", "daemon-reload"], check=False)
+    runner.run(["systemctl", "enable", "--now", system_timer], check=False)
+    runner.run(["systemctl", "--global", "enable", user_timer], check=False)
+    lines = [f"wrote {p}" for p in written]
+    lines.append(f"{system_timer} and {user_timer} are on (mode {read_mode(branding, root)})")
+    return lines
+
+
+def disable(branding: Branding | None = None, runner: util.Runner | None = None) -> list[str]:
+    branding = branding or load_branding()
+    runner = runner or util.Runner()
+    system_timer, user_timer = timer_names(branding)
+    runner.run(["systemctl", "disable", "--now", system_timer], check=False)
+    runner.run(["systemctl", "--global", "disable", user_timer], check=False)
+    return [f"{system_timer} and {user_timer} are off"]
+
+
+def timers_enabled(branding: Branding, runner: util.Runner | None = None) -> bool:
+    runner = runner or util.Runner()
+    system_timer, _ = timer_names(branding)
+    return runner.run(["systemctl", "is-enabled", "--quiet", system_timer], check=False, capture=True).returncode == 0
+
+
 def status(branding: Branding | None = None) -> list[str]:
     branding = branding or load_branding()
     mode = read_mode(branding)
     last = read_record(branding)
-    lines = [f"mode         {mode}  ({config_path(branding)})"]
+    lines = [f"mode         {mode}  ({config_path(branding)})",
+             f"timers       {'on' if timers_enabled(branding) else 'off: sudo ' + branding.cli + ' auto-update enable'}"]
     if last:
         when = time.strftime("%Y-%m-%d %H:%M", time.localtime(last.get("time", 0)))
         lines.append(f"last run     {when}: {'installed' if last.get('installed') else 'nothing installed'}"

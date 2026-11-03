@@ -232,7 +232,13 @@ def _apply_halcyon_desktop_update() -> None:
 
 
 def cmd_update(a) -> int:
-    from .system import update
+    from .system import autoupdate, update
+
+    # A system not installed from the distribution's packages (or installed before automatic updates existed) has no
+    # update timers yet: the first update run as root sets them up.
+    if os.geteuid() == 0 and not autoupdate.timers_enabled(B) and autoupdate.read_mode(B) != "off":
+        for line in autoupdate.enable(B):
+            print(S.ok(line))
 
     if a.desktop_only:
         for line in update.apply_desktop(B, log=lambda m: None):
@@ -363,6 +369,16 @@ def cmd_auto_update(a) -> int:
             return 1
         path = autoupdate.write_mode(a.value, B)
         print(S.ok(f"Automatic updates: {a.value} ({path})"))
+        # The timers may not exist yet on a system not installed from the distribution's packages.
+        for line in (autoupdate.disable(B) if a.value == "off" else autoupdate.enable(B)):
+            print(S.ok(line))
+        return 0
+    if a.action in ("enable", "disable"):
+        if os.geteuid() != 0:
+            print(S.fail(f"This needs root: sudo {B.cli} auto-update {a.action}"), file=sys.stderr)
+            return 1
+        for line in (autoupdate.enable(B) if a.action == "enable" else autoupdate.disable(B)):
+            print(S.ok(line))
         return 0
     if a.action == "run":
         return autoupdate.run_user(B) if a.user else autoupdate.run_system(B)
@@ -1017,7 +1033,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_repo)
 
     s = sub.add_parser("auto-update", help="automatic updates: notify (default), apply or off")
-    s.add_argument("action", choices=["status", "mode", "run"], nargs="?", default="status")
+    s.add_argument("action", choices=["status", "mode", "enable", "disable", "run"], nargs="?", default="status")
     s.add_argument("value", nargs="?", choices=["notify", "apply", "off"], help="mode: the new mode")
     g = s.add_mutually_exclusive_group()
     g.add_argument("--system", action="store_true", help="run: the system timer's part (root)")
