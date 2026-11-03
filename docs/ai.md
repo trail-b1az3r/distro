@@ -34,6 +34,20 @@ its own setup: `hermes setup`, `openclaw onboard`), open Claude Code in a
 terminal, open HyperNix, start or stop the local model server, and manage
 models. Tools that are not installed show how to install them.
 
+## AI autocorrect
+
+Select text in a graphical application and press **Ctrl + Super + Shift + C**.
+Nexora sends the selection to the configured local model server and replaces
+it with the corrected text. This works in Firefox, Nexora Write and other
+Wayland applications that support normal clipboard copy/paste.
+
+The feature uses only the selected text; it does not record keystrokes or run
+as a background keyboard hook. It refuses to operate in terminal windows and
+outside a Wayland desktop session, including TTYs. Install and select a local
+GGUF model first, then start the model server with `nexora model serve` or
+the AI launcher. Required Wayland clipboard/typing tools are installed with
+the desktop profile.
+
 ## Claude Code
 
 `claude` works in every terminal immediately after installation:
