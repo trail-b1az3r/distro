@@ -81,6 +81,14 @@ ApplicationWindow {
         onAccepted: win.openFile(Files.toPath(selectedFile))
     }
     FileDialog {
+        id: pdfExportDialog
+        title: qsTr("Export PDF")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "pdf"
+        nameFilters: [qsTr("PDF document (*.pdf)")]
+        onAccepted: editor.exportPdf(Files.toPath(selectedFile))
+    }
+    FileDialog {
         id: docxExportDialog
         title: qsTr("Export Word document")
         fileMode: FileDialog.SaveFile
@@ -166,7 +174,7 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.fillHeight: true
             currentIndex: win.page
-            Editor { id: editor; onSaveAsRequested: saveAsDialog.open(); onExportRequested: docxExportDialog.open() }
+            Editor { id: editor; onSaveAsRequested: saveAsDialog.open(); onExportRequested: docxExportDialog.open(); onPdfRequested: pdfExportDialog.open() }
             LibraryView { mode: "notes"; onOpenRequested: path => win.openFile(path) }
             LibraryView { mode: "books"; onOpenRequested: path => win.openFile(path); onOpenEpubRequested: openDialog.open() }
             Reader { id: reader }
