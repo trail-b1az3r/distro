@@ -7,6 +7,9 @@
 #include <QSaveFile>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QXmlStreamReader>
+#include <archive.h>
+#include <archive_entry.h>
 
 static QString documents()
 {
@@ -128,6 +131,120 @@ QVariantList Files::recentBooks() const
         if (QFileInfo::exists(v.toMap().value("path").toString()))
             out << v;
     return out;
+}
+
+
+static QString escapeXml(QString s)
+{
+    s.replace('&', "&amp;");
+    s.replace('<', "&lt;");
+    s.replace('>', "&gt;");
+    return s;
+}
+
+QString Files::importDocx(const QString &path) const
+{
+    archive *a = archive_read_new();
+    archive_read_support_format_zip(a);
+    archive_read_support_filter_all(a);
+    if (archive_read_open_filename(a, QFile::encodeName(path).constData(), 65536) != ARCHIVE_OK) {
+        archive_read_free(a);
+        return {};
+    }
+    QByteArray xml;
+    archive_entry *entry = nullptr;
+    while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+        if (QString::fromUtf8(archive_entry_pathname(entry)) == "word/document.xml") {
+            char buf[32768];
+            la_ssize_t n;
+            while ((n = archive_read_data(a, buf, sizeof(buf))) > 0)
+                xml.append(buf, qsizetype(n));
+            break;
+        }
+        archive_read_data_skip(a);
+    }
+    archive_read_free(a);
+    if (xml.isEmpty())
+        return {};
+
+    QXmlStreamReader x(xml);
+    QString out, paragraph;
+    bool inParagraph = false;
+    while (!x.atEnd()) {
+        x.readNext();
+        if (x.isStartElement()) {
+            const QString n = x.name().toString();
+            if (n == "p") { inParagraph = true; paragraph.clear(); }
+            else if (n == "t" && inParagraph) paragraph += x.readElementText();
+            else if (n == "tab" && inParagraph) paragraph += '\t';
+            else if (n == "br" && inParagraph) {
+                if (x.attributes().value("type") == "page")
+                    paragraph += "\n\n<!-- WRITE_PAGE_BREAK -->\n\n";
+                else paragraph += '\n';
+            }
+        } else if (x.isEndElement() && x.name() == "p") {
+            if (!paragraph.trimmed().isEmpty())
+                out += paragraph.trimmed() + "\n\n";
+            inParagraph = false;
+        }
+    }
+    if (x.hasError())
+        return {};
+    return out.trimmed() + '\n';
+}
+
+bool Files::exportDocx(const QString &path, const QString &text) const
+{
+    QString body;
+    const QStringList lines = text.split('\n');
+    for (const QString &line : lines) {
+        if (line.trimmed() == "<!-- WRITE_PAGE_BREAK -->") {
+            body += "<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>";
+            continue;
+        }
+        QString value = line;
+        int level = 0;
+        while (level < value.size() && level < 6 && value[level] == '#') ++level;
+        if (level && level < value.size() && value[level] == ' ')
+            value = value.mid(level + 1);
+        else level = 0;
+        const QString style = level ? QString("<w:pPr><w:pStyle w:val=\"Heading%1\"/></w:pPr>").arg(level) : QString();
+        body += QString("<w:p>%1<w:r><w:t xml:space=\"preserve\">%2</w:t></w:r></w:p>")
+                    .arg(style, escapeXml(value));
+    }
+    const QByteArray doc = QString(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+        "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+        "<w:body>%1<w:sectPr><w:pgSz w:w=\"11906\" w:h=\"16838\"/>"
+        "<w:pgMar w:top=\"1440\" w:right=\"1440\" w:bottom=\"1440\" w:left=\"1440\"/>"
+        "</w:sectPr></w:body></w:document>").arg(body).toUtf8();
+    const QList<QPair<QString, QByteArray>> files = {
+        {"[Content_Types].xml", "<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>"},
+        {"_rels/.rels", "<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>"},
+        {"word/document.xml", doc}
+    };
+    archive *a = archive_write_new();
+    archive_write_set_format_zip(a);
+    if (archive_write_open_filename(a, QFile::encodeName(path).constData()) != ARCHIVE_OK) {
+        archive_write_free(a);
+        return false;
+    }
+    bool ok = true;
+    for (const auto &file : files) {
+        archive_entry *e = archive_entry_new();
+        archive_entry_set_pathname(e, file.first.toUtf8().constData());
+        archive_entry_set_filetype(e, AE_IFREG);
+        archive_entry_set_perm(e, 0644);
+        archive_entry_set_size(e, file.second.size());
+        if (archive_write_header(a, e) != ARCHIVE_OK ||
+            archive_write_data(a, file.second.constData(), size_t(file.second.size())) != file.second.size())
+            ok = false;
+        archive_entry_free(e);
+        if (!ok) break;
+    }
+    if (archive_write_close(a) != ARCHIVE_OK) ok = false;
+    archive_write_free(a);
+    return ok;
 }
 
 int Files::words(const QString &text) const
