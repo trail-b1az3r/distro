@@ -87,18 +87,22 @@ printf 'Running repo-add; database: %s; package count: %d\n' "$db_archive" "${#p
 repo-add "${sign_args[@]}" "$db_archive" "${pkgs[@]}"
 [[ -s "$db_archive" ]] || fail "repo-add returned success but did not create the required database: $db_archive"
 
-# Pacman needs the .db database. The .files database is useful to optional
-# clients, but is not required to install packages; do not fail publication
-# when a pacman version does not emit it.
+# Pacman may create .db/.files aliases itself (often as symlinks to the
+# corresponding .tar.gz archive). Only copy when the alias is not already the
+# same underlying file; cp rejects copying a file onto its own symlink.
 stage="publish database aliases"
 for kind in db files; do
     archive="$out/$repo.$kind.tar.gz"
     alias="$out/$repo.$kind"
 
     if [[ -s "$archive" ]]; then
-        cp -f -- "$archive" "$alias"
+        if [[ ! -e "$alias" ]] || [[ ! "$archive" -ef "$alias" ]]; then
+            cp -f -- "$archive" "$alias"
+        fi
         if [[ -f "$archive.sig" ]]; then
-            cp -f -- "$archive.sig" "$alias.sig"
+            if [[ ! -e "$alias.sig" ]] || [[ ! "$archive.sig" -ef "$alias.sig" ]]; then
+                cp -f -- "$archive.sig" "$alias.sig"
+            fi
         fi
     elif [[ "$kind" == db ]]; then
         fail "required pacman database was not generated: $archive"
