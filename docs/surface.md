@@ -50,7 +50,7 @@ Other controls:
 - `touchdctl handwriting` opens an installed handwriting overlay. The
   optional `handwrite-input` frontend uses local TrOCR recognition; its first
   run downloads model weights. It is not installed by default.
-- Hyprland Plus 0.57.0.p2 supports app-scoped pen pressure curves and optional
+- Hyprland Plus 0.57.0.p2 and later support app-scoped pen pressure curves and optional
   speed/tilt modulation. These apply to Krita, GIMP, Inkscape, MyPaint and
   Blender, not general desktop input. For example:
 
