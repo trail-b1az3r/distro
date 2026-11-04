@@ -332,12 +332,17 @@ def cmd_experiments(a) -> int:
 
     try:
         if a.action == "status":
-            enabled = experiments.status(B)
-            print("Experimental CI package source: " + (", ".join(enabled) if enabled else "disabled"))
-            if enabled:
-                print(f"Packages are taken from the latest successful CI run of {B.get('DISTRO_HOME_URL')}.")
+            config = experiments.read_config(B)
+            print(f"{experiments.MAIN} (latest successful build of main): "
+                  + (", ".join(config["components"]) or "off"))
+            print(f"{experiments.EXTRA} (beta: latest successful build of a development branch): "
+                  + (", ".join(config["extra"]) or "off"))
+            if config["components"] or config["extra"]:
+                print(f"Builds come from {B.get('DISTRO_HOME_URL')}'s CI; `{B.cli} update` installs them for the "
+                      "enabled components' installed packages.")
+            print("Components: " + ", ".join(experiments.COMPONENTS))
             return 0
-        enabled = experiments.set_enabled(a.action, a.component, B)
+        enabled = experiments.set_enabled(a.action, a.component, B, extra=a.extra)
     except experiments.ExperimentError as exc:
         print(S.fail(str(exc)), file=sys.stderr)
         return 1
@@ -347,7 +352,8 @@ def cmd_experiments(a) -> int:
         if sync.returncode:
             print(S.fail("The experimental source was enabled, but pacman could not refresh its databases."), file=sys.stderr)
             return sync.returncode
-    print(S.ok("Experimental pacman source " + state + (": " + ", ".join(enabled) if enabled else " for all components.")))
+    source = experiments.EXTRA if a.extra else experiments.MAIN
+    print(S.ok(f"{a.component} {state} from {source}." + (" Now enabled: " + ", ".join(enabled) if enabled else "")))
     if enabled:
         print(S.info(f"Run `sudo pacman -Syu` or `{B.cli} update` to install packages from the experimental source."))
     return 0
@@ -1021,8 +1027,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("experiments", help="opt in to packages from successful CI builds")
     s.add_argument("action", choices=["status", "enable", "disable"], nargs="?", default="status")
-    s.add_argument("component", choices=["all", "core", "branding", "desktop", "welcome", "installer", "ai"],
+    from .experiments import COMPONENTS as experiment_components
+    s.add_argument("component", choices=["all", *experiment_components],
                    nargs="?", default="all", help="package component (default: all)")
+    s.add_argument("--extra", "--beta", dest="extra", action="store_true",
+                   help="from nexora-experiments-extra: beta builds of development branches")
     s.set_defaults(func=cmd_experiments)
 
     s = sub.add_parser("repo", help="the distribution's package repository in pacman.conf: status, on, off, auto")

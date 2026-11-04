@@ -41,19 +41,23 @@ def distro_repo_block(branding: Branding, enabled: bool = True) -> str:
             + "".join(f"#{line}\n" for line in block.splitlines()) + "\n")
 
 
-def experiments_repo_block(branding: Branding, enabled: bool = True) -> str:
+def experiments_repo_block(branding: Branding, enabled: bool = True, repo: str = "nexora-experiments") -> str:
+    """A CI package source (nexora-experiments, or nexora-experiments-extra for beta builds): a GitHub release."""
     home = branding.get("DISTRO_HOME_URL", "").rstrip("/")
     if not home:
         return ""
-    server = f"{home}/releases/download/nexora-experiments"
-    block = f"[nexora-experiments]\nSigLevel = Optional TrustAll\nServer = {server}\n"
+    server = f"{home}/releases/download/{repo}"
+    block = f"[{repo}]\nSigLevel = Optional TrustAll\nServer = {server}\n"
     return block + ("\n" if enabled else "")
 
 
-def set_experiments_repo(text: str, enabled: bool, branding: Branding | None = None) -> str:
+def set_experiments_repo(text: str, enabled: bool, branding: Branding | None = None,
+                         repo: str = "nexora-experiments") -> str:
+    """Add or remove a CI package source. It goes after every other repository, so `pacman -Syu` keeps taking
+    packages from the stable ones and only the experimental builds `<cli> update` asks for by name come from it."""
     branding = branding or load_branding()
     lines = text.splitlines(keepends=True)
-    head = "[nexora-experiments]"
+    head = f"[{repo}]"
     start = next((i for i, line in enumerate(lines) if line.strip() in (head, "#" + head)), None)
     if start is not None:
         end = start + 1
@@ -64,12 +68,13 @@ def set_experiments_repo(text: str, enabled: bool, branding: Branding | None = N
         lines = lines[:start] + lines[end:]
     if not enabled:
         return "".join(lines)
-    block = experiments_repo_block(branding, True)
-    # Put the experimental source immediately before the stable Nexora source.
-    at = next((i for i, line in enumerate(lines) if line.strip() == f"[{branding.repo_name}]"), None)
-    if at is None:
-        at = next((i for i, line in enumerate(lines) if line.strip() == "[endeavouros]"), len(lines))
-    return "".join(lines[:at]) + block + "".join(lines[at:])
+    block = experiments_repo_block(branding, True, repo)
+    body = "".join(lines)
+    if body and not body.endswith("\n"):
+        body += "\n"
+    if body and not body.endswith("\n\n"):
+        body += "\n"
+    return body + block
 
 
 def distro_repo_published(branding: Branding | None = None, timeout: float = 8.0) -> bool | None:
