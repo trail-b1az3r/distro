@@ -31,16 +31,15 @@ import sys
 import threading
 import time
 import traceback
-import urllib.request
 from pathlib import Path
 
-from . import __version__, net, profiles, security, wpa
+from . import __version__, net, portal, profiles, security, wpa
 
 RUN = wpa.RUN
 SOCKET = RUN / "nmx.sock"
 STATE = Path(os.environ.get("NMX_STATE", "/var/lib/nmx/state.json"))
-CHECK_URL = "http://nmcheck.gnome.org/check_network_status.txt"
-CHECK_TEXT = "NetworkManager is online"
+CHECK_URL = os.environ.get("NMX_CHECK_URL", portal.CHECK_URL)
+RECHECK = {"portal": 15, "limited": 60}                  # seconds between checks; 300 otherwise
 WRITER_GROUPS = ("wheel", "network")
 BACKOFF = [10, 30, 60, 120, 300]
 
@@ -95,7 +94,10 @@ class Daemon:
         self.failures: dict[str, tuple[int, float]] = {}     # profile uuid -> (count, retry after)
         self.needs_secrets: set[str] = set()                  # profile uuids whose saved secrets were refused
         self.connectivity = "unknown"
+        self.portal_url = ""
+        self.portal_device = ""
         self.checked_at = 0.0
+        self.checking = threading.Lock()
         self.state = {"wifi": True, "networking": True, "unmanaged": []}
         self.load_state()
         self.boot_offset = self.clock_offset()
@@ -128,7 +130,10 @@ class Daemon:
     def set_state(self, dev: Device, state: str, reason: str = "") -> None:
         if dev.state == state and dev.reason == reason:
             return
+        was_connected = dev.state == "connected"
         dev.state, dev.reason = state, reason
+        if was_connected and state != "connected" and self.connectivity not in ("unknown", "none"):
+            self.check_connectivity_soon()
         name = dev.profile.id if dev.profile else ""
         self.emit("device", device=dev.iface, state=state, reason=reason, connection=name)
 
@@ -395,7 +400,7 @@ class Daemon:
         self.set_state(dev, "connected", prof.id if prof else "")
         self.finish_waiters(dev, {"ok": True, "message": f"Device '{dev.iface}' successfully activated"
                                   + (f" with '{prof.uuid}'." if prof else ".")})
-        self.check_connectivity(force=True)
+        self.check_connectivity_soon()
 
     def fail(self, dev: Device, code: str, message: str, **extra) -> None:
         prof = dev.profile
@@ -464,8 +469,8 @@ class Daemon:
                         self.succeed(dev)
                 if dev.kind == "wifi" and self.state["wifi"] and dev.supplicant is not None:
                     self.wifi_watch(dev, now)
-        if now - self.checked_at > 300:
-            self.check_connectivity()
+        if now - self.checked_at > RECHECK.get(self.connectivity, 300):
+            self.check_connectivity_soon()
 
     def wifi_watch(self, dev: Device, now: float) -> None:
         if not dev.supplicant.alive():
@@ -521,21 +526,29 @@ class Daemon:
                 net.configure(dev.iface, False, dev.profile.ipv4() if dev.profile else {}, {})
         self.emit("resumed")
 
-    def check_connectivity(self, force: bool = False) -> str:
+    def check_connectivity_soon(self) -> None:
+        """Check in the background: a portal or a dead DNS server can take seconds to answer."""
         self.checked_at = time.monotonic()
-        if not any(d.state == "connected" for d in self.devices.values()):
-            result = "none"
-        else:
-            try:
-                req = urllib.request.Request(CHECK_URL, headers={"User-Agent": f"nmx/{__version__}"})
-                with urllib.request.urlopen(req, timeout=6) as response:
-                    body = response.read(256).decode(errors="replace")
-                    result = "full" if body.strip().startswith(CHECK_TEXT) and response.geturl() == CHECK_URL else "portal"
-            except OSError:
-                result = "limited"
-        if result != self.connectivity:
-            self.connectivity = result
-            self.emit("connectivity", state=result)
+        threading.Thread(target=self.check_connectivity, daemon=True, name="connectivity").start()
+
+    def check_connectivity(self, force: bool = False) -> str:
+        with self.checking:
+            self.checked_at = time.monotonic()
+            connected = [d.iface for d in self.devices.values()
+                         if d.state == "connected" and d.present and d.managed and d.kind != "loopback"]
+            if not connected:
+                result, url, device = "none", "", ""
+            else:
+                result, url, device = portal.check(connected, CHECK_URL)
+            self.checked_at = time.monotonic()
+            changed = result != self.connectivity or url != self.portal_url
+            if result == "portal" and result != self.connectivity:
+                log(f"{device}: this network wants you to sign in at {url}")
+            elif self.connectivity == "portal" and result == "full":
+                log("signed in to the captive portal: online")
+            self.connectivity, self.portal_url, self.portal_device = result, url, device
+        if changed:
+            self.emit("connectivity", state=result, url=url, device=device)
         return result
 
     # ── requests ──
@@ -555,7 +568,7 @@ class Daemon:
         op = req.get("op", "")
         writer = uid == 0 or bool(groups & set(WRITER_GROUPS))
         reads = {"status", "devices", "device-show", "wifi-list", "connections", "connection-show", "monitor",
-                 "connectivity", "hostname"}
+                 "connectivity", "portal", "hostname"}
         if op not in reads and not writer:
             raise Failure("permission", "Not authorized: you need to be in the wheel or network group.")
         if op in ("device-manage", "device-unmanage", "suspend", "resume", "reexec", "exit") and uid != 0:
@@ -573,7 +586,8 @@ class Daemon:
                    else "asleep" if not self.state["networking"] else "disconnected")
         return {"ok": True, "data": {
             "running": "running", "version": __version__, "state": overall, "startup": "started",
-            "connectivity": self.connectivity, "networking": "enabled" if self.state["networking"] else "disabled",
+            "connectivity": self.connectivity, "portal-url": self.portal_url,
+            "networking": "enabled" if self.state["networking"] else "disabled",
             "wifi-hw": "enabled" if hw else "disabled", "wifi": "enabled" if self.state["wifi"] and sw else "disabled",
             "wwan-hw": "missing", "wwan": "enabled", "hostname": net.hostname()}}
 
@@ -893,7 +907,13 @@ class Daemon:
     def op_connectivity(self, req: dict) -> dict:
         if req.get("check"):
             self.check_connectivity(force=True)
-        return {"ok": True, "data": self.connectivity}
+        return {"ok": True, "data": self.connectivity, "url": self.portal_url}
+
+    def op_portal(self, req: dict) -> dict:
+        if req.get("check"):
+            self.check_connectivity(force=True)
+        return {"ok": True, "data": {"connectivity": self.connectivity, "url": self.portal_url,
+                                     "device": self.portal_device}}
 
     def op_hostname(self, req: dict) -> dict:
         if req.get("name"):

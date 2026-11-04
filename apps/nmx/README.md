@@ -49,6 +49,26 @@ nmxtui                                   # menus
 - A network that keeps failing is retried with a backoff (10 s to 5 min); one whose saved password is refused is not
   retried until it gets a new one, and Halcyon (or `nmxcli monitor`) is told.
 
+## Captive portals
+
+Hotel, airport, train and café Wi-Fi often wants you to sign in on a web page first. After every connection (and every
+5 minutes) nmxd asks the network whether it is online:
+
+1. If the network announces a portal (RFC 8910, DHCP option 114 or a router advertisement), systemd-networkd keeps its
+   API URI and nmxd asks that API (RFC 8908, HTTPS only) whether you still have to sign in, and where.
+2. Otherwise it fetches a plain-HTTP check page **without following redirects**: a portal that redirects (or answers
+   511) gives its sign-in page in `Location`; one that answers with its own page has it read from a meta refresh, a
+   script redirect or its form.
+
+Connectivity is then `portal`, the `connectivity` event carries the sign-in URL, and nmxd checks every 15 seconds
+until you are through (then `full`). Halcyon shows a "Sign in to this network" notification and button; elsewhere:
+
+    nmxcli networking connectivity     # portal
+    nmxcli portal                      # wlan0 wants you to sign in at: http://…
+    nmxcli portal open                 # opens it in your browser
+    nmxcli portal check                # check again now
+    nmxtui                             # "Sign in to this network" is the first item
+
 ## Security detection
 
 From the scan flags nmx tells apart open, Enhanced Open (OWE), WEP, WPA/WPA2 Personal, WPA2/WPA3 transition, WPA3

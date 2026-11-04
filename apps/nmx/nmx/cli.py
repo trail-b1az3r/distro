@@ -2,7 +2,7 @@
 
     nmxcli [OPTIONS] OBJECT { COMMAND | help }
 
-    OBJECT  g[eneral]  n[etworking]  r[adio]  c[onnection]  d[evice]  m[onitor]
+    OBJECT  g[eneral]  n[etworking]  r[adio]  c[onnection]  d[evice]  m[onitor]  p[ortal]
 
     OPTIONS -t, --terse                 terse output (fields split by ':', ':' and '\\' escaped)
             -f, --fields FIELD,...|all  which fields to print
@@ -19,6 +19,11 @@ Beyond nmcli: `device wifi connect` takes `username`, `eap`, `phase2`, `ca-cert`
 password; or a username and a password) when run in a terminal. `device unmanage` (root only) is the one way to take
 a device away from nmx; `device manage` gives it back. `connection import networkmanager` brings NetworkManager's
 saved connections over.
+
+Captive portals (hotel, airport and café Wi-Fi that wants you to sign in first): `networking connectivity` says
+`portal`, and `nmxcli portal` prints the sign-in page (`portal open` opens it in your browser, `portal check` checks
+again now). nmx finds the page from the network's RFC 8910/8908 announcement when it makes one, and otherwise from
+where the portal redirects a plain-HTTP probe.
 """
 
 from __future__ import annotations
@@ -151,6 +156,7 @@ GENERAL_FIELDS = {
     "STARTUP": lambda r: r["startup"], "CONNECTIVITY": lambda r: r["connectivity"],
     "NETWORKING": lambda r: r["networking"], "WIFI-HW": lambda r: r["wifi-hw"], "WIFI": lambda r: r["wifi"],
     "WWAN-HW": lambda r: r["wwan-hw"], "WWAN": lambda r: r["wwan"], "METERED": lambda r: "no (guessed)",
+    "PORTAL-URL": lambda r: r.get("portal-url", ""),
 }
 CONNECTION_FIELDS = {
     "NAME": lambda r: r["name"], "UUID": lambda r: r["uuid"], "TYPE": lambda r: r["type"],
@@ -233,7 +239,10 @@ def cmd_networking(args: list[str], opts: Options) -> int:
         return 0
     sub = pick(args.pop(0), ["on", "off", "connectivity"])
     if sub == "connectivity":
-        print(call({"op": "connectivity", "check": bool(args and pick(args[0], ["check"]))})["data"])
+        reply = call({"op": "connectivity", "check": bool(args and pick(args[0], ["check"]))})
+        print(reply["data"])
+        if reply["data"] == "portal" and reply.get("url") and sys.stderr.isatty():
+            print(f"Sign in at {reply['url']}  (nmxcli portal open)", file=sys.stderr)
     else:
         call({"op": "networking", "enable": sub})
     return 0
@@ -476,6 +485,37 @@ def cmd_connection(args: list[str], opts: Options) -> int:
     return 0
 
 
+def cmd_portal(args: list[str], opts: Options) -> int:
+    """`portal`: print the sign-in page (exit 0) or nothing (exit 10: no portal). `portal open`, `portal check`."""
+    sub = pick(args.pop(0), ["show", "open", "check"]) if args else "show"
+    data = call({"op": "portal", "check": sub == "check"})["data"]
+    if data["connectivity"] != "portal" or not data["url"]:
+        if not opts.terse:
+            print(f"No captive portal (connectivity: {data['connectivity']}).", file=sys.stderr)
+        return 10
+    if sub == "open":
+        return open_url(data["url"])
+    if opts.terse:
+        print(data["url"])
+    else:
+        print(f"{data['device'] or 'This network'} wants you to sign in at:\n    {data['url']}")
+    return 0
+
+
+def open_url(url: str) -> int:
+    """Open the sign-in page in the user's browser; plain HTTP so the portal can redirect it."""
+    import shutil
+    import subprocess
+    for opener in (["xdg-open"], ["gio", "open"], ["sensible-browser"]):
+        if shutil.which(opener[0]):
+            subprocess.Popen(opener + [url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             start_new_session=True)
+            print(f"Opening {url}")
+            return 0
+    print(url)
+    return 0
+
+
 def cmd_monitor(args: list[str], opts: Options) -> int:
     try:
         for event in client.events():
@@ -497,6 +537,8 @@ def describe_event(e: dict) -> str:
     if kind == "device-removed":
         return f"{e['device']}: device removed"
     if kind == "connectivity":
+        if e["state"] == "portal" and e.get("url"):
+            return f"Connectivity is now 'portal': sign in at {e['url']}"
         return f"Connectivity is now '{e['state']}'"
     if kind == "scan":
         return f"{e['device']}: {e['count']} networks in range"
@@ -530,7 +572,7 @@ def overview(opts: Options) -> int:
 
 
 OBJECTS = {"general": cmd_general, "networking": cmd_networking, "radio": cmd_radio, "connection": cmd_connection,
-           "device": cmd_device, "monitor": cmd_monitor}
+           "device": cmd_device, "monitor": cmd_monitor, "portal": cmd_portal}
 
 
 def parse_options(argv: list[str], opts: Options) -> list[str]:

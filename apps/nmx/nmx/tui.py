@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import curses
+import io
+import os
 import sys
 
 from . import client, security
@@ -133,20 +136,44 @@ class App:
 
     # ── screens ──
     def main_menu(self) -> None:
-        items = ["Activate a connection", "Edit a connection", "Device management", "Set system hostname",
-                 "Wi-Fi radio on / off", "Quit"]
         selected = 0
         while True:
+            items = ["Activate a connection", "Edit a connection", "Device management", "Set system hostname",
+                     "Wi-Fi radio on / off", "Quit"]
+            actions = [self.activate, self.edit_list, self.devices, self.hostname, self.radio]
+            url = self.portal_url()
+            if url:
+                items.insert(0, "Sign in to this network (captive portal)")
+                actions.insert(0, lambda url=url: self.sign_in(url))
             try:
-                selected, _ = self.menu("nmx", items, "Enter: choose   q: quit", selected)
+                selected, _ = self.menu("nmx", items, f"Sign in at {url}" if url else "Enter: choose   q: quit",
+                                        min(selected, len(items) - 1))
             except Back:
                 return
             if selected == len(items) - 1:
                 return
             try:
-                [self.activate, self.edit_list, self.devices, self.hostname, self.radio][selected]()
+                actions[selected]()
             except Back:
                 pass
+
+    @staticmethod
+    def portal_url() -> str:
+        try:
+            data = call({"op": "portal"}).get("data") or {}
+        except Exception:                            # an older nmxd without the request
+            return ""
+        return data.get("url", "") if data.get("connectivity") == "portal" else ""
+
+    def sign_in(self, url: str) -> None:
+        from .cli import open_url                    # here, so the TUI starts without loading the CLI
+        if os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY"):
+            with contextlib.redirect_stdout(io.StringIO()):
+                open_url(url)
+            self.message("Captive portal", f"Opened the sign-in page in your browser:\n\n{url}\n\n"
+                         "nmx checks again every 15 seconds and says when you are online.")
+        else:
+            self.message("Captive portal", f"This network wants you to sign in. Open this in a browser:\n\n{url}")
 
     def activate(self) -> None:
         selected = 0

@@ -17,7 +17,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "apps" / "nmx"))
 
-from nmx import cli, daemon, net, profiles, security, wpa  # noqa: E402
+from nmx import cli, daemon, net, portal, profiles, security, wpa  # noqa: E402
 
 
 # ── security ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -449,7 +449,8 @@ def fake_nmxd(tmp_path, monkeypatch):
     threading.Thread(target=serve, daemon=True).start()
     monkeypatch.setattr(cli.client, "SOCKET", str(path))
     yield seen
-    server.close()
+    server.shutdown(socket.SHUT_RDWR)                # wakes the accept(): a closed but still waiting socket's fd
+    server.close()                                   # number is reused by the next test's sockets
 
 
 def run(*args):
@@ -523,3 +524,107 @@ def test_unit_refuses_stop_and_comes_back():
     hook = (ROOT / "apps/nmx/data/nmx.sleep").read_text()
     assert "--internal suspend" in hook and "--internal resume" in hook
     assert os.access(ROOT / "apps/nmx/data/nmx.sleep", os.X_OK)
+
+
+# ── captive portals ──────────────────────────────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def hotspot():
+    """A stand-in for the internet and for a hotel's portal, on localhost."""
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    pages = {
+        "/online": (200, {}, portal.CHECK_TEXT + "\n"),
+        "/redirect": (302, {"Location": "/login?orig=probe"}, ""),
+        "/meta": (200, {}, '<html><head><meta http-equiv="refresh" content="0; url=https://portal.example/welcome">'),
+        "/script": (200, {}, "<script>window.location.href = '/splash';</script>"),
+        "/511": (511, {}, '<form method="post" action="https://wifi.example/auth">'),
+        "/blank": (200, {}, "<html>hello</html>"),
+        "/broken": (503, {}, "down"),
+    }
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            code, headers, body = pages.get(self.path, (404, {}, ""))
+            self.send_response(code)
+            for key, value in headers.items():
+                self.send_header(key, value)
+            self.end_headers()
+            self.wfile.write(body.encode())
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{server.server_address[1]}"
+    server.shutdown()
+
+
+def test_portal_probe(hotspot):
+    assert portal.probe(hotspot + "/online") == ("full", "")
+    assert portal.probe(hotspot + "/redirect") == ("portal", hotspot + "/login?orig=probe"), "redirects are not followed"
+    assert portal.probe(hotspot + "/meta") == ("portal", "https://portal.example/welcome")
+    assert portal.probe(hotspot + "/script") == ("portal", hotspot + "/splash")
+    assert portal.probe(hotspot + "/511") == ("portal", "https://wifi.example/auth")
+    assert portal.probe(hotspot + "/blank") == ("portal", hotspot + "/blank"), "the probe itself leads to the portal"
+    assert portal.probe(hotspot + "/broken") == ("limited", "")
+    assert portal.probe("http://127.0.0.1:9/") == ("limited", "")
+
+
+def test_portal_api_and_networkd_hint(monkeypatch):
+    assert portal.api("http://portal.example/api") == (None, ""), "RFC 8908 APIs are HTTPS only"
+    assert portal.find_uri({"Interfaces": [{"Name": "wlan0", "DHCPv4Client": {"CaptivePortal": "https://p/api"}}]}) \
+        == "https://p/api"
+    assert portal.find_uri({"Name": "wlan0"}) == ""
+    monkeypatch.setattr(net, "run", lambda cmd, timeout=15: net.subprocess.CompletedProcess(
+        cmd, 0, json.dumps({"CaptivePortal": "https://p/api"}), ""))
+    assert portal.advertised("wlan0") == "https://p/api"
+
+    monkeypatch.setattr(portal, "api", lambda uri: (True, "https://p/login"))
+    monkeypatch.setattr(portal, "probe", lambda url=portal.CHECK_URL: ("full", ""))
+    assert portal.check(["wlan0"]) == ("portal", "https://p/login", "wlan0"), "the network's own word comes first"
+    monkeypatch.setattr(portal, "api", lambda uri: (False, ""))
+    monkeypatch.setattr(portal, "probe", lambda url=portal.CHECK_URL: ("portal", "http://x/"))
+    assert portal.check(["wlan0"]) == ("full", "", ""), "signed in, says the network"
+    monkeypatch.setattr(portal, "advertised", lambda iface: "")
+    assert portal.check(["wlan0"]) == ("portal", "http://x/", "wlan0")
+
+
+def test_daemon_reports_the_portal(nmxd, hotspot, monkeypatch):
+    d, dev = nmxd
+    monkeypatch.setattr(portal, "advertised", lambda iface: "")
+    dev.state = "connected"
+    monkeypatch.setattr(daemon, "CHECK_URL", hotspot + "/redirect")
+    assert d.check_connectivity(force=True) == "portal"
+    assert d.events[-1] == ("connectivity", {"state": "portal", "url": hotspot + "/login?orig=probe", "device": "wlan0"})
+    assert d.handle({"op": "portal"}, 1000, set())["data"]["url"] == hotspot + "/login?orig=probe"
+    assert d.op_status({})["data"]["portal-url"] == hotspot + "/login?orig=probe"
+    assert daemon.RECHECK["portal"] < 60, "a portal is checked often, so signing in shows up quickly"
+    monkeypatch.setattr(daemon, "CHECK_URL", hotspot + "/online")
+    assert d.op_connectivity({"check": True}) == {"ok": True, "data": "full", "url": ""}
+    assert d.events[-1][1]["state"] == "full"
+    count = len(d.events)
+    d.check_connectivity()
+    assert len(d.events) == count, "no event when nothing changed"
+    dev.state = "disconnected"
+    assert d.check_connectivity() == "none"
+
+
+def test_cli_portal(fake_nmxd, monkeypatch):
+    REPLIES["portal"] = {"ok": True, "data": {"connectivity": "portal", "url": "http://hotel/login", "device": "wlan0"}}
+    try:
+        assert run("-t", "portal") == (0, "http://hotel/login\n", "")
+        assert "wlan0 wants you to sign in" in run("portal")[1]
+        opened = []
+        monkeypatch.setattr(cli, "open_url", lambda url: opened.append(url) or 0)
+        assert run("portal", "open")[0] == 0 and opened == ["http://hotel/login"]
+        assert fake_nmxd[-1] == {"op": "portal", "check": False}
+        run("p", "check")
+        assert fake_nmxd[-1] == {"op": "portal", "check": True}
+        REPLIES["portal"] = {"ok": True, "data": {"connectivity": "full", "url": "", "device": ""}}
+        assert run("-t", "portal") == (10, "", "")
+    finally:
+        del REPLIES["portal"]
+    assert cli.describe_event({"event": "connectivity", "state": "portal", "url": "http://hotel/login"}) == \
+        "Connectivity is now 'portal': sign in at http://hotel/login"
