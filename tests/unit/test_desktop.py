@@ -172,6 +172,25 @@ def test_redeploy_is_idempotent_and_keeps_user_changes(deployer):
     assert mine.read_text().startswith('hl.bind("SUPER + F12"')
 
 
+def test_the_distributions_fastfetch_is_not_replaced(deployer):
+    b, home, make = deployer
+    make().deploy(deploy.UserSettings(), first=True)
+    assert not (home / ".config/fastfetch").exists(), "~/.config/fastfetch would hide /etc/xdg/fastfetch"
+    # A desktop deployed before this keeps no Halcyon fastfetch: an update prunes it (a changed one is backed up).
+    manifest_path = home / f".local/state/{b.id}/desktop-manifest.json"
+    manifest = deploy.util.read_json(manifest_path, {})
+    for name in ("config.jsonc", "halcyon.txt"):
+        src = REPO / "desktop/dots/dots/.config/fastfetch" / name
+        target = home / ".config/fastfetch" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(src.read_bytes())
+        manifest[f".config/fastfetch/{name}"] = deploy._sha(target)
+    manifest_path.write_text(__import__("json").dumps(manifest))
+    report = make().deploy()
+    assert ".config/fastfetch/config.jsonc" in report.removed
+    assert not (home / ".config/fastfetch/config.jsonc").exists()
+
+
 def test_reset_backs_up_custom_and_restores_defaults(deployer):
     b, home, make = deployer
     make().deploy(deploy.UserSettings(keyboard_layout="fr"), first=True)

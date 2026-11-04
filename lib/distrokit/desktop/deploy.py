@@ -31,7 +31,9 @@ from typing import Any, Callable
 from .. import paths, util
 from ..branding import Branding, load as load_branding
 
-MISC_EXCLUDE = {"quickshell", "fish", "hypr", "fontconfig"}
+# fastfetch: the distribution ships its own (/etc/xdg/fastfetch/config.jsonc, its logo and colours). Halcyon's
+# ~/.config/fastfetch would take its place, so it is not deployed, and copies deployed before are pruned.
+MISC_EXCLUDE = {"quickshell", "fish", "hypr", "fontconfig", "fastfetch"}
 # Halcyon's own updater pulls the dots repository into the home directory. Here
 # the desktop is pinned and updated with the distribution's packages, so its
 # units are not deployed (Hyprland's attempt to enable the timer then does
