@@ -245,6 +245,74 @@ def test_device_kinds(tmp_path):
     assert net.devices(tmp_path) == {"eth0": "ethernet", "wlan0": "wifi"}
 
 
+def test_surface_card_only_its_client_interface(tmp_path):
+    """Marvell mwifiex (Surface) makes mlan0, uap0 (access point) and wfd0 (Wi-Fi Direct) on one radio: nmx takes
+    only mlan0, so no second supplicant fights over the radio and nmx never connects with uap0 or wfd0."""
+    for name in ("mlan0", "uap0", "wfd0", "p2p-dev-wlan1", "wlan1"):
+        d = tmp_path / name
+        (d / "device").mkdir(parents=True)
+        (d / "phy80211").mkdir()
+        (d / "phy80211" / "name").write_text("phy1\n" if name.endswith("wlan1") else "phy0\n")
+        (d / "type").write_text("1\n")
+    assert net.devices(tmp_path) == {"mlan0": "wifi", "wlan1": "wifi"}
+
+
+def test_one_client_interface_per_radio(tmp_path):
+    for name in ("wlan0", "wlan9"):
+        d = tmp_path / name
+        (d / "device").mkdir(parents=True)
+        (d / "phy80211").mkdir()
+        (d / "phy80211" / "name").write_text("phy0\n")
+    assert net.devices(tmp_path) == {"wlan0": "wifi"}
+
+
+def test_iw_decides_the_interface_type(monkeypatch):
+    monkeypatch.setattr(net.shutil, "which", lambda tool: "/usr/bin/iw")
+    replies = {"mlan0": "Interface mlan0\n\tifindex 3\n\ttype managed\n", "uap0": "Interface uap0\n\ttype AP\n",
+               "odd0": "Interface odd0\n\ttype P2P-client\n"}
+    monkeypatch.setattr(net, "run", lambda cmd, timeout=15: net.subprocess.CompletedProcess(cmd, 0, replies[cmd[2]], ""))
+    net._WIFI_TYPES.clear()
+    assert net.wifi_station("mlan0") and not net.wifi_station("uap0") and not net.wifi_station("odd0")
+    assert net.wifi_type("mlan0") == "managed"
+    net._WIFI_TYPES.clear()
+
+
+def test_surface_card_power_saving_off(nmxd):
+    d, dev = nmxd
+    dev.driver = "mwifiex_pcie"
+    assert d.needs_power_save_off(dev)
+    dev.driver = "iwlwifi"
+    assert not d.needs_power_save_off(dev)
+
+
+def test_remanage_networkmanager(nmxd, monkeypatch):
+    d, dev = nmxd
+    ran, given = [], []
+    monkeypatch.setattr(net, "give_back_to_networkmanager", lambda iface: given.append(iface))
+    monkeypatch.setattr(daemon, "networkmanager_installed", lambda: True)
+    monkeypatch.setattr(net, "run", lambda cmd, timeout=15: ran.append(cmd) or net.subprocess.CompletedProcess(cmd, 0, "", ""))
+    with pytest.raises(daemon.Failure) as denied:
+        d.handle({"op": "device-remanagenm"}, 1000, {"wheel"})
+    assert "sudo nmxcli device remanagenm" in str(denied.value)
+    reply = d.handle({"op": "device-remanagenm"}, 0, set())
+    assert reply["ok"] and "NetworkManager manages wlan0" in reply["message"]
+    assert not dev.managed and json.loads(daemon.STATE.read_text())["unmanaged"] == ["wlan0"]
+    assert ["systemctl", "enable", "--now", "NetworkManager.service"] in ran
+    assert "wlan0" in given
+    monkeypatch.setattr(d, "reconcile", lambda: None)
+    d.handle({"op": "device-manage"}, 0, set())                      # and `device manage` takes them all back
+    assert dev.managed
+
+
+def test_remanage_without_networkmanager_says_how(nmxd, monkeypatch):
+    d, _ = nmxd
+    monkeypatch.setattr(net, "give_back_to_networkmanager", lambda iface: None)
+    monkeypatch.setattr(net, "run", lambda cmd, timeout=15: net.subprocess.CompletedProcess(cmd, 0, "", ""))
+    monkeypatch.setattr(daemon, "networkmanager_installed", lambda: False)
+    reply = d.handle({"op": "device-remanagenm"}, 0, set())
+    assert "sudo pacman -S networkmanager" in reply["message"]
+
+
 # ── the daemon's decisions, with a stand-in wpa_supplicant ───────────────────────────────────────────────────────
 
 class FakeSupplicant:

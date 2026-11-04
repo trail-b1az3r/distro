@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -34,22 +35,74 @@ def read(path: Path, default: str = "") -> str:
 # ── devices ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
 def kind(iface: str, root: Path = SYS_NET) -> str:
-    """wifi, ethernet, or '' for what nmx leaves alone (loopback, bridges, tunnels, VMs' and containers' links)."""
+    """wifi, ethernet, or '' for what nmx leaves alone (loopback, bridges, tunnels, VMs' and containers' links, and a
+    Wi-Fi card's access-point and Wi-Fi Direct interfaces)."""
     base = root / iface
     if iface == "lo" or not (base / "device").exists():
         return ""
     if (base / "wireless").exists() or (base / "phy80211").exists():
-        return "wifi"
+        return "wifi" if wifi_station(iface, root) else ""
     if read(base / "type") == "1" and not (base / "bridge").exists() and not (base / "bonding").exists():
         return "ethernet"
     return ""
 
 
+# A Wi-Fi card can show more than one interface: Marvell's mwifiex (Surface Pro 3 to 7, Surface Go, Surface Book)
+# makes mlan0 for connecting, uap0 for being an access point and wfd0 for Wi-Fi Direct, all on one radio. A
+# supplicant on each fought over that radio (scans failed busy, connections dropped), and nmx could pick uap0 or wfd0
+# to connect with. Only the station (client) interface is nmx's.
+VIRTUAL_WIFI = re.compile(r"^(uap|wfd|p2p|ap|mon)\d+$|^p2p-")
+
+
+_WIFI_TYPES: dict[tuple[str, str], str] = {}
+
+
+def wifi_type(iface: str) -> str:
+    """nl80211's interface type ("managed", "AP", "P2P-client", "monitor"...), from `iw`, or '' when it cannot say.
+    Asked once per interface (its ifindex changes when the driver makes it again), since nmxd looks every tick."""
+    if not shutil.which("iw"):
+        return ""
+    key = (iface, read(SYS_NET / iface / "ifindex"))
+    if key not in _WIFI_TYPES:
+        match = re.search(r"^\s*type\s+(\S+)", run(["iw", "dev", iface, "info"], timeout=5).stdout, re.M)
+        if not match:
+            return ""                            # not cached: ask again next time
+        _WIFI_TYPES[key] = match.group(1)
+    return _WIFI_TYPES[key]
+
+
+def power_save_off(iface: str) -> None:
+    """Marvell mwifiex (the Surface's card) drops connections and stalls with Wi-Fi power saving on; linux-surface
+    advises turning it off, as NetworkManager's wifi.powersave = 2 does there."""
+    if shutil.which("iw"):
+        run(["iw", "dev", iface, "set", "power_save", "off"], timeout=5)
+
+
+def wifi_station(iface: str, root: Path = SYS_NET) -> bool:
+    """Whether a Wi-Fi interface is one to connect with: `iw` says managed, or (without iw, or on a test's stand-in
+    sysfs) its name is not one of the access-point, Wi-Fi Direct or monitor interfaces' names."""
+    found = wifi_type(iface) if root == SYS_NET else ""
+    if found:
+        return found in ("managed", "station")
+    return not VIRTUAL_WIFI.match(iface)
+
+
+def phy(iface: str, root: Path = SYS_NET) -> str:
+    """The radio (phy0...) a Wi-Fi interface belongs to, or ''."""
+    return read(root / iface / "phy80211" / "name")
+
+
 def devices(root: Path = SYS_NET) -> dict[str, str]:
     out = {}
+    radios: set[str] = set()
     if root.is_dir():
         for entry in sorted(root.iterdir()):
             k = kind(entry.name, root)
+            if k == "wifi":
+                radio = phy(entry.name, root)
+                if radio and radio in radios:
+                    continue                     # one interface per radio: two supplicants on one radio fight
+                radios.add(radio or entry.name)
             if k:
                 out[entry.name] = k
     return out

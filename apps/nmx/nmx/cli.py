@@ -17,8 +17,9 @@
 Beyond nmcli: `device wifi connect` takes `username`, `eap`, `phase2`, `ca-cert`, `domain`, `cert`, `key`,
 `key-password` and `anonymous-identity` for enterprise (802.1X) networks, and asks for what the network needs (a
 password; or a username and a password) when run in a terminal. `device unmanage` (root only) is the one way to take
-a device away from nmx; `device manage` gives it back. `connection import networkmanager` brings NetworkManager's
-saved connections over.
+a device away from nmx; `device manage` gives it back. `device remanagenm` (root only) hands every device back to
+NetworkManager and turns NetworkManager on; `device manage` takes them all back. `connection import networkmanager`
+brings NetworkManager's saved connections over. `nmx` is a short name for `nmxcli`.
 
 Captive portals (hotel, airport and café Wi-Fi that wants you to sign in first): `networking connectivity` says
 `portal`, and `nmxcli portal` prints the sign-in page (`portal open` opens it in your browser, `portal check` checks
@@ -293,7 +294,7 @@ WIFI_CONNECT_ARGS = {"password", "wep-key-type", "ifname", "bssid", "name", "pri
 
 def cmd_device(args: list[str], opts: Options) -> int:
     sub = pick(args.pop(0), ["status", "show", "set", "connect", "reapply", "modify", "disconnect", "delete", "monitor",
-                             "wifi", "lldp", "manage", "unmanage"]) if args else "status"
+                             "wifi", "lldp", "manage", "unmanage", "remanagenm", "remanage-nm"]) if args else "status"
     if sub == "status":
         rows = call({"op": "devices"})["data"]
         sys.stdout.write(table(rows, DEVICE_FIELDS, ["DEVICE", "TYPE", "STATE", "CONNECTION"], opts))
@@ -322,6 +323,9 @@ def cmd_device(args: list[str], opts: Options) -> int:
             call({"op": "device-disconnect", "ifname": iface})
     elif sub in ("manage", "unmanage"):
         print(call({"op": f"device-{sub}", "ifname": args[0] if args else ""})["message"])
+    elif sub in ("remanagenm", "remanage-nm"):
+        # Every device back to NetworkManager, which is turned on (root only); `device manage` undoes it.
+        print(call({"op": "device-remanagenm"})["message"])
     elif sub == "monitor":
         return cmd_monitor(args, opts)
     elif sub == "wifi":

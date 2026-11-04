@@ -23,6 +23,7 @@ import grp
 import json
 import os
 import pwd
+import shutil
 import signal
 import socket
 import socketserver
@@ -42,6 +43,10 @@ CHECK_URL = os.environ.get("NMX_CHECK_URL", portal.CHECK_URL)
 RECHECK = {"portal": 15, "limited": 60}                  # seconds between checks; 300 otherwise
 WRITER_GROUPS = ("wheel", "network")
 BACKOFF = [10, 30, 60, 120, 300]
+
+
+def networkmanager_installed() -> bool:
+    return bool(shutil.which("NetworkManager")) or Path("/usr/bin/NetworkManager").exists()
 
 
 def log(message: str) -> None:
@@ -189,6 +194,8 @@ class Daemon:
                 dev.supplicant.stop()
             dev.supplicant = wpa.Supplicant(dev.iface)
             dev.supplicant.start()
+            if self.needs_power_save_off(dev):
+                net.power_save_off(dev.iface)
             dev.restarts += 1
             dev.start_failures = 0
             self.set_state(dev, "disconnected")
@@ -203,6 +210,11 @@ class Daemon:
                 log(f"{dev.iface}: {error}")
             dev.supplicant = None
             self.set_state(dev, "unavailable", str(error))
+
+    @staticmethod
+    def needs_power_save_off(dev: Device) -> bool:
+        """The Surface's Marvell card (mwifiex) is only steady with Wi-Fi power saving off."""
+        return dev.kind == "wifi" and (dev.driver or net.driver(dev.iface)).startswith("mwifiex")
 
     def stop_supplicant(self, dev: Device) -> None:
         if dev.supplicant:
@@ -398,6 +410,8 @@ class Daemon:
                 self.store.save(prof)
                 dev.pending_new = False
         self.set_state(dev, "connected", prof.id if prof else "")
+        if self.needs_power_save_off(dev):
+            net.power_save_off(dev.iface)          # the driver turns it back on with each association
         self.finish_waiters(dev, {"ok": True, "message": f"Device '{dev.iface}' successfully activated"
                                   + (f" with '{prof.uuid}'." if prof else ".")})
         self.check_connectivity_soon()
@@ -571,7 +585,8 @@ class Daemon:
                  "connectivity", "portal", "hostname"}
         if op not in reads and not writer:
             raise Failure("permission", "Not authorized: you need to be in the wheel or network group.")
-        if op in ("device-manage", "device-unmanage", "suspend", "resume", "reexec", "exit") and uid != 0:
+        if op in ("device-manage", "device-unmanage", "device-remanagenm", "suspend", "resume", "reexec", "exit") \
+                and uid != 0:
             raise Failure("permission", f"Only root may do that: sudo nmxcli device {op.split('-')[1]}"
                           if op.startswith("device") else "root only")
         handler = getattr(self, "op_" + op.replace("-", "_"), None)
@@ -868,6 +883,23 @@ class Daemon:
         if net.run(["systemctl", "is-active", "--quiet", "NetworkManager.service"]).returncode != 0:
             message += " To let NetworkManager have it: sudo systemctl enable --now NetworkManager"
         return {"ok": True, "message": message}
+
+    def op_device_remanagenm(self, req: dict) -> dict:
+        """Hand every device back to NetworkManager: nmx lets go of them all (remembered, like `device unmanage`),
+        NetworkManager is turned on at boot and now, and told to manage them. `sudo nmxcli device manage` (with no
+        device) takes them all back."""
+        targets = [i for i, d in self.devices.items() if d.managed]
+        message = self.op_device_unmanage({"ifname": ""})["message"] if targets else "nmx manages no devices."
+        if not networkmanager_installed():
+            return {"ok": True, "message": message + " NetworkManager is not installed: sudo pacman -S networkmanager, "
+                    "then run this again."}
+        enabled = net.run(["systemctl", "enable", "--now", "NetworkManager.service"], timeout=60)
+        if enabled.returncode != 0:
+            raise Failure("failed", "Could not start NetworkManager: " + (enabled.stderr.strip() or "systemctl failed"))
+        for iface in targets or [i for i, d in self.devices.items() if d.present]:
+            net.give_back_to_networkmanager(iface)
+        return {"ok": True, "message": "NetworkManager manages " + (", ".join(targets) or "the devices")
+                + " again, and starts at boot. `sudo nmxcli device manage` gives them all back to nmx."}
 
     def op_device_manage(self, req: dict) -> dict:
         targets = [req["ifname"]] if req.get("ifname") else list(self.state["unmanaged"])

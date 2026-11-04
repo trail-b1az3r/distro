@@ -12,7 +12,9 @@ pkgdesc="@DISTRO_NAME@'s network manager: nmxd, nmxcli (nmcli-compatible) and nm
 arch=(any)
 url="@DISTRO_HOME_URL@"
 license=(GPL-3.0-or-later)
-depends=(python wpa_supplicant systemd iproute2 util-linux)
+# iw: tells a Wi-Fi card's client interface from its access-point and Wi-Fi Direct ones, and turns off the Surface
+# card's power saving.
+depends=(python wpa_supplicant systemd iproute2 util-linux iw)
 optdepends=('networkmanager: for apps that use its API, and to hand devices back to it')
 install=nmx.install
 source=("@DISTRO_ID@-$pkgver.tar.gz")
@@ -32,6 +34,7 @@ package() {
   python -m compileall -q -d "$site/nmx" "$pkgdir$site/nmx"
   install -Dm755 bin/nmxd "$pkgdir/usr/bin/nmxd"
   install -Dm755 bin/nmxcli "$pkgdir/usr/bin/nmxcli"
+  ln -s nmxcli "$pkgdir/usr/bin/nmx"          # the short name: sudo nmx device remanagenm
   install -Dm755 bin/nmxtui "$pkgdir/usr/bin/nmxtui"
   install -Dm644 data/nmx.service "$pkgdir/usr/lib/systemd/system/nmx.service"
   install -Dm755 data/nmx.sleep "$pkgdir/usr/lib/systemd/system-sleep/nmx"

@@ -8,8 +8,11 @@ It is opt-in: the installer asks (Network manager: networkmanager or nmx), and o
 ```sh
 sudo systemctl enable --now nmx       # switch: NetworkManager's saved networks come over, DNS goes through
                                       # systemd-resolved, NetworkManager is turned off (once)
-sudo nmxcli device unmanage && sudo systemctl enable --now NetworkManager   # and back
+sudo nmx device remanagenm            # and back: every device to NetworkManager, which is turned on
+sudo nmx device manage                # and nmx takes them all back
 ```
+
+`nmx` is a short name for `nmxcli`.
 
 ```sh
 nmxcli                                   # overview
@@ -45,6 +48,10 @@ nmxtui                                   # menus
   nmxd also notices a sleep by itself (the boot clock jumps past the monotonic one). After resume it waits for the
   card, restarts its supplicant and reconnects; a card that does not come back gets its driver reloaded (Marvell
   mwifiex on the Surface Pro 3-6, some Realtek and Intel cards).
+- **Microsoft Surface** (Marvell mwifiex): the card shows three interfaces on one radio, `mlan0` to connect with,
+  `uap0` for an access point and `wfd0` for Wi-Fi Direct. nmx takes only the one to connect with (asking `iw` for
+  each interface's type; one per radio), so no second supplicant fights over the radio, and turns the card's power
+  saving off after it starts and after each connection, as linux-surface advises.
 - A supplicant that dies is restarted; a card that stops returning scans is restarted, then its driver reloaded.
 - A network that keeps failing is retried with a backoff (10 s to 5 min); one whose saved password is refused is not
   retried until it gets a new one, and Halcyon (or `nmxcli monitor`) is told.
