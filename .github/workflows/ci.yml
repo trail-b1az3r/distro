@@ -97,6 +97,10 @@ jobs:
             case "$dir" in */python315-pip/|*/write/|*/touchd-dkms/) continue ;; esac
             (cd "$dir" && runuser -u builder -- makepkg --syncdeps --noconfirm --cleanbuild)
           done
+          # Keep them for the experiments sources now: scripts/build-packages.sh (the steps below) re-renders
+          # build/pkgbuild and deletes every package directory first.
+          mkdir -p build/ci-packages
+          cp -t build/ci-packages -- build/pkgbuild/*/*.pkg.tar.zst
       - name: Install them
         run: pacman -U --noconfirm build/pkgbuild/distro/*-core-*.pkg.tar.zst build/pkgbuild/distro/*-branding-*.pkg.tar.zst
       - name: Installed CLI works
@@ -130,6 +134,14 @@ jobs:
             ! -path 'build/packages/chroot/*' \
             -exec cp -n -t build/ci-packages -- {} +
           count="$(find build/ci-packages -maxdepth 1 -type f -name '*.pkg.tar.zst' | wc -l)"
+          id="$(. ./distro.conf && echo "$DISTRO_ID")"
+          for own in "$id-core" nmx hyprland-plus; do
+            if ! compgen -G "build/ci-packages/$own-[0-9]*.pkg.tar.zst" >/dev/null; then
+              echo "::error::The distribution's own package $own was not collected for the experiments sources."
+              ls build/ci-packages
+              exit 1
+            fi
+          done
           if [ "$count" -eq 0 ]; then
             echo "::error::No package archives were collected. Build output locations:"
             find build -maxdepth 4 -type d -print

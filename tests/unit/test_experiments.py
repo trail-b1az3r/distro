@@ -153,3 +153,12 @@ def test_ci_publishes_both_sources():
     assert "--print-format" not in ci, "pacman -Qp takes no --print-format"
     assert "scripts/experiments-manifest.py" in ci
     assert "'nexora-experiments-extra'" in ci and 'gh release upload "$REPO"' in ci
+
+
+def test_ci_keeps_the_distributions_own_packages():
+    """build-packages.sh re-renders build/pkgbuild (deleting each package directory), so the packages makepkg built
+    there must be saved before it runs, or the sources get only the few packages built last."""
+    ci = (ROOT / ".github/workflows/ci.yml").read_text()
+    save = ci.index("cp -t build/ci-packages -- build/pkgbuild/*/*.pkg.tar.zst")
+    assert save < ci.index("scripts/build-packages.sh --plan") < ci.index("scripts/build-packages.sh --only")
+    assert 'for own in "$id-core" nmx hyprland-plus' in ci
