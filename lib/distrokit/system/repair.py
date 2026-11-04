@@ -119,6 +119,26 @@ def packages_plan(root: Path = Path("/"), runner: util.Runner | None = None, ref
     return plan
 
 
+def hyprland_plan(root: Path = Path("/")) -> Plan:
+    """Move a stale hyprland-plus source build out of /usr/local, so the packaged Hyprland starts."""
+    from . import compositor
+
+    plan = Plan("Let the packaged Hyprland start")
+    stale = compositor.stale_local_build(root)
+    if not stale:
+        plan.notes.append("No hyprland-plus build in /usr/local hides the packaged one.")
+        return plan
+
+    def move() -> None:
+        dest = compositor.retire(stale, root)
+        print(f"  moved to {dest} (delete it once the desktop works)")
+
+    plan.actions.append(Action(
+        "Move the old hyprland-plus build out of /usr/local (" + ", ".join(p.name for p in stale) + ")", move, True))
+    plan.notes.append("Nothing is deleted: the files go to /usr/local/lib/hyprland-plus-retired/.")
+    return plan
+
+
 def boot_plan(root: Path = Path("/"), runner: util.Runner | None = None, branding: Branding | None = None) -> Plan:
     runner = runner or util.Runner()
     branding = branding or load_branding()

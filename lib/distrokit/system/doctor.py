@@ -177,6 +177,20 @@ class Doctor:
             return Check("Desktop", WARN, "No display manager enabled", fix="sudo systemctl enable sddm", critical=False)
         return Check("Desktop", OK, "Hyprland with the Quickshell desktop")
 
+    def compositor(self) -> Check:
+        """A hyprland-plus built from source into /usr/local hides the packaged one (system/compositor.py)."""
+        from . import compositor
+
+        stale = compositor.stale_local_build(self.root)
+        if not stale:
+            return Check("Compositor", OK, "The packaged Hyprland is the one that starts")
+        binary = self.root / "usr/local/bin/Hyprland"
+        missing = compositor.can_start(binary, self.root)
+        summary = ("An old hyprland-plus build in /usr/local/bin starts instead of the packaged one"
+                   + (f", and it cannot start: {', '.join(missing)} not found" if missing else ""))
+        return Check("Compositor", FAIL, summary, [str(p) for p in stale],
+                     fix=f"sudo {self.b.cli} repair hyprland")
+
     def bootloader(self) -> Check:
         cfg = boot.load_config(self.root, self.b)
         if cfg is None:
@@ -300,7 +314,7 @@ class Doctor:
 
     # -- run ------------------------------------------------------------------
     def checks(self) -> list[Callable[[], Check]]:
-        return [self.kernel, self.gpu, self.vulkan, self.network, self.audio, self.desktop, self.bootloader,
+        return [self.kernel, self.gpu, self.vulkan, self.network, self.audio, self.desktop, self.compositor, self.bootloader,
                 self.package_manager, self.ai_backend, self.disk_space, self.services, self.time_sync]
 
     def run(self) -> list[Check]:

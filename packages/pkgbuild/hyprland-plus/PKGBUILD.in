@@ -14,7 +14,7 @@ pkgname=hyprland-plus
 _commit=ba52d8495ea819ef1e0adb39c18fc1564b1089b9
 _udis86=5336633af70f3917760a6d441ff02d93477b0c86
 pkgver=0.57.1.p1
-pkgrel=1
+pkgrel=2
 pkgdesc="Hyprland with Halcyon windows, renderer effects, app-scoped pen pressure curves and touchD support"
 arch=(x86_64)
 url="https://github.com/trail-b1az3r/hyprland-plus"
@@ -33,6 +33,10 @@ optdepends=('hyprpm: build and install plugins'
             'xdg-desktop-portal-hyprland: xdg-desktop-portal backend for hyprland')
 provides=("hyprland=${pkgver%.p*}" wayland-compositor)
 conflicts=(hyprland)
+# Halcyon marks a hyprland-plus it built into /usr/local with this stand-in package; the real one takes its place.
+replaces=(hyprland-plus-local)
+# Moves such a /usr/local build aside, so it cannot start instead of this one (hyprland-plus.install).
+install=hyprland-plus.install
 source=(
   "hyprland-plus::git+https://github.com/trail-b1az3r/hyprland-plus.git#commit=${_commit}"
   "udis86::git+https://github.com/canihavesomecoffee/udis86.git#commit=${_udis86}"

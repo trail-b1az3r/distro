@@ -1,0 +1,33 @@
+# A hyprland-plus built from source into /usr/local (by Halcyon's installer, its updater or hyprctl-lite) comes
+# before this package's /usr/bin/Hyprland in PATH, and its wayland-sessions entry is what the login screen starts.
+# It was linked against the libraries of its day: once one moves on (aquamarine 0.16: libaquamarine.so.14 is gone)
+# it cannot start, and with it the desktop. Moved aside here, never deleted; the same as `nexora repair hyprland`.
+
+_retire_local_build() {
+    local bin=/usr/local/bin/Hyprland dest name session moved=0
+    [ -f "$bin" ] || return 0
+    grep -aqs 'hyprland-plus' "$bin" || return 0          # someone's own stock Hyprland build is left alone
+    dest="/usr/local/lib/hyprland-plus-retired/$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$dest/bin" "$dest/share/wayland-sessions"
+    for name in Hyprland hyprland hyprctl hyprpm start-hyprland; do
+        if [ -e "/usr/local/bin/$name" ] || [ -L "/usr/local/bin/$name" ]; then
+            mv -f "/usr/local/bin/$name" "$dest/bin/" && moved=1
+        fi
+    done
+    for session in /usr/local/share/wayland-sessions/hyprland*.desktop; do
+        [ -e "$session" ] && mv -f "$session" "$dest/share/wayland-sessions/"
+    done
+    if [ "$moved" = 1 ]; then
+        echo ":: An older hyprland-plus built from source was in /usr/local and would have started instead of"
+        echo "   this package (and failed once its libraries moved on). It is now in $dest;"
+        echo "   delete that folder once the desktop works."
+    fi
+}
+
+post_install() {
+    _retire_local_build
+}
+
+post_upgrade() {
+    _retire_local_build
+}

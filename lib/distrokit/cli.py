@@ -799,6 +799,8 @@ def cmd_repair(a) -> int:
         if "Package manager" in failing:
             plans.append(repair.packages_plan(root, runner, refresh=True, branding=B,
                                               distro_repo=pacmanconf.distro_repo_published(B)))
+        if "Compositor" in failing:
+            plans.append(repair.hyprland_plan(root))
         if "Bootloader" in failing or "Kernel" in failing:
             plans.append(repair.boot_plan(root, runner, B))
         if {"GPU", "Vulkan", "AI backend"} & failing:
@@ -810,8 +812,11 @@ def cmd_repair(a) -> int:
                                           distro_repo=pacmanconf.distro_repo_published(B)))
     elif what == "boot":
         plans.append(repair.boot_plan(root, runner, B))
+    elif what == "hyprland":
+        plans.append(repair.hyprland_plan(root))
     elif what == "all":
         plans += [repair.packages_plan(root, runner, branding=B, distro_repo=pacmanconf.distro_repo_published(B)),
+                  repair.hyprland_plan(root),
                   repair.boot_plan(root, runner, B),
                   repair.gpu_plan(root, runner, B, user=os.environ.get("SUDO_USER"))]
     if not plans:
@@ -1096,7 +1101,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_doctor)
 
     s = sub.add_parser("repair", help="fix packages, booting and drivers")
-    s.add_argument("what", nargs="?", choices=["auto", "packages", "boot", "all"])
+    s.add_argument("what", nargs="?", choices=["auto", "packages", "boot", "hyprland", "all"],
+                   help="hyprland: move an old hyprland-plus build out of /usr/local so the packaged one starts")
     s.add_argument("--no-update", action="store_true", help="packages: do not run a full upgrade")
     s.add_argument("--root", default="/", help="repair a mounted system")
     s.add_argument("-y", "--yes", action="store_true")
