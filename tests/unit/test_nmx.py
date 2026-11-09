@@ -709,11 +709,14 @@ def test_networkmanager_assist_enables_system_ca_only_when_profile_has_no_explic
         "already-trusted": "peap;\nalice@uni.example\n--\n--\n--\n--\nyes\n--",
         "no-domain": "peap;\nalice\n--\n--\n--\n--\nno\n--",
     }
+    fields = ",".join(("802-1x.eap", "802-1x.identity", "802-1x.ca-cert", "802-1x.ca-path",
+                       "802-1x.phase2-ca-cert", "802-1x.phase2-ca-path", "802-1x.system-ca-certs",
+                       "802-1x.domain-suffix-match"))
 
     def fake_run(args):
         if args[:4] == ["nmcli", "-t", "-f", "UUID"]:
             return "\n".join(values)
-        if args[:3] == ["nmcli", "-g", "802-1x.eap,802-1x.identity,802-1x.ca-cert,802-1x.ca-path,802-1x.phase2-ca-cert,802-1x.phase2-ca-path,802-1x.system-ca-certs,802-1x.domain-suffix-match"]:
+        if args[:3] == ["nmcli", "-g", fields]:
             return values[args[-1]]
         return ""
     monkeypatch.setattr(nm_assist, 'run', fake_run)
