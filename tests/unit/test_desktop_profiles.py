@@ -33,6 +33,7 @@ def test_networkmanager_assist_is_optional_and_does_not_replace_nmx():
     feature = __import__("distrokit.profiles", fromlist=["load_features"]).load_features()["networkmanager_assist"]
     assert feature.kind == "bool" and feature.default is False
     assert "nmx" in packages()
+    assert "firefox" in packages({"networkmanager_assist": True})
 
 
 def test_external_desktop_setup_script_has_valid_shell_syntax():
