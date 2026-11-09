@@ -6,6 +6,8 @@ import time
 from nmx import portal
 
 INTERVAL = 30
+CA_SCAN_INTERVAL = 300
+SERVER_CERT_EAP = {"peap", "ttls", "tls", "fast", "teap"}
 
 def run(args: list[str]) -> str:
     try:
@@ -16,18 +18,30 @@ def run(args: list[str]) -> str:
 
 def ensure_system_ca() -> None:
     uuids = run(["nmcli", "-t", "-f", "UUID", "connection", "show"]).splitlines()
+    fields = [
+        "802-1x.eap", "802-1x.ca-cert", "802-1x.ca-path",
+        "802-1x.phase2-ca-cert", "802-1x.phase2-ca-path", "802-1x.system-ca-certs"
+    ]
     for uuid in uuids:
         if not uuid:
             continue
-        values = run(["nmcli", "-g", "802-1x.eap,802-1x.ca-cert", "connection", "show", uuid]).splitlines()
-        eap = values[0].strip() if values else ""
-        ca = values[1].strip() if len(values) > 1 else ""
-        if eap and eap not in ("--", "") and not ca:
-            run(["nmcli", "connection", "modify", uuid, "802-1x.system-ca-certs", "yes"])
+        values = run(["nmcli", "-g", ",".join(fields), "connection", "show", uuid]).splitlines()
+        values += [""] * (len(fields) - len(values))
+        eap, ca_cert, ca_path, phase2_cert, phase2_path, system_ca = [value.strip() for value in values[:6]]
+        methods = {method.strip().lower() for method in eap.split(";") if method.strip()}
+        if not methods.intersection(SERVER_CERT_EAP):
+            continue
+        # Respect explicit per-profile CA files, directories and inner-tunnel CAs.
+        if any((ca_cert, ca_path, phase2_cert, phase2_path)) or system_ca.lower() in ("yes", "true", "on"):
+            continue
+        result = subprocess.run(["nmcli", "connection", "modify", uuid, "802-1x.system-ca-certs", "yes"],
+                                capture_output=True, text=True, timeout=8, check=False)
+        if result.returncode == 0:
+            print(f"nmx-nm-assist: enabled system CA trust for 802.1X profile {uuid}", flush=True)
 
 def main() -> int:
-    if run(["nmcli", "-t", "-f", "RUNNING", "general"]) != "running":
-        return 0
+    while run(["nmcli", "-t", "-f", "RUNNING", "general"]) != "running":
+        time.sleep(5)
     last_portal = ""
     last_ca_scan = 0.0
     while True:
@@ -43,7 +57,7 @@ def main() -> int:
         elif state in ("full", "limited", "none"):
             last_portal = ""
         now = time.monotonic()
-        if now - last_ca_scan >= 300:
+        if now - last_ca_scan >= CA_SCAN_INTERVAL:
             ensure_system_ca()
             last_ca_scan = now
         time.sleep(INTERVAL)
