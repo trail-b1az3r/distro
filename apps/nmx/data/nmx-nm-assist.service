@@ -1,0 +1,12 @@
+[Unit]
+Description=nmx NetworkManager captive portal and system CA assistant
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/nmx-nm-assist
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
