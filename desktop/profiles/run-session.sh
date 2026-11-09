@@ -10,7 +10,7 @@ backup="$HOME/.config.distro-session-backup"
 had_base=0
 # Recover the base config if the previous session was killed before its EXIT trap ran.
 if [[ -e "$backup" || -L "$backup" ]]; then
-    if [[ -d "$base" ]]; then
+    if [[ -d "$base/hypr" ]]; then
         rm -rf "$snapshot"
         mkdir -p "$snapshot"
         cp -a "$base/." "$snapshot/"
