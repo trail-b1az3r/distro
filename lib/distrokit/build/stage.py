@@ -274,6 +274,8 @@ class Stage:
         self.tree("desktop/dots", f"{share}/desktop/dots")
         self.tree("desktop/overlay", f"{share}/desktop/overlay")
         self.text(f"{share}/desktop/VERSION", desktop_version(self.src) + "\n")
+        if (self.src / "desktop" / "profiles").is_dir():
+            self.tree("desktop/profiles", f"{share}/desktop/profiles")
         self.template("desktop/overlay/fish/vendor.fish.in", f"/usr/share/fish/vendor_conf.d/{b.id}.fish")
         self.template("desktop/overlay/profile.d/profile.sh.in", f"/etc/profile.d/{b.id}.sh")
         self.template("desktop/overlay/bin/session-start.in", f"{lib}/bin/{b.id}-session-start", 0o755)
