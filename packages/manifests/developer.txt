@@ -143,6 +143,7 @@ illogical-impulse-quickshell-git
 illogical-impulse-screencapture
 illogical-impulse-toolkit
 illogical-impulse-widgets
+
 ## list:dev-basic
 bat
 direnv
