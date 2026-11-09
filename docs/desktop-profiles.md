@@ -12,7 +12,7 @@ Upstream installers still install packages and may change system-wide themes, SD
 
 ## Network choices
 
-The installer keeps full nmx as a replacement network manager, or NetworkManager as the default. The optional **NetworkManager smart assist (nmx)** is a separate per-user service: it leaves NetworkManager in control, opens detected captive portals in the desktop browser, and enables NetworkManager system-CA trust for saved 802.1X profiles that do not specify a CA. It is not enabled when full nmx is selected.
+The installer keeps full nmx as a replacement network manager, or NetworkManager as the default. The optional **NetworkManager smart assist (nmx)** is a separate per-user service: it leaves NetworkManager in control, opens detected captive portals in the desktop browser, and enables NetworkManager system-CA trust for saved 802.1X profiles with no explicit CA only when a server-domain suffix can be retained or derived from the identity realm. It is not enabled when full nmx is selected.
 
 ## Autocorrect
 
