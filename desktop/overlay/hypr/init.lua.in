@@ -63,6 +63,6 @@ end)
 -- Keybinds. Only chords upstream leaves free (checked by the test suite),
 -- because Hyprland runs every action bound to a chord.
 hl.bind("CTRL + SUPER + A", hl.dsp.exec_cmd("@DISTRO_ID@-ai"), { description = "@DISTRO_NAME@: AI launcher" })
-hl.bind("CTRL + SUPER + SHIFT + C", hl.dsp.exec_cmd("@DISTRO_ID@ autocorrect"), { description = "@DISTRO_NAME@: AI autocorrect selected text (disabled in terminals)" })
+hl.bind("CTRL + SUPER + SHIFT + C", hl.dsp.exec_cmd("@DISTRO_ID@ autocorrect --selection"), { description = "@DISTRO_NAME@: AI autocorrect selected text (disabled in terminals)" })
 hl.bind("SUPER + SHIFT + U", hl.dsp.exec_cmd("@DISTRO_ID@-update"), { description = "@DISTRO_NAME@: System update" })
 hl.bind("SUPER + F1", hl.dsp.exec_cmd("@DISTRO_ID@-welcome"), { description = "@DISTRO_NAME@: Welcome and help" })
