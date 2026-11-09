@@ -10,7 +10,7 @@ def test_autocorrect_accepts_text_arguments(monkeypatch):
     monkeypatch.setattr(autocorrect, 'correct_text', lambda text: 'FIXED:' + text)
     args = cli.build_parser().parse_args(['autocorrect', 'fix', 'this', 'text'])
     assert args.func(args) == 0
-    assert cli.sys.stdout.getvalue() == 'FIXED:fix this text\\n'
+    assert cli.sys.stdout.getvalue() == 'FIXED:fix this text\n'
 
 def test_autocorrect_reads_piped_stdin(monkeypatch):
     monkeypatch.setattr(cli.sys, 'stdin', io.StringIO('piped words'))
@@ -19,7 +19,7 @@ def test_autocorrect_reads_piped_stdin(monkeypatch):
     monkeypatch.setattr(autocorrect, 'correct_text', lambda text: text.upper())
     args = cli.build_parser().parse_args(['autocorrect'])
     assert args.func(args) == 0
-    assert cli.sys.stdout.getvalue() == 'PIPED WORDS\\n'
+    assert cli.sys.stdout.getvalue() == 'PIPED WORDS\n'
 
 def test_autocorrect_prompts_when_interactive(monkeypatch):
     class TTY(io.StringIO):
@@ -31,7 +31,7 @@ def test_autocorrect_prompts_when_interactive(monkeypatch):
     monkeypatch.setattr(autocorrect, 'correct_text', lambda text: 'corrected')
     args = cli.build_parser().parse_args(['autocorrect'])
     assert args.func(args) == 0
-    assert cli.sys.stdout.getvalue() == 'corrected\\n'
+    assert cli.sys.stdout.getvalue() == 'corrected\n'
 
 def test_autocorrect_selection_is_explicit(monkeypatch):
     from distrokit import autocorrect
