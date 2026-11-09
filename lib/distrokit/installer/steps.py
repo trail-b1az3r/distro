@@ -860,12 +860,15 @@ class Installation:
         for unit in units:
             self.chroot(["systemctl", "enable", unit], check=False)
         if nm_assist:
-            wants = self.t(f"{self.home}/.config/systemd/user/default.target.wants")
-            wants.mkdir(parents=True, exist_ok=True)
-            link = wants / "nmx-nm-assist.service"
-            if not link.exists():
-                link.symlink_to("/usr/lib/systemd/user/nmx-nm-assist.service")
-            self.log("NetworkManager smart assist enabled for the installed user.")
+            if self.runner.dry_run:
+                self.log("would enable nmx-nm-assist.service for the installed user")
+            else:
+                wants = self.t(f"{self.home}/.config/systemd/user/default.target.wants")
+                wants.mkdir(parents=True, exist_ok=True)
+                link = wants / "nmx-nm-assist.service"
+                if not link.exists():
+                    link.symlink_to("/usr/lib/systemd/user/nmx-nm-assist.service")
+                self.log("NetworkManager smart assist enabled for the installed user.")
         elif self.features.get("networkmanager_assist") and nmx:
             self.warnings.append("NetworkManager smart assist was skipped because nmx is the selected network manager.")
         if nmx:
