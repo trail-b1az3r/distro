@@ -786,8 +786,7 @@ class Installation:
         if external:
             self._schedule_external_desktops(external)
         if primary != "halcyon":
-            self.log("Desktop: " + primary + " selected; upstream setup scheduled for first login")
-            return
+            self.log("Desktop: " + primary + " selected; Halcyon is retained as a bootstrap/fallback session")
         share = self.t(f"/usr/share/{self.branding.id}")
         dep = desktop_deploy.Deployer(
             self.t(self.home), self.branding, dots=share / "desktop" / "dots", overlay=share / "desktop" / "overlay",
@@ -811,6 +810,22 @@ class Installation:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
         target.chmod(0o755)
+        session_source = self.t(f"/usr/share/{self.branding.id}/desktop/profiles/run-session.sh")
+        if session_source.is_file():
+            session_target = self.t("/usr/local/bin/distro-desktop-session")
+            session_target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(session_source, session_target)
+            session_target.chmod(0o755)
+            session_dir = self.t("/usr/share/wayland-sessions")
+            session_dir.mkdir(parents=True, exist_ok=True)
+            labels = {"ml4w": "ML4W", "sekaipop": "SekaiPop", "hyde": "HyDE"}
+            for profile in selected:
+                if profile not in labels:
+                    continue
+                entry = ("[Desktop Entry]\\nName=" + labels[profile] + " (isolated profile)\\n"
+                         "Comment=Start Hyprland with the saved " + labels[profile] + " configuration\\n"
+                         "Exec=/usr/local/bin/distro-desktop-session " + profile + "\\nType=Application\\n")
+                (session_dir / (self.branding.id + "-" + profile + ".desktop")).write_text(entry, encoding="utf-8")
         autostart = self.t(f"{self.home}/.config/autostart/distro-desktop-profiles.desktop")
         autostart.parent.mkdir(parents=True, exist_ok=True)
         entry = ("[Desktop Entry]\nType=Application\nName=Install selected desktop profiles\n"
