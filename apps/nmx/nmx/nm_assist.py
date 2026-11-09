@@ -23,29 +23,41 @@ def run(args: list[str]) -> str:
 def ensure_system_ca() -> None:
     uuids = run(["nmcli", "-t", "-f", "UUID", "connection", "show"]).splitlines()
     fields = [
-        "802-1x.eap", "802-1x.ca-cert", "802-1x.ca-path",
-        "802-1x.phase2-ca-cert", "802-1x.phase2-ca-path", "802-1x.system-ca-certs"
+        "802-1x.eap", "802-1x.identity", "802-1x.ca-cert", "802-1x.ca-path",
+        "802-1x.phase2-ca-cert", "802-1x.phase2-ca-path", "802-1x.system-ca-certs",
+        "802-1x.domain-suffix-match"
     ]
     for uuid in uuids:
         if not uuid:
             continue
         values = run(["nmcli", "-g", ",".join(fields), "connection", "show", uuid]).splitlines()
         values += [""] * (len(fields) - len(values))
-        values = ["" if value.strip() in ("", "--") else value.strip() for value in values[:6]]
-        eap, ca_cert, ca_path, phase2_cert, phase2_path, system_ca = values
+        values = ["" if value.strip() in ("", "--") else value.strip() for value in values[:8]]
+        eap, identity, ca_cert, ca_path, phase2_cert, phase2_path, system_ca, domain_match = values
         methods = {method.strip().lower() for method in eap.split(";") if method.strip()}
         if not methods.intersection(SERVER_CERT_EAP):
             continue
-        # Respect explicit per-profile CA files, directories and inner-tunnel CAs.
+        # Never override an explicit CA or a profile's deliberate system-CA setting.
         if any((ca_cert, ca_path, phase2_cert, phase2_path)) or system_ca.lower() in ("yes", "true", "on"):
             continue
+        # Validate the server name as well as its chain. Prefer the explicit NM setting;
+        # otherwise infer the realm suffix from an identity such as alice@university.edu.
+        domain = domain_match
+        if not domain and "@" in identity:
+            candidate = identity.rsplit("@", 1)[1].strip().rstrip(".")
+            if "." in candidate and all(part and part.replace("-", "").isalnum() for part in candidate.split(".")):
+                domain = candidate
+        if not domain:
+            continue
         try:
-            result = subprocess.run(["nmcli", "connection", "modify", uuid, "802-1x.system-ca-certs", "yes"],
+            result = subprocess.run(["nmcli", "connection", "modify", uuid,
+                                      "802-1x.system-ca-certs", "yes",
+                                      "802-1x.domain-suffix-match", domain],
                                     capture_output=True, text=True, timeout=8, check=False)
         except (OSError, subprocess.TimeoutExpired):
             continue
         if result.returncode == 0:
-            print(f"nmx-nm-assist: enabled system CA trust for 802.1X profile {uuid}", flush=True)
+            print(f"nmx-nm-assist: enabled system CA trust and domain matching for 802.1X profile {uuid}", flush=True)
 
 
 def open_portal_if_needed(state: str, last_url: str) -> str:
