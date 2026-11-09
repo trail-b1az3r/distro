@@ -13,7 +13,7 @@ def test_halcyon_remains_the_default_desktop():
     assert "illogical-impulse-quickshell-git" in selected
     assert "waybar" not in selected
 
-def test_primary_desktop_can_be_selected_instead_of_halcyon():
+def test_primary_external_desktop_is_selected_with_halcyon_fallback():
     selected = packages({"desktop_environment": "ml4w"})
     assert "waybar" in selected
     assert "illogical-impulse-hyprland" in selected
