@@ -45,7 +45,7 @@ def ensure_system_ca() -> None:
         domain = domain_match
         if not domain and "@" in identity:
             candidate = identity.rsplit("@", 1)[1].strip().rstrip(".")
-            if "." in candidate and all(part and part.replace("-", "").isalnum() for part in candidate.split(".")):
+            if "." in candidate and any(char.isalpha() for char in candidate) and all(part and part.replace("-", "").isalnum() for part in candidate.split(".")):
                 domain = candidate
         if not domain:
             continue
