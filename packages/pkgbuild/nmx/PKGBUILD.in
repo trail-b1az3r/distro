@@ -40,6 +40,5 @@ package() {
   install -Dm644 data/nmx-nm-assist.service "$pkgdir/usr/lib/systemd/user/nmx-nm-assist.service"
   install -Dm644 data/nmx.service "$pkgdir/usr/lib/systemd/system/nmx.service"
   install -Dm755 data/nmx.sleep "$pkgdir/usr/lib/systemd/system-sleep/nmx"
-  install -Dm644 data/90-nmx-networkmanager.conf "$pkgdir/usr/lib/NetworkManager/conf.d/90-nmx.conf"
   install -Dm644 README.md "$pkgdir/usr/share/doc/nmx/README.md"
 }
