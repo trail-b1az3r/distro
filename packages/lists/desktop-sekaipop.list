@@ -10,6 +10,5 @@ slurp
 brightnessctl
 playerctl
 xdg-desktop-portal-hyprland
-polkit-gnome
 
 qt6-shadertools
