@@ -781,7 +781,7 @@ class Installation:
         )
         if self.runner.dry_run:
             self.log("desktop profile: " + primary + "; additional profiles: " + (", ".join(external) if external else "none"))
-            self.log("deploy Halcyon dotfiles" if primary == "halcyon" else "skip Halcyon dotfiles; schedule upstream installer")
+            self.log("deploy Halcyon dotfiles" if primary == "halcyon" else "deploy Halcyon bootstrap/fallback dotfiles")
             return
         if external:
             self._schedule_external_desktops(external)
@@ -827,6 +827,7 @@ class Installation:
                          "Exec=/usr/local/bin/distro-desktop-session " + profile + "\nTryExec=Hyprland\nDesktopNames=Hyprland\nType=Application\n")
                 (session_dir / (self.branding.id + "-" + profile + ".desktop")).write_text(entry, encoding="utf-8")
         self.log("External desktop setup scheduled for the first Halcyon login.")
+
     def services(self) -> None:
         nmx = self.features.get("network_manager", "networkmanager") == "nmx"
         nm_assist = bool(self.features.get("networkmanager_assist")) and not nmx
