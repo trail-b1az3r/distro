@@ -9,9 +9,13 @@ Git, Fish and yay. Nothing else: add what you need later with pacman or yay."""
 approx_size_gb = 6
 
 [packages]
-lists = ["base", "desktop"]
+lists = ["base", "desktop-common"]
 
 [features]
+desktop_environment = "halcyon"
+desktop_ml4w = false
+desktop_sekaipop = false
+desktop_hyde = false
 apps = false
 browser = false
 office = false
