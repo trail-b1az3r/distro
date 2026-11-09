@@ -822,9 +822,9 @@ class Installation:
             for profile in selected:
                 if profile not in labels:
                     continue
-                entry = ("[Desktop Entry]\\nName=" + labels[profile] + " (isolated profile)\\n"
-                         "Comment=Start Hyprland with the saved " + labels[profile] + " configuration\\n"
-                         "Exec=/usr/local/bin/distro-desktop-session " + profile + "\\nType=Application\\n")
+                entry = ("[Desktop Entry]\nName=" + labels[profile] + " (isolated profile)\n"
+                         "Comment=Start Hyprland with the saved " + labels[profile] + " configuration\n"
+                         "Exec=/usr/local/bin/distro-desktop-session " + profile + "\nType=Application\n")
                 (session_dir / (self.branding.id + "-" + profile + ".desktop")).write_text(entry, encoding="utf-8")
         autostart = self.t(f"{self.home}/.config/autostart/distro-desktop-profiles.desktop")
         autostart.parent.mkdir(parents=True, exist_ok=True)
