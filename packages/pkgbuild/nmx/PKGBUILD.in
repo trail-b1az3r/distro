@@ -23,6 +23,7 @@ sha256sums=('@SOURCE_SHA256@')
 check() {
   cd "@DISTRO_ID@-$pkgver/apps/nmx"
   python -c 'import nmx.cli, nmx.daemon, nmx.tui; print("nmx", nmx.__version__)'
+  python -m py_compile bin/nmx-nm-assist
 }
 
 package() {
