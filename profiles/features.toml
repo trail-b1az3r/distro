@@ -174,8 +174,8 @@ kind = "bool"
 group = "System"
 order = 25
 label = "NetworkManager smart assist (nmx)"
-description = "Keep NetworkManager in control; nmx watches for captive portals and enables system CA trust only when a safe 802.1X server-domain match can be retained or derived from the identity realm. Does not take over network devices."
-lists = []
+description = "Keep NetworkManager in control; open captive portals and enable system CA trust only when a safe 802.1X server-domain match can be retained or derived from the identity realm. Installs the configured browser and does not take over network devices."
+lists = ["browser"]
 
 [firewall]
 kind = "bool"
