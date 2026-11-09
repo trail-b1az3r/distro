@@ -822,7 +822,7 @@ class Installation:
             for profile in selected:
                 if profile not in labels:
                     continue
-                entry = "\\n".join((
+                entry = "\n".join((
                     "[Desktop Entry]",
                     "Name=" + labels[profile] + " (isolated profile)",
                     "Comment=Start Hyprland with the saved " + labels[profile] + " configuration",
