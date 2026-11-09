@@ -25,5 +25,6 @@ xdg-utils
 gnome-keyring
 polkit-kde-agent
 nm-connection-editor
+@DISTRO_ID@-desktop
 @DISTRO_ID@-welcome
 @DISTRO_ID@-write
