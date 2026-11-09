@@ -28,7 +28,7 @@ fi
 if [[ -e "$base" || -L "$base" ]]; then mv "$base" "$backup"; had_base=1; fi
 mkdir -p "$base"
 cp -a "$snapshot/." "$base/"
-printf "%s\\n" "$profile" > "$active"
+printf "%s\n" "$profile" > "$active"
 restore() {
     status=$?
     trap - EXIT INT TERM
