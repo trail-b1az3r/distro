@@ -10,7 +10,7 @@ kind = "choice"
 group = "Desktop"
 order = 1
 label = "Primary desktop"
-description = "Choose the desktop configuration installed as the default session. Other desktop profiles can be added below."
+description = "Choose the primary external desktop profile. Halcyon is retained as the bootstrap and fallback session; additional profiles can be selected separately."
 default = "halcyon"
 [desktop_environment.choices]
 halcyon = ["desktop-halcyon"]
