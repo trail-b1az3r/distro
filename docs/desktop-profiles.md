@@ -4,7 +4,7 @@ The ISO installer offers Halcyon, ML4W Dotfiles, SekaiPop and HyDE.
 
 - Halcyon is retained as the bootstrap and fallback session.
 - Select one external profile as the primary profile, then optionally select any of the others as additional profiles.
-- External installers run on the first graphical login in a visible terminal and require the user to confirm before any upstream script runs.
+- External installers run on the first Halcyon login in a visible terminal and require the user to confirm before any upstream script runs.
 - Each external profile's `~/.config` is saved independently under `~/.local/share/distro-desktop-profiles/configs/`.
 - The installer adds an SDDM Wayland session entry for each selected external profile. The session wrapper swaps in that profile's saved configuration while Hyprland runs, saves changes when you log out, and restores the Halcyon config.
 
