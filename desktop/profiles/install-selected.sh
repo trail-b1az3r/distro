@@ -20,7 +20,7 @@ read -r -p "Continue with upstream installers? [y/N] " answer
 [[ "$answer" =~ ^[Yy]$ ]] || { echo "Cancelled. Run this helper again when ready."; exit 0; }
 BASE="$CONFIGS/.base"
 if [[ ! -d "$BASE" ]]; then mkdir -p "$BASE"; [[ ! -d "$HOME/.config" ]] || cp -a "$HOME/.config/." "$BASE/"; fi
-restore_base() { rm -rf "$HOME/.config"; mkdir -p "$HOME/.config"; cp -a "$BASE/." "$HOME/.config/" 2>/dev/null || true; }
+restore_base() { rm -rf "$HOME/.config"; mkdir -p "$HOME/.config"; cp -a "$BASE/." "$HOME/.config/" 2>/dev/null || true; rm -f "$HOME/.config/autostart/distro-desktop-profiles.desktop"; }
 run_repo() {
     local id="$1" url="$2" dir="$WORK/$1"
     if [[ ! -d "$dir/.git" ]]; then git clone --depth 1 "$url" "$dir"; else git -C "$dir" pull --ff-only; fi
@@ -39,9 +39,11 @@ for id in "${selected[@]}"; do
         sekaipop) url=https://github.com/Blapples/SekaiPop.git ;;
         *) echo "Ignoring unknown profile: $id"; continue ;;
     esac
+    if [[ -f "$STATE/$id.done" ]]; then echo "=== $id already installed; skipping ==="; continue; fi
     echo "=== Installing $id ==="
     restore_base
     if run_repo "$id" "$url"; then
+        rm -f "$HOME/.config/autostart/distro-desktop-profiles.desktop"
         rm -rf "$CONFIGS/$id"; mkdir -p "$CONFIGS/$id"
         [[ ! -d "$HOME/.config" ]] || cp -a "$HOME/.config/." "$CONFIGS/$id/"
         touch "$STATE/$id.done"
