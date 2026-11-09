@@ -826,13 +826,7 @@ class Installation:
                          "Comment=Start Hyprland with the saved " + labels[profile] + " configuration\n"
                          "Exec=/usr/local/bin/distro-desktop-session " + profile + "\nType=Application\n")
                 (session_dir / (self.branding.id + "-" + profile + ".desktop")).write_text(entry, encoding="utf-8")
-        autostart = self.t(f"{self.home}/.config/autostart/distro-desktop-profiles.desktop")
-        autostart.parent.mkdir(parents=True, exist_ok=True)
-        entry = ("[Desktop Entry]\nType=Application\nName=Install selected desktop profiles\n"
-                 "Comment=Run selected upstream desktop setup scripts\nExec=alacritty -e /usr/local/bin/distro-install-desktop-profiles\n"
-                 "Terminal=false\nX-GNOME-Autostart-enabled=true\n")
-        autostart.write_text(entry, encoding="utf-8")
-        self.log("External desktop setup scheduled for first graphical login.")
+        self.log("External desktop setup scheduled for the first Halcyon login.")
     def services(self) -> None:
         nmx = self.features.get("network_manager", "networkmanager") == "nmx"
         nm_assist = bool(self.features.get("networkmanager_assist")) and not nmx
