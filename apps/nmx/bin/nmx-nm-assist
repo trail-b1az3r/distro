@@ -9,12 +9,14 @@ INTERVAL = 30
 CA_SCAN_INTERVAL = 300
 SERVER_CERT_EAP = {"peap", "ttls", "tls", "fast", "teap"}
 
+
 def run(args: list[str]) -> str:
     try:
         result = subprocess.run(args, capture_output=True, text=True, timeout=8, check=False)
     except (OSError, subprocess.TimeoutExpired):
         return ""
     return result.stdout.strip() if result.returncode == 0 else ""
+
 
 def ensure_system_ca() -> None:
     uuids = run(["nmcli", "-t", "-f", "UUID", "connection", "show"]).splitlines()
@@ -27,7 +29,8 @@ def ensure_system_ca() -> None:
             continue
         values = run(["nmcli", "-g", ",".join(fields), "connection", "show", uuid]).splitlines()
         values += [""] * (len(fields) - len(values))
-        eap, ca_cert, ca_path, phase2_cert, phase2_path, system_ca = [value.strip() for value in values[:6]]
+        values = ["" if value.strip() in ("", "--") else value.strip() for value in values[:6]]
+        eap, ca_cert, ca_path, phase2_cert, phase2_path, system_ca = values
         methods = {method.strip().lower() for method in eap.split(";") if method.strip()}
         if not methods.intersection(SERVER_CERT_EAP):
             continue
@@ -38,6 +41,7 @@ def ensure_system_ca() -> None:
                                 capture_output=True, text=True, timeout=8, check=False)
         if result.returncode == 0:
             print(f"nmx-nm-assist: enabled system CA trust for 802.1X profile {uuid}", flush=True)
+
 
 def main() -> int:
     while run(["nmcli", "-t", "-f", "RUNNING", "general"]) != "running":
