@@ -49,7 +49,7 @@ def ensure_system_ca() -> None:
 
 
 def open_portal_if_needed(state: str, last_url: str) -> str:
-    if state != "portal":
+    if state not in ("portal", "limited", "unknown"):
         return ""
     kind, url = portal.probe()
     if kind != "portal" or not url or url == last_url:
