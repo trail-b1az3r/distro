@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 CONFIG=/etc/distro-desktop-profiles.conf
-STATE="$HOME/.local/state/distro-desktop-profiles"
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/distro-desktop-profiles"
 LOG="$STATE/install.log"
 WORK="$HOME/.local/share/distro-desktop-profiles"
 CONFIGS="$WORK/configs"
@@ -55,6 +55,7 @@ for id in "${selected[@]}"; do
 done
 if (( failed == 0 )); then
     rm -f "$HOME/.config/autostart/distro-desktop-profiles.desktop"
+    touch "$STATE/completed"
     echo "Profiles are available as separate sessions in the login-screen session menu."
 else
     echo "One or more installers failed. Review $LOG and rerun this helper."
