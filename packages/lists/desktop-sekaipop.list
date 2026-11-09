@@ -1,0 +1,15 @@
+# Common tools used by upstream Hyprland desktop setup scripts.
+git
+base-devel
+kitty
+waybar
+rofi-wayland
+swww
+grim
+slurp
+brightnessctl
+playerctl
+xdg-desktop-portal-hyprland
+polkit-gnome
+
+qt6-shadertools
