@@ -6,6 +6,10 @@ ColumnLayout {
     id: page
     spacing: 24
     readonly property var plasma: installer.features.find(f => f.id === "plasma_fallback")
+    readonly property var primaryDesktop: installer.features.find(f => f.id === "desktop_environment")
+    readonly property var extraMl4w: installer.features.find(f => f.id === "desktop_ml4w")
+    readonly property var extraSekai: installer.features.find(f => f.id === "desktop_sekaipop")
+    readonly property var extraHyde: installer.features.find(f => f.id === "desktop_hyde")
 
     PageHeader { title: qsTr("Desktop"); subtitle: qsTr("Choose Halcyon, ML4W, SekaiPop or HyDE. External profiles are installed at first login and added as separate SDDM sessions; Halcyon remains the bootstrap/fallback session.") }
 
