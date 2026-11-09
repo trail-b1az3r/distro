@@ -820,6 +820,7 @@ class Installation:
         self.log("External desktop setup scheduled for first graphical login.")
     def services(self) -> None:
         nmx = self.features.get("network_manager", "networkmanager") == "nmx"
+        nm_assist = bool(self.features.get("networkmanager_assist")) and not nmx
         # The network: NetworkManager, or nmx (apps/nmx), whose addressing is systemd-networkd's and DNS
         # systemd-resolved's. The installer's choice; both are installed either way.
         units = (["nmx.service", "systemd-networkd.service", "systemd-resolved.service"] if nmx
@@ -843,6 +844,15 @@ class Installation:
         units.append(f"{self.branding.id}-auto-update.timer")
         for unit in units:
             self.chroot(["systemctl", "enable", unit], check=False)
+        if nm_assist:
+            wants = self.t(f"{self.home}/.config/systemd/user/default.target.wants")
+            wants.mkdir(parents=True, exist_ok=True)
+            link = wants / "nmx-nm-assist.service"
+            if not link.exists():
+                link.symlink_to("/usr/lib/systemd/user/nmx-nm-assist.service")
+            self.log("NetworkManager smart assist enabled for the installed user.")
+        elif self.features.get("networkmanager_assist") and nmx:
+            self.warnings.append("NetworkManager smart assist was skipped because nmx is the selected network manager.")
         if nmx:
             # DNS through systemd-resolved, which nmx's addressing (systemd-networkd) feeds.
             self.chroot(["ln", "-sf", "/run/systemd/resolve/stub-resolv.conf", "/etc/resolv.conf"], check=False)
