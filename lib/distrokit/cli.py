@@ -575,13 +575,34 @@ def _install_desktop_entry(tool_id: str) -> None:
         dest.write_text(B.render(src.read_text()))
 
 
-def cmd_autocorrect(_a) -> int:
+def cmd_autocorrect(a) -> int:
+    """Correct explicit/TTY/stdin text, or safely replace a GUI text selection."""
     from . import autocorrect
 
     try:
-        return autocorrect.correct_selection()
-    except autocorrect.AutocorrectError as exc:
-        print(S.fail(str(exc)), file=sys.stderr)
+        if a.selection:
+            return autocorrect.correct_selection()
+
+        if a.text:
+            source = " ".join(a.text)
+        elif not sys.stdin.isatty():
+            source = sys.stdin.read()
+        else:
+            print("Enter text to correct (one line):", file=sys.stderr)
+            source = input()
+
+        if not source.strip():
+            print(S.warn("Nothing to correct."), file=sys.stderr)
+            return 0
+
+        corrected = autocorrect.correct_text(source)
+        sys.stdout.write(corrected)
+        if not corrected.endswith("\\n"):
+            sys.stdout.write("\\n")
+        return 0
+    except (autocorrect.AutocorrectError, EOFError, KeyboardInterrupt) as exc:
+        message = str(exc) if str(exc) else "Autocorrect cancelled."
+        print(S.fail(message), file=sys.stderr)
         return 1
 
 
@@ -1086,7 +1107,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("-y", "--yes", action="store_true")
     s.set_defaults(func=cmd_model)
 
-    s = sub.add_parser("autocorrect", help="correct selected text with the local AI model (graphical apps only)")
+    s = sub.add_parser("autocorrect", help="correct text from an argument, stdin, or the graphical selection")
+    s.add_argument("text", nargs="*", help="text to correct; quote it to preserve spaces")
+    s.add_argument("--selection", action="store_true",
+                   help="replace selected text in a safe graphical app (never injects into terminals)")
     s.set_defaults(func=cmd_autocorrect)
 
     s = sub.add_parser("logs", help="diagnostic logs: status, save (local), on/off sharing, send")
