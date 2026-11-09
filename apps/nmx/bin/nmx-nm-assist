@@ -1,0 +1,52 @@
+#!/usr/bin/python3 -I
+"""NetworkManager-side portal and system-CA helper; never manages network devices."""
+from __future__ import annotations
+import subprocess
+import time
+from nmx import portal
+
+INTERVAL = 30
+
+def run(args: list[str]) -> str:
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, timeout=8, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+def ensure_system_ca() -> None:
+    uuids = run(["nmcli", "-t", "-f", "UUID", "connection", "show"]).splitlines()
+    for uuid in uuids:
+        if not uuid:
+            continue
+        values = run(["nmcli", "-g", "802-1x.eap,802-1x.ca-cert", "connection", "show", uuid]).splitlines()
+        eap = values[0].strip() if values else ""
+        ca = values[1].strip() if len(values) > 1 else ""
+        if eap and eap not in ("--", "") and not ca:
+            run(["nmcli", "connection", "modify", uuid, "802-1x.system-ca-certs", "yes"])
+
+def main() -> int:
+    if run(["nmcli", "-t", "-f", "RUNNING", "general"]) != "running":
+        return 0
+    last_portal = ""
+    last_ca_scan = 0.0
+    while True:
+        state = run(["nmcli", "-t", "-f", "CONNECTIVITY", "general"])
+        if state == "portal":
+            kind, url = portal.probe()
+            if kind == "portal" and url and url != last_portal:
+                try:
+                    subprocess.Popen(["xdg-open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    last_portal = url
+                except OSError:
+                    pass
+        elif state in ("full", "limited", "none"):
+            last_portal = ""
+        now = time.monotonic()
+        if now - last_ca_scan >= 300:
+            ensure_system_ca()
+            last_ca_scan = now
+        time.sleep(INTERVAL)
+
+if __name__ == "__main__":
+    raise SystemExit(main())
