@@ -710,7 +710,7 @@ def test_networkmanager_assist_enables_system_ca_only_when_profile_has_no_explic
     }
     def fake_run(args):
         if args[:4] == ["nmcli", "-t", "-f", "UUID"]:
-            return "\\n".join(values)
+            return "\n".join(values)
         if args[:3] == ["nmcli", "-g", "802-1x.eap,802-1x.ca-cert,802-1x.ca-path,802-1x.phase2-ca-cert,802-1x.phase2-ca-path,802-1x.system-ca-certs"]:
             return values[args[-1]]
         return ""
