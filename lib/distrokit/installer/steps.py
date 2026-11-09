@@ -824,7 +824,7 @@ class Installation:
                     continue
                 entry = ("[Desktop Entry]\nName=" + labels[profile] + " (isolated profile)\n"
                          "Comment=Start Hyprland with the saved " + labels[profile] + " configuration\n"
-                         "Exec=/usr/local/bin/distro-desktop-session " + profile + "\nType=Application\n")
+                         "Exec=/usr/local/bin/distro-desktop-session " + profile + "\nTryExec=Hyprland\nDesktopNames=Hyprland\nType=Application\n")
                 (session_dir / (self.branding.id + "-" + profile + ".desktop")).write_text(entry, encoding="utf-8")
         self.log("External desktop setup scheduled for the first Halcyon login.")
     def services(self) -> None:
