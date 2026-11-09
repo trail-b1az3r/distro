@@ -21,4 +21,4 @@ restore() {
     exit "$status"
 }
 trap restore EXIT INT TERM
-exec Hyprland
+Hyprland
