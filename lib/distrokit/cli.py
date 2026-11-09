@@ -597,8 +597,8 @@ def cmd_autocorrect(a) -> int:
 
         corrected = autocorrect.correct_text(source)
         sys.stdout.write(corrected)
-        if not corrected.endswith("\\n"):
-            sys.stdout.write("\\n")
+        if not corrected.endswith("\n"):
+            sys.stdout.write("\n")
         return 0
     except (autocorrect.AutocorrectError, EOFError, KeyboardInterrupt) as exc:
         message = str(exc) if str(exc) else "Autocorrect cancelled."
