@@ -766,6 +766,12 @@ class Installation:
         installed = set(self.selection.packages)
         editors = load_editors()
         editor = editors.get(self.branding.get("CODE_EDITOR", "code"))
+        primary = str(self.features.get("desktop_environment", "halcyon"))
+        external = [name for name, enabled in (("ml4w", self.features.get("desktop_ml4w")),
+                    ("sekaipop", self.features.get("desktop_sekaipop")), ("hyde", self.features.get("desktop_hyde"))) if enabled]
+        if primary != "halcyon":
+            external.insert(0, primary)
+        external = list(dict.fromkeys(external))
         settings = desktop_deploy.UserSettings(
             keyboard_layout=self.cfg.keyboard_layout,
             keyboard_variant=self.cfg.keyboard_variant,
@@ -774,8 +780,13 @@ class Installation:
             apps=desktop_deploy.default_apps(installed, editor.command if editor and self.features.get("code_editor") else ""),
         )
         if self.runner.dry_run:
-            self.log(f"deploy desktop to {self.home} (keyboard {settings.keyboard_layout}, "
-                     f"{len(settings.monitors)} scaled displays)")
+            self.log("desktop profile: " + primary + "; additional profiles: " + (", ".join(external) if external else "none"))
+            self.log("deploy Halcyon dotfiles" if primary == "halcyon" else "skip Halcyon dotfiles; schedule upstream installer")
+            return
+        if external:
+            self._schedule_external_desktops(external)
+        if primary != "halcyon":
+            self.log("Desktop: " + primary + " selected; upstream setup scheduled for first login")
             return
         share = self.t(f"/usr/share/{self.branding.id}")
         dep = desktop_deploy.Deployer(
@@ -786,6 +797,27 @@ class Installation:
         self.log(f"Desktop: {len(report.written)} files")
         self.chroot(["chown", "-R", f"{self.user}:{self.user}", self.home])
 
+    def _schedule_external_desktops(self, selected: list[str]) -> None:
+        """Run upstream setup interactively at first login, never silently as root."""
+        config = self.t("/etc/distro-desktop-profiles.conf")
+        config.parent.mkdir(parents=True, exist_ok=True)
+        config.write_text(" ".join(selected) + "\n", encoding="utf-8")
+        config.chmod(0o644)
+        source = self.t(f"/usr/share/{self.branding.id}/desktop/profiles/install-selected.sh")
+        if not source.is_file():
+            self.warnings.append("External desktop setup helper is missing; profiles were not scheduled.")
+            return
+        target = self.t("/usr/local/bin/distro-install-desktop-profiles")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        target.chmod(0o755)
+        autostart = self.t(f"{self.home}/.config/autostart/distro-desktop-profiles.desktop")
+        autostart.parent.mkdir(parents=True, exist_ok=True)
+        entry = ("[Desktop Entry]\nType=Application\nName=Install selected desktop profiles\n"
+                 "Comment=Run selected upstream desktop setup scripts\nExec=alacritty -e /usr/local/bin/distro-install-desktop-profiles\n"
+                 "Terminal=false\nX-GNOME-Autostart-enabled=true\n")
+        autostart.write_text(entry, encoding="utf-8")
+        self.log("External desktop setup scheduled for first graphical login.")
     def services(self) -> None:
         nmx = self.features.get("network_manager", "networkmanager") == "nmx"
         # The network: NetworkManager, or nmx (apps/nmx), whose addressing is systemd-networkd's and DNS
