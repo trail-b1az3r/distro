@@ -870,6 +870,7 @@ class Installation:
                 link = wants / "nmx-nm-assist.service"
                 if not link.exists():
                     link.symlink_to("/usr/lib/systemd/user/nmx-nm-assist.service")
+                self.chroot(["chown", "-R", f"{self.user}:{self.user}", f"{self.home}/.config/systemd"], check=False)
                 self.log("NetworkManager smart assist enabled for the installed user.")
         elif self.features.get("networkmanager_assist") and nmx:
             self.warnings.append("NetworkManager smart assist was skipped because nmx is the selected network manager.")
