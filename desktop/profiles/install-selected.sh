@@ -23,9 +23,9 @@ if [[ ! -d "$BASE" ]]; then mkdir -p "$BASE"; [[ ! -d "$HOME/.config" ]] || cp -
 restore_base() { rm -rf "$HOME/.config"; mkdir -p "$HOME/.config"; cp -a "$BASE/." "$HOME/.config/" 2>/dev/null || true; rm -f "$HOME/.config/autostart/distro-desktop-profiles.desktop"; }
 run_repo() {
     local id="$1" url="$2" dir="$WORK/$1"
-    if [[ ! -d "$dir/.git" ]]; then git clone --depth 1 "$url" "$dir"; else git -C "$dir" pull --ff-only; fi
+    if [[ ! -d "$dir/.git" ]]; then git clone --depth 1 "$url" "$dir" || return $?; else git -C "$dir" pull --ff-only || return $?; fi
     case "$id" in
-        ml4w) bash <(curl -fsSL https://ml4w.com/os/stable) ;;
+        ml4w) curl -fsSL https://ml4w.com/os/stable -o "$WORK/ml4w-install.sh" || return $?; bash "$WORK/ml4w-install.sh" ;;
         hyde) (cd "$dir/Scripts" && ./install.sh) ;;
         sekaipop) (cd "$dir" && ./install.sh) ;;
         *) echo "Unknown desktop profile: $id" >&2; return 2 ;;
