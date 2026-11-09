@@ -14,9 +14,9 @@ description = "Choose the desktop configuration installed as the default session
 default = "halcyon"
 [desktop_environment.choices]
 halcyon = ["desktop-halcyon"]
-ml4w = ["desktop-ml4w"]
-sekaipop = ["desktop-sekaipop"]
-hyde = ["desktop-hyde"]
+ml4w = ["desktop-halcyon", "desktop-ml4w"]
+sekaipop = ["desktop-halcyon", "desktop-sekaipop"]
+hyde = ["desktop-halcyon", "desktop-hyde"]
 
 [desktop_ml4w]
 kind = "bool"
