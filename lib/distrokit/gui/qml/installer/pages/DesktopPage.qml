@@ -11,7 +11,7 @@ ColumnLayout {
     readonly property var extraSekai: installer.features.find(f => f.id === "desktop_sekaipop")
     readonly property var extraHyde: installer.features.find(f => f.id === "desktop_hyde")
 
-    PageHeader { title: qsTr("Desktop"); subtitle: qsTr("Choose Halcyon, ML4W, SekaiPop or HyDE. External profiles are installed at first login and added as separate SDDM sessions; Halcyon remains the bootstrap/fallback session.") }
+    PageHeader { title: qsTr("Desktop"); subtitle: qsTr("Choose Halcyon, ML4W, SekaiPop or HyDE. External profiles are installed during the first Halcyon login, then appear as separate SDDM sessions.") }
 
     Card {
         Layout.fillWidth: true
