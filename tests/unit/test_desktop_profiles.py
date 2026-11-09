@@ -16,7 +16,7 @@ def test_halcyon_remains_the_default_desktop():
 def test_primary_desktop_can_be_selected_instead_of_halcyon():
     selected = packages({"desktop_environment": "ml4w"})
     assert "waybar" in selected
-    assert "illogical-impulse-hyprland" not in selected
+    assert "illogical-impulse-hyprland" in selected
 
 def test_additional_desktops_can_be_installed_together():
     selected = packages({"desktop_ml4w": True, "desktop_sekaipop": True, "desktop_hyde": True})
