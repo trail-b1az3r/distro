@@ -34,6 +34,11 @@ fi
 # Make the session's PATH (with ~/.local/bin) visible to user services.
 systemctl --user import-environment PATH HALCYON_FASTFETCH_LOGO_OVERRIDE WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE 2>/dev/null || true
 
+# External desktop profiles: run the upstream setup in a visible terminal once.
+profile_state="${XDG_STATE_HOME:-$HOME/.local/state}/distro-desktop-profiles"
+if [[ -x /usr/local/bin/distro-install-desktop-profiles && ! -e "$profile_state/completed" ]]; then
+    (sleep 6; alacritty -e /usr/local/bin/distro-install-desktop-profiles) &
+fi
 # Setup tasks left over from an offline installation (no-op when none).
 @DISTRO_CLI@ setup resume --background >/dev/null 2>&1 &
 
