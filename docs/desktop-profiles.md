@@ -16,4 +16,4 @@ The installer keeps full nmx as a replacement network manager, or NetworkManager
 
 ## Autocorrect
 
-`distro autocorrect TEXT...` corrects explicit text, `printf 'text' | distro autocorrect` reads stdin, and `distro autocorrect` prompts in a TTY. `distro autocorrect --selection` is the separate graphical selected-text replacement mode; it continues to reject terminal windows.
+`nexora autocorrect TEXT...` corrects explicit text, `printf 'text' | nexora autocorrect` reads stdin, and `nexora autocorrect` prompts in a TTY. `nexora autocorrect --selection` is the separate graphical selected-text replacement mode; it continues to reject terminal windows.
