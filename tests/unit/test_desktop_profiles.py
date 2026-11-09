@@ -43,3 +43,7 @@ def test_external_desktop_setup_script_has_valid_shell_syntax():
     for path in (script, wrapper):
         result = subprocess.run(["bash", "-n", str(path)], capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stderr
+    wrapper_text = wrapper.read_text()
+    assert 'active="$root/.active-profile"' in wrapper_text
+    assert 'previous_snapshot="$root/configs/$previous"' in wrapper_text
+    assert 'rm -f "$active"' in wrapper_text
