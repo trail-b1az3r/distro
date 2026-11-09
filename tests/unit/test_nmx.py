@@ -709,6 +709,7 @@ def test_networkmanager_assist_enables_system_ca_only_when_profile_has_no_explic
         "already-trusted": "peap;\nalice@uni.example\n--\n--\n--\n--\nyes\n--",
         "no-domain": "peap;\nalice\n--\n--\n--\n--\nno\n--",
     }
+
     def fake_run(args):
         if args[:4] == ["nmcli", "-t", "-f", "UUID"]:
             return "\n".join(values)
@@ -717,6 +718,7 @@ def test_networkmanager_assist_enables_system_ca_only_when_profile_has_no_explic
         return ""
     monkeypatch.setattr(nm_assist, 'run', fake_run)
     changed = []
+
     def modify(args, **kwargs):
         changed.append(args)
         return subprocess.CompletedProcess(args, 0, '', '')
@@ -724,6 +726,7 @@ def test_networkmanager_assist_enables_system_ca_only_when_profile_has_no_explic
     nm_assist.ensure_system_ca()
     assert changed == [["nmcli", "connection", "modify", "eligible", "802-1x.system-ca-certs", "yes",
                         "802-1x.domain-suffix-match", "uni.example"]]
+
 
 def test_networkmanager_assist_opens_portal_only_in_a_graphical_session(monkeypatch):
     from nmx import nm_assist
@@ -739,6 +742,7 @@ def test_networkmanager_assist_opens_portal_only_in_a_graphical_session(monkeypa
     monkeypatch.setattr(nm_assist, 'run', lambda _args: 'WAYLAND_DISPLAY=wayland-1')
     assert nm_assist.open_portal_if_needed('portal', '') == 'http://login.example/'
     assert opened and opened[0][0] == ['xdg-open', 'http://login.example/']
+
 
 
 def test_nmx_package_does_not_install_a_global_unmanaged_devices_rule():
