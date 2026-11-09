@@ -6,6 +6,7 @@ import io
 import json
 import os
 import socket
+import subprocess
 import stat
 import sys
 import threading
@@ -696,3 +697,57 @@ def test_cli_portal(fake_nmxd, monkeypatch):
         del REPLIES["portal"]
     assert cli.describe_event({"event": "connectivity", "state": "portal", "url": "http://hotel/login"}) == \
         "Connectivity is now 'portal': sign in at http://hotel/login"
+
+
+def test_networkmanager_assist_enables_system_ca_only_when_profile_has_no_explicit_ca(monkeypatch):
+    from nmx import nm_assist
+    values = {
+        "eligible": "peap;\nalice@uni.example\n--\n--\n--\n--\nno\n--",
+        "custom-ca": "peap;\nbob@uni.example\nfile:///etc/ssl/custom.pem\n--\n--\n--\nno\n--",
+        "custom-phase2": "ttls;\nbob@uni.example\n--\n--\nfile:///etc/ssl/inner.pem\n--\nno\n--",
+        "pwd": "pwd;\nuser@uni.example\n--\n--\n--\n--\nno\n--",
+        "already-trusted": "peap;\nalice@uni.example\n--\n--\n--\n--\nyes\n--",
+        "no-domain": "peap;\nalice\n--\n--\n--\n--\nno\n--",
+    }
+    fields = ",".join(("802-1x.eap", "802-1x.identity", "802-1x.ca-cert", "802-1x.ca-path",
+                       "802-1x.phase2-ca-cert", "802-1x.phase2-ca-path", "802-1x.system-ca-certs",
+                       "802-1x.domain-suffix-match"))
+
+    def fake_run(args):
+        if args[:4] == ["nmcli", "-t", "-f", "UUID"]:
+            return "\n".join(values)
+        if args[:3] == ["nmcli", "-g", fields]:
+            return values[args[-1]]
+        return ""
+    monkeypatch.setattr(nm_assist, 'run', fake_run)
+    changed = []
+
+    def modify(args, **kwargs):
+        changed.append(args)
+        return subprocess.CompletedProcess(args, 0, '', '')
+    monkeypatch.setattr(nm_assist.subprocess, 'run', modify)
+    nm_assist.ensure_system_ca()
+    assert changed == [["nmcli", "connection", "modify", "eligible", "802-1x.system-ca-certs", "yes",
+                        "802-1x.domain-suffix-match", "uni.example"]]
+
+
+def test_networkmanager_assist_opens_portal_only_in_a_graphical_session(monkeypatch):
+    from nmx import nm_assist
+    monkeypatch.setattr(portal, 'probe', lambda: ('portal', 'http://login.example/'))
+    monkeypatch.delenv('WAYLAND_DISPLAY', raising=False)
+    monkeypatch.delenv('DISPLAY', raising=False)
+    monkeypatch.setattr(nm_assist, 'run', lambda _args: '')
+    opened = []
+    monkeypatch.setattr(nm_assist.subprocess, 'Popen', lambda args, **kwargs: opened.append((args, kwargs)))
+    assert nm_assist.open_portal_if_needed('portal', '') == ''
+    assert not opened
+    monkeypatch.setenv('WAYLAND_DISPLAY', 'wayland-1')
+    monkeypatch.setattr(nm_assist, 'run', lambda _args: 'WAYLAND_DISPLAY=wayland-1')
+    assert nm_assist.open_portal_if_needed('portal', '') == 'http://login.example/'
+    assert opened and opened[0][0] == ['xdg-open', 'http://login.example/']
+
+
+
+def test_nmx_package_does_not_install_a_global_unmanaged_devices_rule():
+    package = (ROOT / "packages" / "pkgbuild" / "nmx" / "PKGBUILD.in").read_text()
+    assert "data/90-nmx-networkmanager.conf" not in package

@@ -1,0 +1,5 @@
+#!/usr/bin/python3 -I
+import sys
+from nmx.nm_assist import main
+
+sys.exit(main())

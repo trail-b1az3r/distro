@@ -12,6 +12,10 @@ approx_size_gb = 6
 lists = ["base", "desktop"]
 
 [features]
+desktop_environment = "halcyon"
+desktop_ml4w = false
+desktop_sekaipop = false
+desktop_hyde = false
 apps = false
 browser = false
 office = false

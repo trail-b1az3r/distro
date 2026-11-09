@@ -6,8 +6,12 @@ ColumnLayout {
     id: page
     spacing: 24
     readonly property var plasma: installer.features.find(f => f.id === "plasma_fallback")
+    readonly property var primaryDesktop: installer.features.find(f => f.id === "desktop_environment")
+    readonly property var extraMl4w: installer.features.find(f => f.id === "desktop_ml4w")
+    readonly property var extraSekai: installer.features.find(f => f.id === "desktop_sekaipop")
+    readonly property var extraHyde: installer.features.find(f => f.id === "desktop_hyde")
 
-    PageHeader { title: qsTr("Desktop"); subtitle: qsTr("Hyprland with the Halcyon shell: Wayland-first, keyboard- and touch-friendly, with Material You colours from your wallpaper.") }
+    PageHeader { title: qsTr("Desktop"); subtitle: qsTr("Choose Halcyon, ML4W, SekaiPop or HyDE. External profiles are installed during the first Halcyon login, then appear as separate SDDM sessions.") }
 
     Card {
         Layout.fillWidth: true
@@ -57,6 +61,25 @@ ColumnLayout {
                 Text { text: modelData.v; color: Theme.muted; font.pixelSize: Theme.text }
             }
         }
+    }
+
+    SectionTitle { text: qsTr("Desktop selection") }
+    Card {
+        Layout.fillWidth: true
+        spacing: 12
+        Text { text: qsTr("Primary desktop"); color: Theme.fg; font.weight: Font.DemiBold; font.pixelSize: Theme.text }
+        Text { Layout.fillWidth: true; text: qsTr("Choose the primary desktop profile. Halcyon remains installed as a safe first-login and fallback session; external profiles get separate saved configurations and login-screen entries."); color: Theme.muted; wrapMode: Text.WordWrap; font.pixelSize: Theme.textSmall }
+        AppCombo {
+            Layout.fillWidth: true
+            options: [{ id: "halcyon", label: "Halcyon" }, { id: "ml4w", label: "ML4W Dotfiles" }, { id: "sekaipop", label: "SekaiPop" }, { id: "hyde", label: "HyDE" }]
+            current: page.primaryDesktop ? page.primaryDesktop.value : "halcyon"
+            onChosen: (id) => installer.setFeature("desktop_environment", id)
+        }
+        SectionTitle { text: qsTr("Additional desktops") }
+        Text { Layout.fillWidth: true; text: qsTr("Each external profile gets its own saved ~/.config snapshot and SDDM session. Upstream installers still install shared packages and may change global GTK, SDDM, portal or theme settings."); color: Theme.muted; wrapMode: Text.WordWrap; font.pixelSize: Theme.textSmall }
+        ToggleRow { Layout.fillWidth: true; title: "ML4W Dotfiles"; description: "Install as an additional desktop profile."; checked: page.extraMl4w ? page.extraMl4w.value === true : false; onToggled: (v) => installer.setFeature("desktop_ml4w", v) }
+        ToggleRow { Layout.fillWidth: true; title: "SekaiPop"; description: "Install as an additional desktop profile."; checked: page.extraSekai ? page.extraSekai.value === true : false; onToggled: (v) => installer.setFeature("desktop_sekaipop", v) }
+        ToggleRow { Layout.fillWidth: true; title: "HyDE"; description: "Install as an additional desktop profile."; checked: page.extraHyde ? page.extraHyde.value === true : false; onToggled: (v) => installer.setFeature("desktop_hyde", v) }
     }
 
     SectionTitle { text: qsTr("Displays") }

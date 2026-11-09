@@ -5,6 +5,43 @@
 # kind = "choice" -> one of `choices`; each choice names the lists it installs.
 # `group` and `order` arrange the installer's customisation page.
 
+[desktop_environment]
+kind = "choice"
+group = "Desktop"
+order = 1
+label = "Primary desktop"
+description = "Choose the primary external desktop profile. Halcyon is retained as the bootstrap and fallback session; additional profiles can be selected separately."
+default = "halcyon"
+[desktop_environment.choices]
+halcyon = ["desktop-halcyon"]
+ml4w = ["desktop-halcyon", "desktop-ml4w"]
+sekaipop = ["desktop-halcyon", "desktop-sekaipop"]
+hyde = ["desktop-halcyon", "desktop-hyde"]
+
+[desktop_ml4w]
+kind = "bool"
+group = "Desktop"
+order = 2
+label = "Also install ML4W"
+description = "Install ML4W as an additional Hyprland configuration. Its upstream setup can change shared themes and login settings."
+lists = ["desktop-ml4w"]
+
+[desktop_sekaipop]
+kind = "bool"
+group = "Desktop"
+order = 3
+label = "Also install SekaiPop"
+description = "Install SekaiPop as an additional Quickshell desktop configuration."
+lists = ["desktop-sekaipop"]
+
+[desktop_hyde]
+kind = "bool"
+group = "Desktop"
+order = 4
+label = "Also install HyDE"
+description = "Install HyDE as an additional Hyprland configuration. Its upstream installer may change shared system settings."
+lists = ["desktop-hyde"]
+
 [apps]
 kind = "bool"
 group = "Applications"
@@ -131,6 +168,14 @@ default = "networkmanager"
 [network_manager.choices]
 networkmanager = []
 nmx = []
+
+[networkmanager_assist]
+kind = "bool"
+group = "System"
+order = 25
+label = "NetworkManager smart assist (nmx)"
+description = "Keep NetworkManager in control; open captive portals and enable system CA trust only when a safe 802.1X server-domain match can be retained or derived from the identity realm. Installs the configured browser and does not take over network devices."
+lists = ["browser"]
 
 [firewall]
 kind = "bool"

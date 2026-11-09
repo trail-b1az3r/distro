@@ -46,7 +46,7 @@ from . import stage
 from .editions import NANO_LIVE_LISTS, NANO_SIZE_LIMIT, nano_live_packages
 
 RELENG = Path("/usr/share/archiso/configs/releng")
-LIVE_LISTS = ["base", "desktop", "browser", "live"]
+LIVE_LISTS = ["base", "desktop", "desktop-halcyon", "browser", "live"]
 LIVE_EXTRA = ["linux", "amd-ucode", "intel-ucode"]
 
 # releng pieces the distribution replaces or does not want: its boot menus,
