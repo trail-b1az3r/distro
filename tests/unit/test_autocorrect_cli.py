@@ -1,5 +1,6 @@
 """CLI input modes for local autocorrect."""
 import io
+from pathlib import Path
 
 from distrokit import cli
 
@@ -43,3 +44,8 @@ def test_autocorrect_selection_is_explicit(monkeypatch):
     monkeypatch.setattr(autocorrect, 'correct_selection', lambda: 7)
     args = cli.build_parser().parse_args(['autocorrect', '--selection'])
     assert args.func(args) == 7
+
+
+def test_hyprland_autocorrect_keybind_uses_graphical_selection_mode():
+    keybind = Path(__file__).resolve().parents[2] / "desktop" / "overlay" / "hypr" / "init.lua.in"
+    assert "autocorrect --selection" in keybind.read_text()
