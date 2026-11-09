@@ -87,11 +87,6 @@ package_@DISTRO_ID@-desktop() {
   pkgdesc="@DISTRO_PRETTY_NAME@ desktop: Hyprland with the illogical-impulse shell (pinned) and the distribution layer"
   depends=(
     @DISTRO_ID@-core @DISTRO_ID@-branding @DISTRO_ID@-fonts-google-sans-flex
-    illogical-impulse-audio illogical-impulse-backlight illogical-impulse-basic
-    illogical-impulse-bibata-modern-classic-bin illogical-impulse-fonts-themes
-    illogical-impulse-hyprland illogical-impulse-kde illogical-impulse-microtex-git
-    illogical-impulse-portal illogical-impulse-python illogical-impulse-quickshell-git
-    illogical-impulse-screencapture illogical-impulse-toolkit illogical-impulse-widgets
     fish konsole dolphin sddm uv
   )
   backup=(etc/xdg/mimeapps.list etc/xdg/xdg-terminals.list)
