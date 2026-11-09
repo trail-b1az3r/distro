@@ -13,6 +13,7 @@ mkdir -p "$base"
 cp -a "$snapshot/." "$base/"
 restore() {
     status=$?
+    trap - EXIT INT TERM
     rm -rf "$snapshot"
     mkdir -p "$snapshot"
     cp -a "$base/." "$snapshot/" 2>/dev/null || true
