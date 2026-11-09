@@ -169,6 +169,14 @@ default = "networkmanager"
 networkmanager = []
 nmx = []
 
+[networkmanager_assist]
+kind = "bool"
+group = "System"
+order = 25
+label = "NetworkManager smart assist (nmx)"
+description = "Keep NetworkManager in control, while nmx watches for captive portals and enables system CA trust on saved 802.1X profiles without a CA. Does not take over network devices."
+lists = []
+
 [firewall]
 kind = "bool"
 group = "System"
