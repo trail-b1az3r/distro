@@ -36,6 +36,8 @@ package() {
   install -Dm755 bin/nmxcli "$pkgdir/usr/bin/nmxcli"
   ln -s nmxcli "$pkgdir/usr/bin/nmx"          # the short name: sudo nmx device remanagenm
   install -Dm755 bin/nmxtui "$pkgdir/usr/bin/nmxtui"
+  install -Dm755 bin/nmx-nm-assist "$pkgdir/usr/bin/nmx-nm-assist"
+  install -Dm644 data/nmx-nm-assist.service "$pkgdir/usr/lib/systemd/user/nmx-nm-assist.service"
   install -Dm644 data/nmx.service "$pkgdir/usr/lib/systemd/system/nmx.service"
   install -Dm755 data/nmx.sleep "$pkgdir/usr/lib/systemd/system-sleep/nmx"
   install -Dm644 data/90-nmx-networkmanager.conf "$pkgdir/usr/lib/NetworkManager/conf.d/90-nmx.conf"
