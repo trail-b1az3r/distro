@@ -84,7 +84,7 @@ package_@DISTRO_ID@-branding() {
 }
 
 package_@DISTRO_ID@-desktop() {
-  pkgdesc="@DISTRO_PRETTY_NAME@ desktop: Hyprland with the illogical-impulse shell (pinned) and the distribution layer"
+  pkgdesc="@DISTRO_PRETTY_NAME@ desktop integration, Halcyon configuration and selectable profile session helpers"
   depends=(
     @DISTRO_ID@-core @DISTRO_ID@-branding @DISTRO_ID@-fonts-google-sans-flex
     fish konsole dolphin sddm uv
