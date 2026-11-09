@@ -31,5 +31,7 @@ def test_networkmanager_assist_is_optional_and_does_not_replace_nmx():
 
 def test_external_desktop_setup_script_has_valid_shell_syntax():
     script = Path(__file__).resolve().parents[2] / "desktop" / "profiles" / "install-selected.sh"
-    result = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True, check=False)
-    assert result.returncode == 0, result.stderr
+    wrapper = script.with_name("run-session.sh")
+    for path in (script, wrapper):
+        result = subprocess.run(["bash", "-n", str(path)], capture_output=True, text=True, check=False)
+        assert result.returncode == 0, result.stderr
