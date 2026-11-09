@@ -37,7 +37,15 @@ systemctl --user import-environment PATH HALCYON_FASTFETCH_LOGO_OVERRIDE WAYLAND
 # External desktop profiles: run the upstream setup in a visible terminal once.
 profile_state="${XDG_STATE_HOME:-$HOME/.local/state}/distro-desktop-profiles"
 if [[ -x /usr/local/bin/distro-install-desktop-profiles && ! -e "$profile_state/completed" ]]; then
-    (sleep 6; alacritty -e /usr/local/bin/distro-install-desktop-profiles) &
+    (
+        for _ in {1..180}; do
+            [[ -e "$state/firstboot-done" ]] && break
+            sleep 2
+        done
+        [[ -e "$state/firstboot-done" ]] || exit 0
+        sleep 3
+        alacritty -e /usr/local/bin/distro-install-desktop-profiles
+    ) &
 fi
 # Setup tasks left over from an offline installation (no-op when none).
 @DISTRO_CLI@ setup resume --background >/dev/null 2>&1 &
