@@ -104,7 +104,7 @@ the unmanaged-device rule.
 The per-user service watches NetworkManager connectivity and probes the GNOME connectivity-check endpoint without
 following redirects. When it detects a captive portal, it opens the sign-in URL in the logged-in desktop browser.
 It also checks saved 802.1X profiles and enables NetworkManager's 802-1x.system-ca-certs setting when an EAP profile
-has no explicit CA certificate. Explicit CA paths are left unchanged. It does not collect passwords or enroll client
+has no explicit CA certificate and a server-domain suffix can be retained or derived from the identity realm. Explicit CA paths are left unchanged; profiles without a safe realm match are skipped. It does not collect passwords or enroll client
 certificates.
 
 Choose NetworkManager plus NetworkManager smart assist (nmx) in the installer. Do not enable this option with the
