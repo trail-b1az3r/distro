@@ -59,6 +59,25 @@ ColumnLayout {
         }
     }
 
+    SectionTitle { text: qsTr("Desktop selection") }
+    Card {
+        Layout.fillWidth: true
+        spacing: 12
+        Text { text: qsTr("Primary desktop"); color: Theme.fg; font.weight: Font.DemiBold; font.pixelSize: Theme.text }
+        Text { Layout.fillWidth: true; text: qsTr("Choose the default desktop. You can add other desktop configurations below."); color: Theme.muted; wrapMode: Text.WordWrap; font.pixelSize: Theme.textSmall }
+        AppCombo {
+            Layout.fillWidth: true
+            options: [{ id: "halcyon", label: "Halcyon" }, { id: "ml4w", label: "ML4W Dotfiles" }, { id: "sekaipop", label: "SekaiPop" }, { id: "hyde", label: "HyDE" }]
+            current: page.primaryDesktop ? page.primaryDesktop.value : "halcyon"
+            onChosen: (id) => installer.setFeature("desktop_environment", id)
+        }
+        SectionTitle { text: qsTr("Additional desktops") }
+        Text { Layout.fillWidth: true; text: qsTr("Upstream installers may change shared Hyprland, GTK, SDDM, portal and theme settings. Review their prompts before accepting changes."); color: Theme.muted; wrapMode: Text.WordWrap; font.pixelSize: Theme.textSmall }
+        ToggleRow { Layout.fillWidth: true; title: "ML4W Dotfiles"; description: "Install as an additional desktop profile."; checked: page.extraMl4w ? page.extraMl4w.value === true : false; onToggled: (v) => installer.setFeature("desktop_ml4w", v) }
+        ToggleRow { Layout.fillWidth: true; title: "SekaiPop"; description: "Install as an additional desktop profile."; checked: page.extraSekai ? page.extraSekai.value === true : false; onToggled: (v) => installer.setFeature("desktop_sekaipop", v) }
+        ToggleRow { Layout.fillWidth: true; title: "HyDE"; description: "Install as an additional desktop profile."; checked: page.extraHyde ? page.extraHyde.value === true : false; onToggled: (v) => installer.setFeature("desktop_hyde", v) }
+    }
+
     SectionTitle { text: qsTr("Displays") }
     Card {
         Layout.fillWidth: true
