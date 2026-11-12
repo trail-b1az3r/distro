@@ -35,6 +35,7 @@ static bool rustRequest(const QJsonObject &request, QJsonValue *result)
     static QProcess process;
     static QByteArray buffer;
     if (process.state() == QProcess::NotRunning) {
+        buffer.clear();
         process.setProgram(program);
         process.setProcessChannelMode(QProcess::SeparateChannels);
         process.start();
