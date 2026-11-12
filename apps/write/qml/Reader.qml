@@ -51,6 +51,19 @@ Item {
             epub.current = Math.max(0, Math.min(epub.count - 1, epub.current + delta))
         }
     }
+    function turnPage(delta) {
+        if (!hasBook)
+            return
+        const direction = delta > 0 ? 1 : -1
+        const script = "(function(){const e=document.scrollingElement||document.documentElement;"
+            + "if(" + direction + ">0 && e.scrollTop+window.innerHeight>=e.scrollHeight-8)return 'end';"
+            + "if(" + direction + "<0 && e.scrollTop<=8)return 'start';"
+            + "e.scrollBy({top:" + direction + "*window.innerHeight*0.88,behavior:'smooth'});return 'moved';})()"
+        view.runJavaScript(script, function(result) {
+            if (result === "end") root.moveChapter(1)
+            else if (result === "start") root.moveChapter(-1)
+        })
+    }
     function restyle() {
         if (isMdxlBook) {
             if (mdxlRenderer.html.length)
@@ -80,8 +93,8 @@ Item {
             + "img,svg,video{max-width:100%;height:auto;border-radius:14px}figure{margin:1.5em 0}"
     }
 
-    Keys.onLeftPressed: root.moveChapter(-1)
-    Keys.onRightPressed: root.moveChapter(1)
+    Keys.onLeftPressed: root.turnPage(-1)
+    Keys.onRightPressed: root.turnPage(1)
     Keys.onEscapePressed: root.immersive = false
 
     Rectangle {
@@ -235,7 +248,7 @@ Item {
                         target: null
                         xAxis.enabled: true
                         yAxis.enabled: false
-                        onActiveChanged: if (!active && translation.x > 80) root.moveChapter(-1)
+                        onActiveChanged: if (!active && translation.x > 80) root.turnPage(-1)
                     }
                 }
                 Item {
@@ -245,7 +258,7 @@ Item {
                         target: null
                         xAxis.enabled: true
                         yAxis.enabled: false
-                        onActiveChanged: if (!active && translation.x < -80) root.moveChapter(1)
+                        onActiveChanged: if (!active && translation.x < -80) root.turnPage(1)
                     }
                 }
                 Label {
@@ -263,7 +276,7 @@ Item {
                     visible: root.hasBook && !root.immersive
                     text: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "chevron_left" : "‹"; font.family: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "Material Symbols Rounded" : Theme.font
                     enabled: root.isMdxlBook ? root.mdxlCurrent > 0 : epub.current > 0
-                    onClicked: root.moveChapter(-1)
+                    onClicked: root.turnPage(-1)
                 }
                 ToolButton {
                     anchors.right: parent.right
@@ -271,7 +284,7 @@ Item {
                     visible: root.hasBook && !root.immersive
                     text: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "chevron_right" : "›"; font.family: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "Material Symbols Rounded" : Theme.font
                     enabled: root.isMdxlBook ? root.mdxlCurrent < root.mdxlChapters.length - 1 : epub.current < epub.count - 1
-                    onClicked: root.moveChapter(1)
+                    onClicked: root.turnPage(1)
                 }
             }
             RowLayout {
