@@ -393,10 +393,11 @@ QString Files::importImage(const QString &source, const QString &documentDir) co
         return {};
     const QString images = documentDir + QStringLiteral("/images");
     QDir().mkpath(images);
-    QString name = input.completeBaseName() + u'.' + extension;
+    const QString stem = slug(input.completeBaseName());
+    QString name = stem + u'.' + extension;
     QString target = images + u'/' + name;
     for (int index = 2; QFileInfo::exists(target); ++index) {
-        name = input.completeBaseName() + QStringLiteral("-%1.").arg(index) + extension;
+        name = stem + QStringLiteral("-%1.").arg(index) + extension;
         target = images + u'/' + name;
     }
     if (!QFile::copy(source, target))
