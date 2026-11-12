@@ -121,6 +121,8 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Shift+E"; onActivated: win.togglePreview() }
     Shortcut { sequence: "Ctrl+PageDown"; onActivated: win.movePage(1) }
     Shortcut { sequence: "Ctrl+PageUp"; onActivated: win.movePage(-1) }
+    Shortcut { sequence: "Left"; enabled: win.page === 3 && reader.hasBook; onActivated: reader.turnPage(-1) }
+    Shortcut { sequence: "Right"; enabled: win.page === 3 && reader.hasBook; onActivated: reader.turnPage(1) }
 
     // Direct navigation aliases for one-handed use.
     Shortcut { sequence: "Ctrl+Alt+1"; onActivated: win.page = 0 }
