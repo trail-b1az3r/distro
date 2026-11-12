@@ -35,7 +35,7 @@ static bool rustRequest(const QJsonObject &request, QJsonValue *result)
     process.start();
     if (!process.waitForStarted(1500))
         return false;
-    process.write(QJsonDocument(request).toJson(QJsonDocument::Compact) + '\\n');
+    process.write(QJsonDocument(request).toJson(QJsonDocument::Compact) + '\n');
     process.closeWriteChannel();
     if (!process.waitForFinished(6000))
         return false;
