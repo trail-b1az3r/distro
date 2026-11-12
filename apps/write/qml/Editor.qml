@@ -244,6 +244,8 @@ Item {
                 ToolButton { text: qsTr("Italic"); onClicked: root.wrapSelection("*", "*") }
                 ToolButton { text: qsTr("Strike"); onClicked: root.wrapSelection("~~", "~~") }
                 ToolButton { text: qsTr("Link"); onClicked: root.wrapSelection("[", "](https://)") }
+                ToolButton { text: qsTr("Image"); onClicked: root.insertAtCursor("![Alt text](images/image.png)") }
+                ToolButton { text: qsTr("Color"); onClicked: root.insertAtCursor("/col//Colored text /col#B7F77A//") }
                 ToolButton { text: qsTr("Quote"); onClicked: root.prefixLine("> ") }
                 ToolButton { text: qsTr("Bullets"); onClicked: root.prefixLine("- ") }
                 ToolButton { text: qsTr("Numbered"); onClicked: root.prefixLine("1. ") }
