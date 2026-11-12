@@ -103,9 +103,11 @@ install_packages() {
     [[ -f "$list" ]] || { echo "Missing package list: $list" >&2; return 1; }
     local -a packages=()
     while IFS= read -r line || [[ -n "$line" ]]; do
+        # Strip comments, then split on shell whitespace (spaces and tabs).
         line="${line%%#*}"
-        line="${line//[$'\\t\\r']/ }"
-        [[ -z "${line// /}" ]] || packages+=("$line")
+        [[ -z "${line//[[:space:]]/}" ]] && continue
+        read -r -a entries <<< "$line"
+        packages+=("${entries[@]}")
     done < "$list"
     if (( ${#packages[@]} )); then
         sudo pacman -S --needed --noconfirm -- "${packages[@]}"
