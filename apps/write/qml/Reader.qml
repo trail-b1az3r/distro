@@ -108,7 +108,7 @@ Item {
 
         Rectangle {
             Layout.fillHeight: true
-            Layout.preferredWidth: root.contents && root.hasBook ? 288 : 0
+            Layout.preferredWidth: root.contents && root.hasBook && !root.immersive ? 288 : 0
             Layout.minimumWidth: 0
             clip: true
             color: Qt.rgba(Qt.color(Theme.c.surfaceContainerLow).r,
@@ -185,6 +185,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.margins: 12
                 implicitHeight: 54
+                visible: !root.immersive
                 radius: 18
                 color: Qt.rgba(Qt.color(Theme.c.surfaceContainerHigh).r,
                                Qt.color(Theme.c.surfaceContainerHigh).g,
