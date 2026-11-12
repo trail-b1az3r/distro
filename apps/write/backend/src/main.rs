@@ -19,8 +19,8 @@ enum Request {
     CreateBook { root: PathBuf, title: String },
     CreateChapter { book: PathBuf, title: String },
     ImportImage { source: PathBuf, book: PathBuf },
-    RecentBooks { store: PathBuf },
-    AddRecentBook { store: PathBuf, path: String, title: String },
+    RecentBooks { store: PathBuf, #[serde(default)] legacy: Vec<serde_json::Value> },
+    AddRecentBook { store: PathBuf, path: String, title: String, #[serde(default)] legacy: Vec<serde_json::Value> },
 }
 
 #[derive(Debug, Serialize)]
@@ -153,19 +153,21 @@ fn import_image(source: &Path, book: &Path) -> Result<String, String> {
     Ok(format!("images/{filename}"))
 }
 
-fn read_recent_books(store: &Path) -> Result<Vec<serde_json::Value>, String> {
-    if !store.exists() {
-        return Ok(Vec::new());
-    }
-    let raw = fs::read_to_string(store).map_err(|e| e.to_string())?;
-    let value: serde_json::Value = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
-    Ok(value.get("recent_books").and_then(|v| v.as_array()).cloned().unwrap_or_default()
-        .into_iter().filter(|item| item.get("path").and_then(|v| v.as_str())
-            .is_some_and(|path| Path::new(path).exists())).collect())
+fn read_recent_books(store: &Path, legacy: &[serde_json::Value]) -> Result<Vec<serde_json::Value>, String> {
+    let mut books = if store.exists() {
+        let raw = fs::read_to_string(store).map_err(|e| e.to_string())?;
+        let value: serde_json::Value = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
+        value.get("recent_books").and_then(|v| v.as_array()).cloned().unwrap_or_default()
+    } else {
+        legacy.to_vec()
+    };
+    books.retain(|item| item.get("path").and_then(|v| v.as_str())
+        .is_some_and(|path| Path::new(path).exists()));
+    Ok(books)
 }
 
-fn add_recent_book(store: &Path, path: &str, title: &str) -> Result<Vec<serde_json::Value>, String> {
-    let mut books = read_recent_books(store).unwrap_or_default();
+fn add_recent_book(store: &Path, path: &str, title: &str, legacy: &[serde_json::Value]) -> Result<Vec<serde_json::Value>, String> {
+    let mut books = read_recent_books(store, legacy).unwrap_or_default();
     books.retain(|item| item.get("path").and_then(|v| v.as_str()) != Some(path));
     books.insert(0, serde_json::json!({"path": path, "title": title}));
     books.truncate(12);
@@ -211,8 +213,8 @@ fn handle(request: Request) -> Result<serde_json::Value, String> {
         Request::CreateBook { root, title } => create_book(&root, &title).map(serde_json::Value::String),
         Request::CreateChapter { book, title } => create_chapter(&book, &title).map(serde_json::Value::String),
         Request::ImportImage { source, book } => import_image(&source, &book).map(serde_json::Value::String),
-        Request::RecentBooks { store } => read_recent_books(&store).map(serde_json::Value::Array),
-        Request::AddRecentBook { store, path, title } => add_recent_book(&store, &path, &title).map(serde_json::Value::Array),
+        Request::RecentBooks { store, legacy } => read_recent_books(&store, &legacy).map(serde_json::Value::Array),
+        Request::AddRecentBook { store, path, title, legacy } => add_recent_book(&store, &path, &title, &legacy).map(serde_json::Value::Array),
     }
 }
 
@@ -320,11 +322,11 @@ mod tests {
         for index in 0..14 {
             let path = root.join(format!("book-{index}.epub"));
             fs::write(&path, "book").unwrap();
-            add_recent_book(&store, path.to_str().unwrap(), &format!("Book {index}")).unwrap();
+            add_recent_book(&store, path.to_str().unwrap(), &format!("Book {index}"), &[]).unwrap();
         }
         let oldest = root.join("book-13.epub");
-        add_recent_book(&store, oldest.to_str().unwrap(), "Book 13 renamed").unwrap();
-        let recent = read_recent_books(&store).unwrap();
+        add_recent_book(&store, oldest.to_str().unwrap(), "Book 13 renamed", &[]).unwrap();
+        let recent = read_recent_books(&store, &[]).unwrap();
         assert_eq!(recent.len(), 12);
         assert_eq!(recent[0]["title"], "Book 13 renamed");
         assert_eq!(recent.iter().filter(|item| item["path"] == oldest.to_str().unwrap()).count(), 1);
