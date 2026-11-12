@@ -783,8 +783,9 @@ class Installation:
             self.log("desktop profile: " + primary + "; additional profiles: " + (", ".join(external) if external else "none"))
             self.log("deploy Halcyon dotfiles" if primary == "halcyon" else "deploy Halcyon bootstrap/fallback dotfiles")
             return
-        if external:
-            self._schedule_external_desktops(external)
+        # Install the post-setup profile manager even when no optional desktop
+        # was selected in the ISO installer. Users can add profiles later.
+        self._schedule_external_desktops(external)
         if primary != "halcyon":
             self.log("Desktop: " + primary + " selected; Halcyon is retained as a bootstrap/fallback session")
         share = self.t(f"/usr/share/{self.branding.id}")
@@ -833,7 +834,24 @@ class Installation:
                     "",
                 ))
                 (session_dir / (self.branding.id + "-" + profile + ".desktop")).write_text(entry, encoding="utf-8")
-        self.log("External desktop setup scheduled for the first Halcyon login.")
+        if selected:
+            # Launch the installer visibly in the user's first Halcyon session.
+            # The helper runs as the user and asks for sudo only for system packages
+            # and SDDM session registration; upstream setup is never run as root.
+            autostart = self.t(f"{self.home}/.config/autostart")
+            autostart.mkdir(parents=True, exist_ok=True)
+            (autostart / "distro-desktop-profiles.desktop").write_text("\n".join((
+                "[Desktop Entry]",
+                "Type=Application",
+                "Name=Install selected desktop environments",
+                "Comment=Install the additional desktops selected in the ISO installer",
+                "Exec=/usr/local/bin/distro-install-desktop-profiles",
+                "Terminal=true",
+                "X-GNOME-Autostart-enabled=true",
+                "",
+            )), encoding="utf-8")
+            self.chroot(["chown", "-R", f"{self.user}:{self.user}", f"{self.home}/.config"], check=False)
+        self.log("External desktop setup helper installed; selected profiles will be offered on first login.")
 
     def services(self) -> None:
         nmx = self.features.get("network_manager", "networkmanager") == "nmx"

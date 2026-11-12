@@ -1,44 +1,81 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+
 profile="${1:-}"
 case "$profile" in ml4w|hyde|sekaipop) ;; *) echo "Unknown desktop profile: $profile" >&2; exit 2 ;; esac
+shift || true
+
 root="$HOME/.local/share/distro-desktop-profiles"
-snapshot="$root/configs/$profile"
-backup="$HOME/.config.distro-session-backup"
-active="$root/.active-profile"
+configs="$root/configs"
+snapshot="$configs/$profile"
 base="$HOME/.config"
-[[ -d "$snapshot" ]] || { echo "No saved config for $profile. Run the profile installer first." >&2; exit 1; }
-had_base=0
-# Recover a previous session only if its config copy had completed.
-if [[ -e "$backup" || -L "$backup" ]]; then
-    previous=""
-    [[ ! -f "$active" ]] || previous="$(cat "$active")"
-    case "$previous" in ml4w|hyde|sekaipop)
-        if [[ -d "$base/hypr" ]]; then
-            previous_snapshot="$root/configs/$previous"
-            rm -rf "$previous_snapshot"
-            mkdir -p "$previous_snapshot"
-            cp -a "$base/." "$previous_snapshot/"
-        fi ;;
-    esac
-    rm -rf "$base"
-    mv "$backup" "$base"
-    rm -f "$active"
+state="$HOME/.local/state/distro-desktop-profiles"
+active="$state/active-profile"
+lock="$state/session.lock"
+mkdir -p "$state"
+
+[[ -d "$snapshot" ]] || { echo "No saved config for $profile. Install it first with distro-install-desktop-profiles $profile." >&2; exit 1; }
+if [[ -e "$lock" ]]; then
+    echo "A desktop profile switch/recovery is already in progress ($lock)." >&2
+    exit 1
 fi
-if [[ -e "$base" || -L "$base" ]]; then mv "$base" "$backup"; had_base=1; fi
-mkdir -p "$base"
-cp -a "$snapshot/." "$base/"
-printf "%s\n" "$profile" > "$active"
+: > "$lock"
+backup="$(mktemp -d "$HOME/.config.distro-session.XXXXXX")"
+had_base=0
+if [[ -e "$base" || -L "$base" ]]; then
+    cp -a "$base/." "$backup/"
+    had_base=1
+fi
+previous=""
+[[ ! -f "$active" ]] || previous="$(cat "$active")"
+
 restore() {
     status=$?
     trap - EXIT INT TERM
-    rm -rf "$snapshot"
-    mkdir -p "$snapshot"
-    cp -a "$base/." "$snapshot/" 2>/dev/null || true
+    # Save any changes made in this session back to its own profile snapshot.
+    if [[ -f "$active" ]]; then
+        running="$(cat "$active")"
+        case "$running" in
+            ml4w|hyde|sekaipop)
+                if [[ -d "$base" ]]; then
+                    staging="$(mktemp -d "$configs/.save-$running.XXXXXX")"
+                    cp -a "$base/." "$staging/"
+                    old="$configs/.$running.old"
+                    rm -rf "$old"
+                    [[ ! -d "$snapshot" ]] || mv "$configs/$running" "$old"
+                    mv "$staging" "$configs/$running"
+                    rm -rf "$old"
+                fi
+                ;;
+        esac
+    fi
     rm -rf "$base"
-    if (( had_base )); then mv "$backup" "$base"; fi
-    rm -f "$active"
+    mkdir -p "$base"
+    if (( had_base )); then cp -a "$backup/." "$base/"; fi
+    rm -rf "$backup"
+    rm -f "$active" "$lock"
     exit "$status"
 }
-trap restore EXIT INT TERM
+trap restore EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# Persist the previous profile's latest state before switching. Its snapshot
+# remains isolated; no other profile's config directory is touched.
+if [[ "$previous" =~ ^(ml4w|hyde|sekaipop)$ && -d "$base" ]]; then
+    staging="$(mktemp -d "$configs/.save-$previous.XXXXXX")"
+    cp -a "$base/." "$staging/"
+    rm -rf "$configs/.$previous.old"
+    [[ ! -d "$configs/$previous" ]] || mv "$configs/$previous" "$configs/.$previous.old"
+    mv "$staging" "$configs/$previous"
+    rm -rf "$configs/.$previous.old"
+fi
+
+# Install the requested profile as the active XDG config tree. Restore the
+# original Halcyon/user config after Hyprland exits; the profile snapshot is
+# saved independently by the EXIT trap above.
+rm -rf "$base"
+mkdir -p "$base"
+cp -a "$snapshot/." "$base/"
+printf "%s\n" "$profile" > "$active"
 Hyprland "$@"
