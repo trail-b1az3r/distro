@@ -11,10 +11,10 @@
 # Generated from packages/pkgbuild/hyprland-plus/PKGBUILD.in.
 
 pkgname=hyprland-plus
-_commit=ba52d8495ea819ef1e0adb39c18fc1564b1089b9
+_commit=eccfd07bc8aa3eb7a9f1488b69cf548e1f743f08
 _udis86=5336633af70f3917760a6d441ff02d93477b0c86
-pkgver=0.57.1.p1
-pkgrel=2
+pkgver=0.57.2.p1
+pkgrel=1
 pkgdesc="Hyprland with Halcyon windows, renderer effects, app-scoped pen pressure curves and touchD support"
 arch=(x86_64)
 url="https://github.com/trail-b1az3r/hyprland-plus"
@@ -23,7 +23,7 @@ depends=(
   "aquamarine>=0.16.0" cairo glib2 glslang hyprcursor hyprgraphics hyprland-guiutils
   hyprlang hyprutils hyprwire lcms2 libcanberra libdrm libei libglvnd
   libinput libx11 libxcb libxcomposite libxcursor libxfixes libxkbcommon
-  libxrender lua mesa muparser pango pixman re2 sdbus-cpp
+  libxrender lua mesa muparser pango pixman re2
   tomlplusplus util-linux-libs wayland wayland-protocols xcb-proto xcb-util
   xcb-util-errors xcb-util-image xcb-util-keysyms xcb-util-renderutil
   xcb-util-wm xorg-xwayland
