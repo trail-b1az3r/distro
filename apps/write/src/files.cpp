@@ -199,9 +199,11 @@ void Files::addRecentBook(const QString &path, const QString &title)
 {
     const QString store = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
         + QStringLiteral("/write-state.json");
+    const QVariantList legacy = QSettings().value(QStringLiteral("recentBooks")).toList();
     QJsonValue result;
     if (rustRequest({{"op", "add_recent_book"}, {"store", store},
-                     {"path", path}, {"title", title}}, &result)) {
+                     {"path", path}, {"title", title},
+                     {"legacy", QJsonArray::fromVariantList(legacy)}}, &result)) {
         emit recentBooksChanged();
         return;
     }
@@ -222,8 +224,10 @@ QVariantList Files::recentBooks() const
 {
     const QString store = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
         + QStringLiteral("/write-state.json");
+    const QVariantList legacy = QSettings().value(QStringLiteral("recentBooks")).toList();
     QJsonValue result;
-    if (rustRequest({{"op", "recent_books"}, {"store", store}}, &result))
+    if (rustRequest({{"op", "recent_books"}, {"store", store},
+                     {"legacy", QJsonArray::fromVariantList(legacy)}}, &result))
         return result.toArray().toVariantList();
 
     QVariantList out;
