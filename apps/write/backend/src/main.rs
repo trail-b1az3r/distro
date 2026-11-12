@@ -332,4 +332,19 @@ mod tests {
         assert_eq!(recent.iter().filter(|item| item["path"] == oldest.to_str().unwrap()).count(), 1);
         fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn imports_legacy_recent_books_when_the_rust_store_is_new() {
+        let root = std::env::temp_dir().join(format!("nexora-write-legacy-recents-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let store = root.join("state.json");
+        let book = root.join("old-book.epub");
+        fs::write(&book, "book").unwrap();
+        let legacy = vec![serde_json::json!({"path": book, "title": "Old book"})];
+        let migrated = read_recent_books(&store, &legacy).unwrap();
+        assert_eq!(migrated.len(), 1);
+        assert_eq!(migrated[0]["title"], "Old book");
+        fs::remove_dir_all(root).unwrap();
+    }
 }
