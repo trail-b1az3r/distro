@@ -78,7 +78,7 @@ jobs:
       - name: Check Rust formatting
         run: cargo fmt --manifest-path apps/write/backend/Cargo.toml -- --check
       - name: Run Rust backend tests
-        run: cargo test --manifest-path apps/write/backend/Cargo.toml --locked
+        run: cargo test --manifest-path apps/write/backend/Cargo.toml
 
   arch:
     outputs:
