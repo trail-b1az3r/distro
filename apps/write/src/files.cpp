@@ -7,6 +7,10 @@
 #include <QSaveFile>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QProcess>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include <algorithm>
 #include <QXmlStreamReader>
 #include <archive.h>
@@ -16,6 +20,36 @@ static QString documents()
 {
     const QString docs = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
     return docs.isEmpty() ? QDir::homePath() + QStringLiteral("/Documents") : docs;
+}
+
+static bool rustRequest(const QJsonObject &request, QJsonValue *result)
+{
+    QString program = qEnvironmentVariable("NEXORA_WRITE_BACKEND");
+    if (program.isEmpty())
+        program = QStringLiteral(HELPER_DIR "/nexora-write-backend");
+    if (!QFileInfo::isExecutable(program))
+        return false;
+
+    QProcess process;
+    process.setProgram(program);
+    process.start();
+    if (!process.waitForStarted(1500))
+        return false;
+    process.write(QJsonDocument(request).toJson(QJsonDocument::Compact) + '\\n');
+    process.closeWriteChannel();
+    if (!process.waitForFinished(6000))
+        return false;
+    const QJsonObject response = QJsonDocument::fromJson(process.readAllStandardOutput()).object();
+    if (process.exitStatus() != QProcess::NormalExit || !response.value("ok").toBool())
+        return false;
+    if (result)
+        *result = response.value("result");
+    return true;
+}
+
+static QJsonObject rustOp(const QString &op, const QString &path)
+{
+    return {{ "op", op }, { "path", path }};
 }
 
 Files::Files(QObject *parent) : QObject(parent)
@@ -29,6 +63,9 @@ QString Files::booksDir() const { return documents() + QStringLiteral("/Books");
 
 QString Files::read(const QString &path) const
 {
+    QJsonValue result;
+    if (rustRequest({{"op", "read"}, {"path", path}}, &result))
+        return result.toString();
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly))
         return {};
@@ -37,6 +74,9 @@ QString Files::read(const QString &path) const
 
 bool Files::write(const QString &path, const QString &text) const
 {
+    QJsonValue result;
+    if (rustRequest({{"op", "write"}, {"path", path}, {"content", text}}, &result))
+        return result.toBool();
     QDir().mkpath(QFileInfo(path).absolutePath());
     QSaveFile f(path);  // written whole or not at all
     if (!f.open(QIODevice::WriteOnly))
@@ -87,6 +127,15 @@ QString Files::newBook(const QString &title) const
 QStringList Files::chapters(const QString &bookDir) const
 {
     QStringList out;
+    QJsonValue listed;
+    if (rustRequest({{"op", "list"}, {"path", bookDir}}, &listed)) {
+        for (const QJsonValue &entry : listed.toArray()) {
+            const QString name = entry.toObject().value("name").toString();
+            if (name.endsWith(".mdxl") || name.endsWith(".md"))
+                out << entry.toObject().value("path").toString();
+        }
+        return out;
+    }
     const auto entries = QDir(bookDir).entryInfoList({"*.mdxl", "*.md"}, QDir::Files, QDir::Name);
     for (const QFileInfo &fi : entries)
         out << fi.absoluteFilePath();
@@ -95,6 +144,9 @@ QStringList Files::chapters(const QString &bookDir) const
 
 QString Files::newChapter(const QString &bookDir, const QString &title) const
 {
+    QJsonValue result;
+    if (rustRequest({{"op", "create_chapter"}, {"book", bookDir}, {"title", title}}, &result))
+        return result.toString();
     const int next = chapters(bookDir).size();
     const QString name = QStringLiteral("%1-%2").arg(next, 2, 10, QLatin1Char('0')).arg(slug(title));
     const QString path = unique(bookDir, name, QStringLiteral(".mdxl"));
@@ -105,6 +157,13 @@ QString Files::newChapter(const QString &bookDir, const QString &title) const
 QStringList Files::books() const
 {
     QStringList out;
+    QJsonValue listed;
+    if (rustRequest({{"op", "list"}, {"path", booksDir()}}, &listed)) {
+        for (const QJsonValue &entry : listed.toArray())
+            if (entry.toObject().value("directory").toBool())
+                out << entry.toObject().value("path").toString();
+        return out;
+    }
     const auto entries = QDir(booksDir()).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     for (const QFileInfo &fi : entries)
         out << fi.absoluteFilePath();
