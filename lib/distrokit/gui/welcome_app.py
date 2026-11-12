@@ -108,9 +108,24 @@ class WelcomeBackend(QObject):
         """Profiles that can coexist as separate Hyprland sessions."""
         state = self.home / ".local" / "state" / "distro-desktop-profiles"
         return [
-            {"id": "ml4w", "name": "ML4W Dotfiles", "description": "A polished, feature-rich Hyprland desktop.", "installed": (state / "ml4w.done").exists()},
-            {"id": "hyde", "name": "HyDE", "description": "A heavily themed and customisable Hyprland setup.", "installed": (state / "hyde.done").exists()},
-            {"id": "sekaipop", "name": "SekaiPop", "description": "An expressive, themed Hyprland desktop.", "installed": (state / "sekaipop.done").exists()},
+            {
+                "id": "ml4w",
+                "name": "ML4W Dotfiles",
+                "description": "A polished, feature-rich Hyprland desktop.",
+                "installed": (state / "ml4w.done").exists(),
+            },
+            {
+                "id": "hyde",
+                "name": "HyDE",
+                "description": "A heavily themed and customisable Hyprland setup.",
+                "installed": (state / "hyde.done").exists(),
+            },
+            {
+                "id": "sekaipop",
+                "name": "SekaiPop",
+                "description": "An expressive, themed Hyprland desktop.",
+                "installed": (state / "sekaipop.done").exists(),
+            },
         ]
 
     @Slot("QVariantList", result=bool)
