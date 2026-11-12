@@ -17,6 +17,7 @@ enum Request {
     CreateNote { root: PathBuf, title: String },
     CreateBook { root: PathBuf, title: String },
     CreateChapter { book: PathBuf, title: String },
+    ImportImage { source: PathBuf, book: PathBuf },
 }
 
 #[derive(Debug, Serialize)]
@@ -95,6 +96,28 @@ fn create_chapter(book: &Path, title: &str) -> Result<String, String> {
     Ok(path.to_string_lossy().into_owned())
 }
 
+fn import_image(source: &Path, book: &Path) -> Result<String, String> {
+    let extension = source.extension().and_then(|value| value.to_str())
+        .ok_or_else(|| "image has no file extension".to_string())?.to_ascii_lowercase();
+    if !["png", "jpg", "jpeg", "webp", "gif", "svg", "avif", "bmp"].contains(&extension.as_str()) {
+        return Err("unsupported image format".into());
+    }
+    let original = source.file_stem().and_then(|value| value.to_str())
+        .ok_or_else(|| "invalid image filename".to_string())?;
+    let images = book.join("images");
+    fs::create_dir_all(&images).map_err(|e| e.to_string())?;
+    let mut target = images.join(format!("{original}.{extension}"));
+    let mut index = 2;
+    while target.exists() {
+        target = images.join(format!("{original}-{index}.{extension}"));
+        index += 1;
+    }
+    fs::copy(source, &target).map_err(|e| e.to_string())?;
+    let filename = target.file_name().and_then(|value| value.to_str())
+        .ok_or_else(|| "invalid destination filename".to_string())?;
+    Ok(format!("images/{filename}"))
+}
+
 fn handle(request: Request) -> Result<serde_json::Value, String> {
     match request {
         Request::Read { path } => fs::read_to_string(path).map(serde_json::Value::String).map_err(|e| e.to_string()),
@@ -127,6 +150,7 @@ fn handle(request: Request) -> Result<serde_json::Value, String> {
         Request::CreateNote { root, title } => create_note(&root, &title).map(serde_json::Value::String),
         Request::CreateBook { root, title } => create_book(&root, &title).map(serde_json::Value::String),
         Request::CreateChapter { book, title } => create_chapter(&book, &title).map(serde_json::Value::String),
+        Request::ImportImage { source, book } => import_image(&source, &book).map(serde_json::Value::String),
     }
 }
 
