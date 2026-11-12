@@ -66,7 +66,7 @@ package_@DISTRO_ID@-core() {
     'yay: AUR packages'
     'flatpak: Flatpak updates'
   )
-  backup=(etc/pacman.d/hooks/05-snap-pac-pre.hook etc/pacman.d/hooks/zz-snap-pac-post.hook)
+  backup=()
   _stage core
   python -m compileall -q -s "$pkgdir" -p / "$pkgdir/usr/lib/@DISTRO_ID@/distrokit"
 }

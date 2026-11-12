@@ -547,31 +547,11 @@ def test_builder_adds_build_dependencies_a_pkgbuild_forgets(tmp_path):
     assert _deps(runner.recorded) == ["cmake", "vulkan-headers", "shaderc"]
 
 
-def test_snap_pac_hooks_are_quiet(tmp_path):
-    # snap-pac's snapshots, without "==> root: 303" after every pacman/yay run: hooks of the same names in
-    # /etc/pacman.d/hooks replace its own and send its script's output away.
+
+def test_core_ships_no_host_pacman_hooks(tmp_path):
+    # Hooks in /etc/pacman.d/hooks come from the host, so they also run when pacstrap installs into an empty new root
+    # (the installer, the ISO and CI), where nothing they call exists yet: a failing pre-transaction hook aborts the
+    # install. Hooks go in /usr/share/libalpm/hooks, which belongs to the root being installed.
     b = load_branding()
     stage.Stage(tmp_path, b).run("core")
-    quiet = f"/usr/lib/{b.id}/bin/{b.id}-snap-pac"
-    pre = (tmp_path / "etc/pacman.d/hooks/05-snap-pac-pre.hook").read_text()
-    post = (tmp_path / "etc/pacman.d/hooks/zz-snap-pac-post.hook").read_text()
-    assert f"Exec = {quiet} pre" in pre and "When = PreTransaction" in pre and "AbortOnFail" in pre
-    assert f"Exec = {quiet} post" in post and "When = PostTransaction" in post and "AbortOnFail" not in post
-    for hook in (pre, post):
-        assert "NeedsTargets" in hook and "Target = *" in hook and "Operation = Remove" in hook
-
-    # The wrapper passes the targets through, keeps errors, drops the number, and does nothing without snap-pac.
-    script = (tmp_path / quiet.lstrip("/")).read_text()
-    fake = tmp_path / "snap-pac"
-    fake.write_text('#!/bin/sh\nread -r pkg\necho "==> root: 303"\necho "pkgs $1 $pkg" >&2\n')
-    fake.chmod(0o755)
-    wrapper = tmp_path / "wrapper"
-    wrapper.write_text(script.replace("/usr/share/libalpm/scripts/snap-pac", str(fake)))
-    wrapper.chmod(0o755)
-    res = subprocess.run([str(wrapper), "pre"], input="bash\n", capture_output=True, text=True)
-    assert res.returncode == 0 and res.stdout == "" and "pkgs pre bash" in res.stderr
-    wrapper.write_text(script.replace("/usr/share/libalpm/scripts/snap-pac", str(tmp_path / "missing")))
-    assert subprocess.run([str(wrapper), "pre"], input="", capture_output=True).returncode == 0
-
-    pkgbuild = (Path(__file__).resolve().parents[2] / "packages/pkgbuild/distro/PKGBUILD.in").read_text()
-    assert "etc/pacman.d/hooks/05-snap-pac-pre.hook" in pkgbuild and "etc/pacman.d/hooks/zz-snap-pac-post.hook" in pkgbuild
+    assert not (tmp_path / "etc/pacman.d/hooks").exists()
