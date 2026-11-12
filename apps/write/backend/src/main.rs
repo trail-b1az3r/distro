@@ -254,4 +254,30 @@ mod tests {
         assert!(import_image(&source, &book).unwrap().contains("cover-2.png"));
         fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn atomic_write_replaces_existing_document_without_temp_collisions() {
+        let root = std::env::temp_dir().join(format!("nexora-write-atomic-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join("draft.mdxl");
+        fs::write(&path, "old").unwrap();
+        atomic_write(&path, b"new").unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "new");
+        assert_eq!(fs::read_dir(&root).unwrap().count(), 1);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn chapter_creation_does_not_overwrite_a_numbered_file_after_a_gap() {
+        let root = std::env::temp_dir().join(format!("nexora-write-gap-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        fs::write(root.join("00-About.mdxl"), "# About").unwrap();
+        fs::write(root.join("02-second-chapter.mdxl"), "existing").unwrap();
+        let created = PathBuf::from(create_chapter(&root, "Second chapter").unwrap());
+        assert_eq!(fs::read_to_string(root.join("02-second-chapter.mdxl")).unwrap(), "existing");
+        assert_eq!(created.file_name().unwrap(), "02-second-chapter-2.mdxl");
+        fs::remove_dir_all(root).unwrap();
+    }
 }
