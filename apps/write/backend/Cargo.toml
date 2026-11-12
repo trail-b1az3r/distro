@@ -1,0 +1,19 @@
+[package]
+name = "nexora-write-backend"
+version = "0.2.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+description = "Rust application backend for Nexora Write"
+
+[[bin]]
+name = "nexora-write-backend"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

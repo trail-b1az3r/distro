@@ -12,6 +12,18 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 WebEn
 find_package(KF6SyntaxHighlighting REQUIRED)
 find_package(LibArchive REQUIRED)
 include(GNUInstallDirs)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+set(WRITE_BACKEND_MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/backend/Cargo.toml")
+set(WRITE_BACKEND_TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/rust-target")
+set(WRITE_BACKEND_BINARY "${WRITE_BACKEND_TARGET_DIR}/release/nexora-write-backend")
+add_custom_command(OUTPUT "${WRITE_BACKEND_BINARY}"
+    COMMAND ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${WRITE_BACKEND_TARGET_DIR}
+            ${CARGO_EXECUTABLE} build --release --manifest-path "${WRITE_BACKEND_MANIFEST}"
+    DEPENDS "${WRITE_BACKEND_MANIFEST}" "${CMAKE_CURRENT_SOURCE_DIR}/backend/src/main.rs"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/backend"
+    COMMENT "Building Nexora Write Rust backend"
+    VERBATIM)
+add_custom_target(write-rust-backend ALL DEPENDS "${WRITE_BACKEND_BINARY}")
 
 qt_standard_project_setup(REQUIRES 6.5)
 
@@ -30,6 +42,7 @@ qt_add_qml_module(write
     SOURCES
         src/theme.h src/theme.cpp
         src/files.h src/files.cpp
+        src/rustbackend.h src/rustbackend.cpp
         src/highlighter.h src/highlighter.cpp
         src/mdxlrenderer.h src/mdxlrenderer.cpp
         src/epubbook.h src/epubbook.cpp
@@ -49,6 +62,7 @@ target_link_libraries(write PRIVATE
     KF6::SyntaxHighlighting LibArchive::LibArchive)
 
 install(TARGETS write RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(PROGRAMS "${WRITE_BACKEND_BINARY}" DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_ID})
 install(PROGRAMS data/mdxl-render.py
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_ID} RENAME mdxl-render)
 configure_file(data/write.desktop.in ${CMAKE_CURRENT_BINARY_DIR}/${APP_ID}.desktop @ONLY)

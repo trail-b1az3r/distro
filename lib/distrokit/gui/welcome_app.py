@@ -104,6 +104,51 @@ class WelcomeBackend(QObject):
         return [e.to_dict() for e in launcher.entries(self.home, self.b)]
 
     @Property("QVariant", constant=True)
+    def desktopProfiles(self) -> list:  # noqa: N802
+        """Profiles that can coexist as separate Hyprland sessions."""
+        state = self.home / ".local" / "state" / "distro-desktop-profiles"
+        return [
+            {
+                "id": "ml4w",
+                "name": "ML4W Dotfiles",
+                "description": "A polished, feature-rich Hyprland desktop.",
+                "installed": (state / "ml4w.done").exists(),
+            },
+            {
+                "id": "hyde",
+                "name": "HyDE",
+                "description": "A heavily themed and customisable Hyprland setup.",
+                "installed": (state / "hyde.done").exists(),
+            },
+            {
+                "id": "sekaipop",
+                "name": "SekaiPop",
+                "description": "An expressive, themed Hyprland desktop.",
+                "installed": (state / "sekaipop.done").exists(),
+            },
+        ]
+
+    @Slot("QVariantList", result=bool)
+    def saveDesktopProfiles(self, profile_ids: list) -> bool:  # noqa: N802
+        """Persist a validated multi-profile selection for the user installer."""
+        allowed = {"ml4w", "hyde", "sekaipop"}
+        selected = list(dict.fromkeys(str(item) for item in profile_ids))
+        if not selected or any(item not in allowed for item in selected):
+            self.log.emit("Select at least one supported desktop profile.")
+            return False
+        config = self.home / ".config" / self.b.id / "desktop-profiles.conf"
+        try:
+            config.parent.mkdir(parents=True, exist_ok=True)
+            temporary = config.with_suffix(".conf.tmp")
+            temporary.write_text(" ".join(selected) + "\n", encoding="utf-8")
+            temporary.replace(config)
+        except OSError as exc:
+            self.log.emit(f"Could not save desktop selection: {exc}")
+            return False
+        self.log.emit("Selected desktop profiles: " + ", ".join(selected))
+        return True
+
+    @Property("QVariant", constant=True)
     def themes(self) -> list:
         base = self.home / ".config" / "hypr" / "hyprland" / "halcyon" / "themes"
         out = [{"id": "off", "name": "Wallpaper colours", "description": "Material You colours from your wallpaper (default)."}]

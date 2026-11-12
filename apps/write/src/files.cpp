@@ -1,4 +1,5 @@
 #include "files.h"
+#include "rustbackend.h"
 
 #include <QDir>
 #include <QFile>
@@ -7,6 +8,8 @@
 #include <QSaveFile>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QJsonObject>
+#include <QJsonArray>
 #include <algorithm>
 #include <QXmlStreamReader>
 #include <archive.h>
@@ -17,6 +20,7 @@ static QString documents()
     const QString docs = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
     return docs.isEmpty() ? QDir::homePath() + QStringLiteral("/Documents") : docs;
 }
+
 
 Files::Files(QObject *parent) : QObject(parent)
 {
@@ -29,6 +33,9 @@ QString Files::booksDir() const { return documents() + QStringLiteral("/Books");
 
 QString Files::read(const QString &path) const
 {
+    QJsonValue result;
+    if (RustBackend::request({{"op", "read"}, {"path", path}}, &result))
+        return result.toString();
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly))
         return {};
@@ -37,6 +44,9 @@ QString Files::read(const QString &path) const
 
 bool Files::write(const QString &path, const QString &text) const
 {
+    QJsonValue result;
+    if (rustRequest({{"op", "write"}, {"path", path}, {"content", text}}, &result))
+        return result.toBool();
     QDir().mkpath(QFileInfo(path).absolutePath());
     QSaveFile f(path);  // written whole or not at all
     if (!f.open(QIODevice::WriteOnly))
@@ -67,6 +77,9 @@ static QString unique(const QString &dir, const QString &name, const QString &su
 
 QString Files::newNote(const QString &title) const
 {
+    QJsonValue result;
+    if (rustRequest({{"op", "create_note"}, {"root", notesDir()}, {"title", title}}, &result))
+        return result.toString();
     const QString name = slug(title);
     const QString path = unique(notesDir(), name, QStringLiteral(".mdxl"));
     write(path, QStringLiteral("# %1\n\n").arg(name));
@@ -75,6 +88,9 @@ QString Files::newNote(const QString &title) const
 
 QString Files::newBook(const QString &title) const
 {
+    QJsonValue result;
+    if (rustRequest({{"op", "create_book"}, {"root", booksDir()}, {"title", title}}, &result))
+        return result.toString();
     const QString name = slug(title);
     const QString dir = unique(booksDir(), name, QString());
     QDir().mkpath(dir);
@@ -87,14 +103,28 @@ QString Files::newBook(const QString &title) const
 QStringList Files::chapters(const QString &bookDir) const
 {
     QStringList out;
+    QJsonValue listed;
+    if (rustRequest({{"op", "list"}, {"path", bookDir}}, &listed)) {
+        for (const QJsonValue &entry : listed.toArray()) {
+            const QString name = entry.toObject().value("name").toString();
+            if ((name.endsWith(".mdxl") || name.endsWith(".md"))
+                    && name.compare("00-About.mdxl", Qt::CaseInsensitive) != 0)
+                out << entry.toObject().value("path").toString();
+        }
+        return out;
+    }
     const auto entries = QDir(bookDir).entryInfoList({"*.mdxl", "*.md"}, QDir::Files, QDir::Name);
     for (const QFileInfo &fi : entries)
-        out << fi.absoluteFilePath();
+        if (fi.fileName().compare(QStringLiteral("00-About.mdxl"), Qt::CaseInsensitive) != 0)
+            out << fi.absoluteFilePath();
     return out;
 }
 
 QString Files::newChapter(const QString &bookDir, const QString &title) const
 {
+    QJsonValue result;
+    if (rustRequest({{"op", "create_chapter"}, {"book", bookDir}, {"title", title}}, &result))
+        return result.toString();
     const int next = chapters(bookDir).size();
     const QString name = QStringLiteral("%1-%2").arg(next, 2, 10, QLatin1Char('0')).arg(slug(title));
     const QString path = unique(bookDir, name, QStringLiteral(".mdxl"));
@@ -105,6 +135,13 @@ QString Files::newChapter(const QString &bookDir, const QString &title) const
 QStringList Files::books() const
 {
     QStringList out;
+    QJsonValue listed;
+    if (rustRequest({{"op", "list"}, {"path", booksDir()}}, &listed)) {
+        for (const QJsonValue &entry : listed.toArray())
+            if (entry.toObject().value("directory").toBool())
+                out << entry.toObject().value("path").toString();
+        return out;
+    }
     const auto entries = QDir(booksDir()).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     for (const QFileInfo &fi : entries)
         out << fi.absoluteFilePath();
@@ -113,27 +150,45 @@ QStringList Files::books() const
 
 void Files::addRecentBook(const QString &path, const QString &title)
 {
-    QSettings s;
-    QVariantList list = s.value(QStringLiteral("recentBooks")).toList();
+    const QString store = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+        + QStringLiteral("/write-state.json");
+    const QVariantList legacy = QSettings().value(QStringLiteral("recentBooks")).toList();
+    QJsonValue result;
+    if (rustRequest({{"op", "add_recent_book"}, {"store", store},
+                     {"path", path}, {"title", title},
+                     {"legacy", QJsonArray::fromVariantList(legacy)}}, &result)) {
+        emit recentBooksChanged();
+        return;
+    }
+
+    QSettings settings;
+    QVariantList list = settings.value(QStringLiteral("recentBooks")).toList();
     for (int i = list.size() - 1; i >= 0; --i)
         if (list[i].toMap().value("path").toString() == path)
             list.removeAt(i);
     list.prepend(QVariantMap{{"path", path}, {"title", title}});
     while (list.size() > 12)
         list.removeLast();
-    s.setValue(QStringLiteral("recentBooks"), list);
+    settings.setValue(QStringLiteral("recentBooks"), list);
     emit recentBooksChanged();
 }
 
 QVariantList Files::recentBooks() const
 {
+    const QString store = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+        + QStringLiteral("/write-state.json");
+    const QVariantList legacy = QSettings().value(QStringLiteral("recentBooks")).toList();
+    QJsonValue result;
+    if (rustRequest({{"op", "recent_books"}, {"store", store},
+                     {"legacy", QJsonArray::fromVariantList(legacy)}}, &result))
+        return result.toArray().toVariantList();
+
     QVariantList out;
-    for (const QVariant &v : QSettings().value(QStringLiteral("recentBooks")).toList())
-        if (QFileInfo::exists(v.toMap().value("path").toString()))
-            out << v;
+    for (const QVariant &value : QSettings().value(QStringLiteral("recentBooks")).toList())
+        if (QFileInfo::exists(value.toMap().value("path").toString()))
+            out << value;
     return out;
 }
-
 
 static QString escapeXml(QString s)
 {
@@ -299,6 +354,30 @@ bool Files::exportDocx(const QString &path, const QString &text) const
     return ok;
 }
 
+QString Files::importImage(const QString &source, const QString &documentDir) const
+{
+    QJsonValue result;
+    if (rustRequest({{"op", "import_image"}, {"source", source}, {"book", documentDir}}, &result))
+        return result.toString();
+
+    const QFileInfo input(source);
+    const QString extension = input.suffix().toLower();
+    if (!QStringList{"png", "jpg", "jpeg", "webp", "gif", "svg", "avif", "bmp"}.contains(extension))
+        return {};
+    const QString images = documentDir + QStringLiteral("/images");
+    QDir().mkpath(images);
+    const QString stem = slug(input.completeBaseName());
+    QString name = stem + u'.' + extension;
+    QString target = images + u'/' + name;
+    for (int index = 2; QFileInfo::exists(target); ++index) {
+        name = stem + QStringLiteral("-%1.").arg(index) + extension;
+        target = images + u'/' + name;
+    }
+    if (!QFile::copy(source, target))
+        return {};
+    return QStringLiteral("images/") + name;
+}
+
 bool Files::betterbirdInstalled() const
 {
     return !QStandardPaths::findExecutable(QStringLiteral("betterbird")).isEmpty();
@@ -306,6 +385,9 @@ bool Files::betterbirdInstalled() const
 
 int Files::words(const QString &text) const
 {
+    QJsonValue result;
+    if (rustRequest({{"op", "word_count"}, {"text", text}}, &result))
+        return result.toInt();
     static const QRegularExpression word(QStringLiteral(R"(\w[\w'’-]*)"),
                                          QRegularExpression::UseUnicodePropertiesOption);
     int n = 0;

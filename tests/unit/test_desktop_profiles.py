@@ -9,6 +9,18 @@ def packages(overrides=None):
     return set(select_packages(load_profiles()["minimal"], overrides=overrides or {}).packages)
 
 
+def test_welcome_backend_exposes_multi_profile_selection():
+    source = (Path(__file__).resolve().parents[2] / "lib" / "distrokit" / "gui" / "welcome_app.py").read_text()
+    assert 'def desktopProfiles(self)' in source
+    assert 'def saveDesktopProfiles(self, profile_ids: list)' in source
+    assert 'allowed = {"ml4w", "hyde", "sekaipop"}' in source
+
+
+def test_profile_installer_prefers_user_selection_and_falls_back_to_system_config():
+    script = (Path(__file__).resolve().parents[2] / "desktop" / "profiles" / "install-selected.sh").read_text()
+    assert 'XDG_CONFIG_HOME:-$HOME/.config' in script
+    assert 'CONFIG=/etc/distro-desktop-profiles.conf' in script
+
 def test_halcyon_remains_the_default_desktop():
     selected = packages()
     assert "illogical-impulse-hyprland" in selected

@@ -10,6 +10,10 @@ The ISO installer offers Halcyon, ML4W Dotfiles, SekaiPop and HyDE.
 
 Upstream installers still install packages and may change system-wide themes, SDDM settings, portals or other shared files. The profile wrapper isolates the user's config tree; it cannot sandbox arbitrary upstream system changes. Review the upstream prompts, especially when installing more than one profile.
 
+## Selecting multiple profiles from Welcome
+
+Open **Desktop environments** in Nexora Welcome to select any combination of ML4W, HyDE and SekaiPop. The selection is saved per-user at `~/.config/nexora/desktop-profiles.conf`; the first-login installer consumes this file and installs each selected profile as an independent session. The existing `/etc/distro-desktop-profiles.conf` remains supported as a system-wide fallback for ISO and administrator-provisioned selections. Halcyon remains the fallback session.
+
 ## Network choices
 
 The installer keeps full nmx as a replacement network manager, or NetworkManager as the default. The optional **NetworkManager smart assist (nmx)** is a separate per-user service: it leaves NetworkManager in control, installs the configured browser, opens detected captive portals in it, and enables NetworkManager system-CA trust for saved 802.1X profiles with no explicit CA only when a server-domain suffix can be retained or derived from the identity realm. It is not enabled when full nmx is selected.

@@ -6,10 +6,13 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QQuickWindow>
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
 
 int main(int argc, char *argv[])
 {
+    // Request an alpha-capable backing surface for translucent QML panels.
+    QQuickWindow::setDefaultAlphaBuffer(true);
     QtWebEngineQuick::initialize();
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName(QStringLiteral(APP_ID));

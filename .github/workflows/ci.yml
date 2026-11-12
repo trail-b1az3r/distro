@@ -67,6 +67,17 @@ jobs:
       - name: Artwork generation
         run: PYTHONPATH=lib python -m distrokit.build.branding
 
+
+  write-rust:
+    name: Nexora Write Rust backend
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run Rust backend tests
+        run: cargo test --manifest-path apps/write/backend/Cargo.toml
+
   arch:
     outputs:
       package_build_success: ${{ steps.build_iso_packages.outcome }}

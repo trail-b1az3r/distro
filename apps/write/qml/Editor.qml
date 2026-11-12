@@ -244,6 +244,8 @@ Item {
                 ToolButton { text: qsTr("Italic"); onClicked: root.wrapSelection("*", "*") }
                 ToolButton { text: qsTr("Strike"); onClicked: root.wrapSelection("~~", "~~") }
                 ToolButton { text: qsTr("Link"); onClicked: root.wrapSelection("[", "](https://)") }
+                ToolButton { text: qsTr("Image"); enabled: root.path !== ""; onClicked: imageDialog.open() }
+                ToolButton { text: qsTr("Color"); onClicked: root.insertAtCursor("/col//Colored text /col#B7F77A//") }
                 ToolButton { text: qsTr("Quote"); onClicked: root.prefixLine("> ") }
                 ToolButton { text: qsTr("Bullets"); onClicked: root.prefixLine("- ") }
                 ToolButton { text: qsTr("Numbered"); onClicked: root.prefixLine("1. ") }
@@ -274,8 +276,8 @@ Item {
                 SplitView.fillWidth: root.viewMode === 0
                 SplitView.preferredWidth: parent.width / 2
                 visible: root.viewMode !== 2 && root.viewMode !== 3
-                color: Theme.c.surfaceContainerLow
-                radius: 16
+                color: Qt.rgba(Qt.color(Theme.c.surfaceContainerLow).r, Qt.color(Theme.c.surfaceContainerLow).g, Qt.color(Theme.c.surfaceContainerLow).b, 0.80)
+                radius: 22
                 ScrollView {
                     anchors.fill: parent
                     anchors.margins: 4
@@ -308,8 +310,8 @@ Item {
             Rectangle {
                 SplitView.fillWidth: true
                 visible: root.viewMode !== 0
-                color: root.documentMode ? Theme.c.surfaceContainer : Theme.c.surface
-                radius: 16
+                color: Qt.rgba(Qt.color(root.documentMode ? Theme.c.surfaceContainer : Theme.c.surface).r, Qt.color(root.documentMode ? Theme.c.surfaceContainer : Theme.c.surface).g, Qt.color(root.documentMode ? Theme.c.surfaceContainer : Theme.c.surface).b, 0.78)
+                radius: 22
                 clip: true
                 WebEngineView {
                     id: preview

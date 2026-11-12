@@ -14,7 +14,7 @@ arch=(x86_64)
 url="@DISTRO_HOME_URL@"
 license=(GPL-3.0-or-later)
 depends=(qt6-base qt6-declarative qt6-webengine syntax-highlighting libarchive python mdxl)
-makedepends=(cmake ninja)
+makedepends=(cmake ninja rust cargo)
 source=("@DISTRO_ID@-$pkgver.tar.gz")
 sha256sums=('@SOURCE_SHA256@')
 
@@ -28,6 +28,7 @@ build() {
 }
 
 check() {
+  cargo test --manifest-path "@DISTRO_ID@-$pkgver/apps/write/backend/Cargo.toml"
   # The window, its QML and the EPUB reader load (headless).
   QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 \
     QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu" HOME="$srcdir/home" \

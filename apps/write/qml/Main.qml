@@ -14,7 +14,7 @@ ApplicationWindow {
     visible: true
     title: (page === 3 && reader.bookTitle ? reader.bookTitle
             : editor.path ? Files.baseName(editor.path) + (editor.modified ? " •" : "") : "") + " — " + appName
-    color: Theme.c.surface
+    color: Qt.rgba(Qt.color(Theme.c.surface).r, Qt.color(Theme.c.surface).g, Qt.color(Theme.c.surface).b, 0.84)
     font.family: Theme.font
 
     Material.theme: Theme.dark ? Material.Dark : Material.Light
@@ -38,6 +38,9 @@ ApplicationWindow {
                 editor.open(note)
                 page = 0
             }
+        } else if (Files.chapters(path).length > 0) {
+            reader.open(path)
+            page = 3
         } else {
             editor.open(path)
             page = 0
@@ -118,6 +121,8 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Shift+E"; onActivated: win.togglePreview() }
     Shortcut { sequence: "Ctrl+PageDown"; onActivated: win.movePage(1) }
     Shortcut { sequence: "Ctrl+PageUp"; onActivated: win.movePage(-1) }
+    Shortcut { sequence: "Left"; enabled: win.page === 3 && reader.hasBook; onActivated: reader.turnPage(-1) }
+    Shortcut { sequence: "Right"; enabled: win.page === 3 && reader.hasBook; onActivated: reader.turnPage(1) }
 
     // Direct navigation aliases for one-handed use.
     Shortcut { sequence: "Ctrl+Alt+1"; onActivated: win.page = 0 }
@@ -133,7 +138,7 @@ ApplicationWindow {
         Rectangle {
             Layout.fillHeight: true
             implicitWidth: 88
-            color: Theme.c.surfaceContainer
+            color: Qt.rgba(Qt.color(Theme.c.surfaceContainer).r, Qt.color(Theme.c.surfaceContainer).g, Qt.color(Theme.c.surfaceContainer).b, 0.78)
             ColumnLayout {
                 anchors.fill: parent
                 anchors.topMargin: 16
