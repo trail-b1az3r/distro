@@ -88,7 +88,7 @@ fn create_chapter(book: &Path, title: &str) -> Result<String, String> {
     let count = fs::read_dir(book).map_err(|e| e.to_string())?
         .filter_map(Result::ok)
         .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "mdxl"))
-        .count() + 1;
+        .count();
     let path = book.join(format!("{count:02}-{}.mdxl", slug(title)));
     fs::write(&path, format!("# {}\n\n", title.trim())).map_err(|e| e.to_string())?;
     Ok(path.to_string_lossy().into_owned())
