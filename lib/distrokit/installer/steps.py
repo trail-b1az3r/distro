@@ -783,8 +783,9 @@ class Installation:
             self.log("desktop profile: " + primary + "; additional profiles: " + (", ".join(external) if external else "none"))
             self.log("deploy Halcyon dotfiles" if primary == "halcyon" else "deploy Halcyon bootstrap/fallback dotfiles")
             return
-        if external:
-            self._schedule_external_desktops(external)
+        # Install the post-setup profile manager even when no optional desktop
+        # was selected in the ISO installer. Users can add profiles later.
+        self._schedule_external_desktops(external)
         if primary != "halcyon":
             self.log("Desktop: " + primary + " selected; Halcyon is retained as a bootstrap/fallback session")
         share = self.t(f"/usr/share/{self.branding.id}")
