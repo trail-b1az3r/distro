@@ -100,7 +100,6 @@ fn atomic_write(path: &Path, content: &[u8]) -> Result<(), String> {
         let candidate = parent.join(format!(".{file_name}.{}.{}.tmp", std::process::id(), id));
         match fs::OpenOptions::new().write(true).create_new(true).open(&candidate) {
             Ok(mut file) => {
-                use std::io::Write as _;
                 if let Err(error) = file.write_all(content).and_then(|_| file.sync_all()) {
                     let _ = fs::remove_file(&candidate);
                     return Err(error.to_string());
