@@ -10,10 +10,21 @@ LOG="$STATE/install.log"
 WORK="$HOME/.local/share/distro-desktop-profiles"
 CONFIGS="$WORK/configs"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-DISTRO_ID="$(basename "$(dirname "$(dirname "$SCRIPT_DIR")")")"
-# Installed layout: /usr/share/<id>/desktop/profiles. During development,
-# permit an explicit override and locate the package list relative to it.
-DATA_ROOT="${DISTRO_DATA_ROOT:-/usr/share/$DISTRO_ID}"
+# The helper is installed in /usr/local/bin, not alongside the profile data.
+# Discover the distribution data root from the packaged desktop lists.
+DATA_ROOT="${DISTRO_DATA_ROOT:-}"
+if [[ -z "$DATA_ROOT" ]]; then
+    for candidate in /usr/share/*/packages/lists/desktop-ml4w.list; do
+        [[ -f "$candidate" ]] || continue
+        DATA_ROOT="${candidate%/packages/lists/desktop-ml4w.list}"
+        break
+    done
+fi
+if [[ -z "$DATA_ROOT" || ! -d "$DATA_ROOT/packages/lists" ]]; then
+    echo "Could not locate the installed desktop package lists under /usr/share." >&2
+    echo "Set DISTRO_DATA_ROOT to the distribution data directory and retry." >&2
+    exit 1
+fi
 LISTS="$DATA_ROOT/packages/lists"
 SESSION_DIR="/usr/share/wayland-sessions"
 SESSION_RUNNER="/usr/local/bin/distro-desktop-session"
