@@ -26,10 +26,10 @@ struct Reply<T: Serialize> {
     error: Option<String>,
 }
 
-fn reply<T: Serialize>(result: Result<T, String>) -> String {
+fn reply(result: Result<serde_json::Value, String>) -> String {
     let value = match result {
         Ok(value) => Reply { ok: true, result: Some(value), error: None },
-        Err(error) => Reply::<serde_json::Value> { ok: false, result: None, error: Some(error) },
+        Err(error) => Reply { ok: false, result: None, error: Some(error) },
     };
     serde_json::to_string(&value).unwrap_or_else(|_| r#"{"ok":false,"result":null,"error":"serialization failure"}"#.into())
 }
@@ -133,9 +133,9 @@ fn main() {
         let response = match line {
             Ok(line) => match serde_json::from_str::<Request>(&line) {
                 Ok(request) => reply(handle(request)),
-                Err(error) => reply::<serde_json::Value>(Err(format!("invalid request: {error}"))),
+                Err(error) => reply(Err(format!("invalid request: {error}"))),
             },
-            Err(error) => reply::<serde_json::Value>(Err(error.to_string())),
+            Err(error) => reply(Err(error.to_string())),
         };
         if writeln!(stdout, "{response}").is_err() { break; }
         if stdout.flush().is_err() { break; }
