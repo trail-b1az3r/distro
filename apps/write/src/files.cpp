@@ -27,7 +27,7 @@ static bool rustRequest(const QJsonObject &request, QJsonValue *result)
     QString program = qEnvironmentVariable("NEXORA_WRITE_BACKEND");
     if (program.isEmpty())
         program = QStringLiteral(HELPER_DIR "/nexora-write-backend");
-    if (!QFileInfo::isExecutable(program))
+    if (!QFileInfo(program).isExecutable())
         return false;
 
     QProcess process;
@@ -40,7 +40,7 @@ static bool rustRequest(const QJsonObject &request, QJsonValue *result)
     if (!process.waitForFinished(6000))
         return false;
     const QJsonObject response = QJsonDocument::fromJson(process.readAllStandardOutput()).object();
-    if (process.exitStatus() != QProcess::NormalExit || !response.value("ok").toBool())
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0 || !response.value("ok").toBool())
         return false;
     if (result)
         *result = response.value("result");
@@ -107,6 +107,9 @@ static QString unique(const QString &dir, const QString &name, const QString &su
 
 QString Files::newNote(const QString &title) const
 {
+    QJsonValue result;
+    if (rustRequest({{"op", "create_note"}, {"root", notesDir()}, {"title", title}}, &result))
+        return result.toString();
     const QString name = slug(title);
     const QString path = unique(notesDir(), name, QStringLiteral(".mdxl"));
     write(path, QStringLiteral("# %1\n\n").arg(name));
@@ -115,6 +118,9 @@ QString Files::newNote(const QString &title) const
 
 QString Files::newBook(const QString &title) const
 {
+    QJsonValue result;
+    if (rustRequest({{"op", "create_book"}, {"root", booksDir()}, {"title", title}}, &result))
+        return result.toString();
     const QString name = slug(title);
     const QString dir = unique(booksDir(), name, QString());
     QDir().mkpath(dir);
@@ -365,6 +371,9 @@ bool Files::betterbirdInstalled() const
 
 int Files::words(const QString &text) const
 {
+    QJsonValue result;
+    if (rustRequest({{"op", "word_count"}, {"text", text}}, &result))
+        return result.toInt();
     static const QRegularExpression word(QStringLiteral(R"(\w[\w'’-]*)"),
                                          QRegularExpression::UseUnicodePropertiesOption);
     int n = 0;
