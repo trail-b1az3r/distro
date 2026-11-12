@@ -21,6 +21,8 @@ enum Request {
     ImportImage { source: PathBuf, book: PathBuf },
     RecentBooks { store: PathBuf, #[serde(default)] legacy: Vec<serde_json::Value> },
     AddRecentBook { store: PathBuf, path: String, title: String, #[serde(default)] legacy: Vec<serde_json::Value> },
+    EpubPosition { store: PathBuf, path: String, #[serde(default)] legacy: u64 },
+    SetEpubPosition { store: PathBuf, path: String, index: u64 },
 }
 
 #[derive(Debug, Serialize)]
@@ -182,6 +184,34 @@ fn add_recent_book(store: &Path, path: &str, title: &str, legacy: &[serde_json::
     Ok(books)
 }
 
+fn read_state(store: &Path) -> Result<serde_json::Map<String, serde_json::Value>, String> {
+    if !store.exists() {
+        return Ok(serde_json::Map::new());
+    }
+    let raw = fs::read_to_string(store).map_err(|e| e.to_string())?;
+    let value: serde_json::Value = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
+    Ok(value.as_object().cloned().unwrap_or_default())
+}
+
+fn epub_position(store: &Path, path: &str, legacy: u64) -> Result<u64, String> {
+    let state = read_state(store)?;
+    Ok(state.get("epub_positions")
+        .and_then(|value| value.get(path))
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(legacy))
+}
+
+fn set_epub_position(store: &Path, path: &str, index: u64) -> Result<bool, String> {
+    let mut state = read_state(store)?;
+    let positions = state.entry("epub_positions")
+        .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
+    let object = positions.as_object_mut()
+        .ok_or_else(|| "EPUB position store is not an object".to_string())?;
+    object.insert(path.to_string(), serde_json::json!(index));
+    atomic_write(store, serde_json::to_string_pretty(&state).map_err(|e| e.to_string())?.as_bytes())?;
+    Ok(true)
+}
+
 fn handle(request: Request) -> Result<serde_json::Value, String> {
     match request {
         Request::Read { path } => fs::read_to_string(path).map(serde_json::Value::String).map_err(|e| e.to_string()),
@@ -215,6 +245,8 @@ fn handle(request: Request) -> Result<serde_json::Value, String> {
         Request::ImportImage { source, book } => import_image(&source, &book).map(serde_json::Value::String),
         Request::RecentBooks { store, legacy } => read_recent_books(&store, &legacy).map(serde_json::Value::Array),
         Request::AddRecentBook { store, path, title, legacy } => add_recent_book(&store, &path, &title, &legacy).map(serde_json::Value::Array),
+        Request::EpubPosition { store, path, legacy } => epub_position(&store, &path, legacy).map(serde_json::Value::from),
+        Request::SetEpubPosition { store, path, index } => set_epub_position(&store, &path, index).map(serde_json::Value::Bool),
     }
 }
 
