@@ -16,6 +16,8 @@ DISTRO_ID="$(basename "$(dirname "$(dirname "$SCRIPT_DIR")")")"
 DATA_ROOT="${DISTRO_DATA_ROOT:-/usr/share/$DISTRO_ID}"
 LISTS="$DATA_ROOT/packages/lists"
 SESSION_DIR="/usr/share/wayland-sessions"
+SESSION_RUNNER="/usr/local/bin/distro-desktop-session"
+[[ -x "$SESSION_RUNNER" ]] || SESSION_RUNNER="$SCRIPT_DIR/run-session.sh"
 
 mkdir -p "$STATE" "$WORK" "$CONFIGS"
 touch "$LOG"
@@ -70,7 +72,7 @@ register_session() {
 [Desktop Entry]
 Name=$name
 Comment=$name desktop profile for Nexora
-Exec=$SCRIPT_DIR/run-session.sh $id
+Exec=$SESSION_RUNNER $id
 TryExec=Hyprland
 Type=Application
 DesktopNames=$name
@@ -136,9 +138,12 @@ for id in "${selected[@]}"; do
     restore_base
     if run_repo "$id" "$url"; then
         rm -f "$HOME/.config/autostart/distro-desktop-profiles.desktop"
-        rm -rf "$CONFIGS/$id"
-        mkdir -p "$CONFIGS/$id"
-        [[ ! -d "$HOME/.config" ]] || cp -a "$HOME/.config/." "$CONFIGS/$id/"
+        if [[ ! -d "$CONFIGS/$id" ]]; then
+            mkdir -p "$CONFIGS/$id"
+            [[ ! -d "$HOME/.config" ]] || cp -a "$HOME/.config/." "$CONFIGS/$id/"
+        else
+            echo "Existing $id configuration found; leaving it untouched."
+        fi
         if register_session "$id" "$name"; then
             touch "$STATE/$id.done"
             echo "$name installed and registered as a separate login session."
