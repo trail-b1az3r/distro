@@ -309,7 +309,7 @@ ApplicationWindow {
                                     enabled: !welcome.busy && win.selectedDesktopProfiles.length > 0
                                     onClicked: {
                                         if (welcome.saveDesktopProfiles(win.selectedDesktopProfiles))
-                                            launcher.runInTerminal("bash /usr/lib/" + brandInfo.id + "/desktop-profiles/install-selected.sh")
+                                            launcher.runInTerminal("bash /usr/share/" + brandInfo.id + "/desktop/profiles/install-selected.sh")
                                     }
                                 }
                             }
