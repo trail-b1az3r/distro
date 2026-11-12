@@ -150,6 +150,28 @@ class Stage:
             f"Exec = {lib}/bin/{b.id}-update-boot\n"
         ))
 
+        # snap-pac snapshots the system before and after every pacman/yay transaction and prints each snapshot's
+        # number ("==> root: 303"), a count that only ever goes up and reads like an error in the terminal. The same
+        # snapshots, without the number: hooks of the same name in /etc/pacman.d/hooks replace snap-pac's own. They
+        # do nothing when snap-pac is not installed (its pre hook aborts the transaction when it fails).
+        quiet = f"{lib}/bin/{b.id}-snap-pac"
+        self.text(quiet, (
+            "#!/bin/sh\n"
+            f"# {b.pretty_name}: snap-pac's snapshots, without printing their numbers (pre|post).\n"
+            "script=/usr/share/libalpm/scripts/snap-pac\n"
+            "[ -x \"$script\" ] || exit 0\n"
+            "exec \"$script\" \"$@\" >/dev/null\n"
+        ), mode=0o755)
+        for name, when, step, what in (("05-snap-pac-pre", "PreTransaction", "pre", "before"),
+                                       ("zz-snap-pac-post", "PostTransaction", "post", "after")):
+            self.text(f"/etc/pacman.d/hooks/{name}.hook", (
+                f"# {b.pretty_name}: snap-pac's hook, quiet (see {quiet}).\n"
+                "[Trigger]\nOperation = Upgrade\nOperation = Install\nOperation = Remove\n"
+                "Type = Package\nTarget = *\n\n"
+                f"[Action]\nDescription = Taking a snapshot {what} the change...\nWhen = {when}\n"
+                f"Exec = {quiet} {step}\n" + ("AbortOnFail\n" if step == "pre" else "") + "NeedsTargets\n"
+            ))
+
         # Marvell mwifiex Wi-Fi (Surface Pro 3-6, Surface Book and Laptop 1-2...)
         # drops the connection and stalls with power saving on; only these cards.
         self.text(f"/usr/lib/NetworkManager/conf.d/50-{b.id}-mwifiex.conf", (

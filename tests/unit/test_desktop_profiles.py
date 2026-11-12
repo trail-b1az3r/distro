@@ -56,6 +56,10 @@ def test_external_desktop_setup_script_has_valid_shell_syntax():
         result = subprocess.run(["bash", "-n", str(path)], capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stderr
     wrapper_text = wrapper.read_text()
-    assert 'active="$root/.active-profile"' in wrapper_text
-    assert 'previous_snapshot="$root/configs/$previous"' in wrapper_text
-    assert 'rm -f "$active"' in wrapper_text
+    # Which profile is running lives in the state directory, with a lock against two switches at once; the
+    # previous profile's config goes back to its own snapshot, and both are cleared when the session ends.
+    assert 'state="$HOME/.local/state/distro-desktop-profiles"' in wrapper_text
+    assert 'active="$state/active-profile"' in wrapper_text
+    assert 'lock="$state/session.lock"' in wrapper_text
+    assert 'mv "$staging" "$configs/$previous"' in wrapper_text
+    assert 'rm -f "$active" "$lock"' in wrapper_text
