@@ -42,6 +42,7 @@ qt_add_qml_module(write
     SOURCES
         src/theme.h src/theme.cpp
         src/files.h src/files.cpp
+        src/rustbackend.h src/rustbackend.cpp
         src/highlighter.h src/highlighter.cpp
         src/mdxlrenderer.h src/mdxlrenderer.cpp
         src/epubbook.h src/epubbook.cpp
