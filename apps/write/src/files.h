@@ -30,6 +30,7 @@ public:
     Q_INVOKABLE bool exists(const QString &path) const;
     Q_INVOKABLE QString importDocx(const QString &path) const;
     Q_INVOKABLE bool exportDocx(const QString &path, const QString &text) const;
+    Q_INVOKABLE QString importImage(const QString &source, const QString &documentDir) const;
 
     // A new, empty note: "<title>.mdxl" in the notes folder (numbered if taken).
     Q_INVOKABLE QString newNote(const QString &title) const;
