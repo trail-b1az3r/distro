@@ -1,4 +1,5 @@
 #include "epubbook.h"
+#include "rustbackend.h"
 
 #include <archive.h>
 #include <archive_entry.h>
@@ -9,6 +10,7 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QSettings>
+#include <QJsonValue>
 #include <QStandardPaths>
 #include <QXmlStreamReader>
 
@@ -40,8 +42,15 @@ void EpubBook::setPath(const QString &path)
         if (ready && parse(root)) {
             if (m_title.isEmpty())
                 m_title = QFileInfo(path).completeBaseName();
-            m_current = qBound(0, QSettings().value(QStringLiteral("position/") + path, 0).toInt(),
-                               qMax(0, int(m_files.size()) - 1));
+            const int legacyPosition = QSettings().value(QStringLiteral("position/") + path, 0).toInt();
+            const QString store = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+                + QStringLiteral("/write-state.json");
+            QJsonValue savedPosition;
+            if (RustBackend::request({{"op", "epub_position"}, {"store", store},
+                                      {"path", path}, {"legacy", legacyPosition}}, &savedPosition))
+                m_current = qBound(0, savedPosition.toInt(), qMax(0, int(m_files.size()) - 1));
+            else
+                m_current = qBound(0, legacyPosition, qMax(0, int(m_files.size()) - 1));
         } else if (m_error.isEmpty()) {
             m_error = tr("This is not an EPUB book that can be read.");
         }
@@ -200,8 +209,14 @@ void EpubBook::setCurrent(int index)
     if (index == m_current)
         return;
     m_current = index;
-    if (!m_path.isEmpty())
-        QSettings().setValue(QStringLiteral("position/") + m_path, index);
+    if (!m_path.isEmpty()) {
+        const QString store = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+            + QStringLiteral("/write-state.json");
+        QJsonValue saved;
+        if (!RustBackend::request({{"op", "set_epub_position"}, {"store", store},
+                                   {"path", m_path}, {"index", index}}, &saved))
+            QSettings().setValue(QStringLiteral("position/") + m_path, index);
+    }
     emit currentChanged();
 }
 
