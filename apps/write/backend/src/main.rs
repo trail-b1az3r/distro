@@ -19,6 +19,8 @@ enum Request {
     CreateBook { root: PathBuf, title: String },
     CreateChapter { book: PathBuf, title: String },
     ImportImage { source: PathBuf, book: PathBuf },
+    RecentBooks { store: PathBuf },
+    AddRecentBook { store: PathBuf, path: String, title: String },
 }
 
 #[derive(Debug, Serialize)]
@@ -152,6 +154,33 @@ fn import_image(source: &Path, book: &Path) -> Result<String, String> {
     Ok(format!("images/{filename}"))
 }
 
+fn read_recent_books(store: &Path) -> Result<Vec<serde_json::Value>, String> {
+    if !store.exists() {
+        return Ok(Vec::new());
+    }
+    let raw = fs::read_to_string(store).map_err(|e| e.to_string())?;
+    let value: serde_json::Value = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
+    Ok(value.get("recent_books").and_then(|v| v.as_array()).cloned().unwrap_or_default()
+        .into_iter().filter(|item| item.get("path").and_then(|v| v.as_str())
+            .is_some_and(|path| Path::new(path).exists())).collect())
+}
+
+fn add_recent_book(store: &Path, path: &str, title: &str) -> Result<Vec<serde_json::Value>, String> {
+    let mut books = read_recent_books(store).unwrap_or_default();
+    books.retain(|item| item.get("path").and_then(|v| v.as_str()) != Some(path));
+    books.insert(0, serde_json::json!({"path": path, "title": title}));
+    books.truncate(12);
+    let mut state = if store.exists() {
+        fs::read_to_string(store).ok().and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+            .and_then(|value| value.as_object().cloned()).unwrap_or_default()
+    } else {
+        serde_json::Map::new()
+    };
+    state.insert("recent_books".into(), serde_json::Value::Array(books.clone()));
+    atomic_write(store, serde_json::to_string_pretty(&state).map_err(|e| e.to_string())?.as_bytes())?;
+    Ok(books)
+}
+
 fn handle(request: Request) -> Result<serde_json::Value, String> {
     match request {
         Request::Read { path } => fs::read_to_string(path).map(serde_json::Value::String).map_err(|e| e.to_string()),
@@ -183,6 +212,8 @@ fn handle(request: Request) -> Result<serde_json::Value, String> {
         Request::CreateBook { root, title } => create_book(&root, &title).map(serde_json::Value::String),
         Request::CreateChapter { book, title } => create_chapter(&book, &title).map(serde_json::Value::String),
         Request::ImportImage { source, book } => import_image(&source, &book).map(serde_json::Value::String),
+        Request::RecentBooks { store } => read_recent_books(&store).map(serde_json::Value::Array),
+        Request::AddRecentBook { store, path, title } => add_recent_book(&store, &path, &title).map(serde_json::Value::Array),
     }
 }
 
