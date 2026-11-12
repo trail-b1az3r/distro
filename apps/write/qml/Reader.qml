@@ -180,7 +180,7 @@ Item {
                     anchors.fill: parent
                     anchors.leftMargin: 10
                     anchors.rightMargin: 10
-                    ToolButton { text: root.contents ? "menu_open" : "menu"; onClicked: root.contents = !root.contents }
+                    ToolButton { text: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? (root.contents ? "menu_open" : "menu") : "☰"; font.family: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "Material Symbols Rounded" : Theme.font; onClicked: root.contents = !root.contents }
                     Label {
                         Layout.fillWidth: true
                         text: root.bookTitle || qsTr("Reading")
@@ -192,7 +192,7 @@ Item {
                     ToolButton { text: "A−"; onClicked: root.textScale = Math.max(0.75, root.textScale - 0.1) }
                     Label { text: Math.round(root.textScale * 100) + "%"; color: Theme.c.onSurfaceVariant }
                     ToolButton { text: "A+"; onClicked: root.textScale = Math.min(1.8, root.textScale + 0.1) }
-                    ToolButton { text: root.immersive ? "fullscreen_exit" : "fullscreen"; onClicked: root.immersive = !root.immersive }
+                    ToolButton { text: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? (root.immersive ? "fullscreen_exit" : "fullscreen") : "⛶"; font.family: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "Material Symbols Rounded" : Theme.font; onClicked: root.immersive = !root.immersive }
                 }
             }
 
@@ -261,7 +261,7 @@ Item {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     visible: root.hasBook && !root.immersive
-                    text: "chevron_left"
+                    text: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "chevron_left" : "‹"; font.family: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "Material Symbols Rounded" : Theme.font
                     enabled: root.isMdxlBook ? root.mdxlCurrent > 0 : epub.current > 0
                     onClicked: root.moveChapter(-1)
                 }
@@ -269,7 +269,7 @@ Item {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     visible: root.hasBook && !root.immersive
-                    text: "chevron_right"
+                    text: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "chevron_right" : "›"; font.family: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "Material Symbols Rounded" : Theme.font
                     enabled: root.isMdxlBook ? root.mdxlCurrent < root.mdxlChapters.length - 1 : epub.current < epub.count - 1
                     onClicked: root.moveChapter(1)
                 }
