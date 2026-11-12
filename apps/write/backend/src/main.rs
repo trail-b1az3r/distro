@@ -102,8 +102,8 @@ fn import_image(source: &Path, book: &Path) -> Result<String, String> {
     if !["png", "jpg", "jpeg", "webp", "gif", "svg", "avif", "bmp"].contains(&extension.as_str()) {
         return Err("unsupported image format".into());
     }
-    let original = source.file_stem().and_then(|value| value.to_str())
-        .ok_or_else(|| "invalid image filename".to_string())?;
+    let original = slug(source.file_stem().and_then(|value| value.to_str())
+        .ok_or_else(|| "invalid image filename".to_string())?);
     let images = book.join("images");
     fs::create_dir_all(&images).map_err(|e| e.to_string())?;
     let mut target = images.join(format!("{original}.{extension}"));
