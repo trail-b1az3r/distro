@@ -154,14 +154,16 @@ QStringList Files::chapters(const QString &bookDir) const
     if (rustRequest({{"op", "list"}, {"path", bookDir}}, &listed)) {
         for (const QJsonValue &entry : listed.toArray()) {
             const QString name = entry.toObject().value("name").toString();
-            if (name.endsWith(".mdxl") || name.endsWith(".md"))
+            if ((name.endsWith(".mdxl") || name.endsWith(".md"))
+                    && name.compare("00-About.mdxl", Qt::CaseInsensitive) != 0)
                 out << entry.toObject().value("path").toString();
         }
         return out;
     }
     const auto entries = QDir(bookDir).entryInfoList({"*.mdxl", "*.md"}, QDir::Files, QDir::Name);
     for (const QFileInfo &fi : entries)
-        out << fi.absoluteFilePath();
+        if (fi.fileName().compare(QStringLiteral("00-About.mdxl"), Qt::CaseInsensitive) != 0)
+            out << fi.absoluteFilePath();
     return out;
 }
 
