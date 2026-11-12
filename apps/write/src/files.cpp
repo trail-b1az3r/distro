@@ -30,23 +30,42 @@ static bool rustRequest(const QJsonObject &request, QJsonValue *result)
     if (!QFileInfo(program).isExecutable())
         return false;
 
-    QProcess process;
-    process.setProgram(program);
-    process.start();
-    if (!process.waitForStarted(1500))
+    // Keep one Rust worker alive: QML calls are serialized on the GUI thread,
+    // and JSON-lines gives us one request/reply without repeatedly spawning it.
+    static QProcess process;
+    static QByteArray buffer;
+    if (process.state() == QProcess::NotRunning) {
+        process.setProgram(program);
+        process.setProcessChannelMode(QProcess::SeparateChannels);
+        process.start();
+        if (!process.waitForStarted(1500))
+            return false;
+    }
+
+    const QByteArray payload = QJsonDocument(request).toJson(QJsonDocument::Compact) + '\n';
+    if (process.write(payload) != payload.size() || !process.waitForBytesWritten(1500))
         return false;
-    process.write(QJsonDocument(request).toJson(QJsonDocument::Compact) + '\n');
-    process.closeWriteChannel();
-    if (!process.waitForFinished(6000))
-        return false;
-    const QJsonObject response = QJsonDocument::fromJson(process.readAllStandardOutput()).object();
-    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0 || !response.value("ok").toBool())
+
+    int newline = buffer.indexOf('\n');
+    while (newline < 0) {
+        if (!process.waitForReadyRead(6000)) {
+            if (process.state() == QProcess::NotRunning)
+                buffer.clear();
+            return false;
+        }
+        buffer += process.readAllStandardOutput();
+        newline = buffer.indexOf('\n');
+    }
+
+    const QByteArray line = buffer.left(newline);
+    buffer.remove(0, newline + 1);
+    const QJsonObject response = QJsonDocument::fromJson(line).object();
+    if (!response.value("ok").toBool())
         return false;
     if (result)
         *result = response.value("result");
     return true;
 }
-
 
 Files::Files(QObject *parent) : QObject(parent)
 {
