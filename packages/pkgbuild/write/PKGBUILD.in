@@ -14,7 +14,7 @@ arch=(x86_64)
 url="@DISTRO_HOME_URL@"
 license=(GPL-3.0-or-later)
 depends=(qt6-base qt6-declarative qt6-webengine syntax-highlighting libarchive python mdxl)
-makedepends=(cmake ninja)
+makedepends=(cmake ninja rust)
 source=("@DISTRO_ID@-$pkgver.tar.gz")
 sha256sums=('@SOURCE_SHA256@')
 
