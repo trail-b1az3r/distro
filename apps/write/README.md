@@ -1,6 +1,6 @@
 # Write
 
-The distribution's writer and e-book reader (packaged as `<id>-write`): Qt Quick and C++.
+The distribution's writer and e-book reader (packaged as `<id>-write`): Qt Quick/QML frontend with a Rust application backend.
 
 * **Write**: MDXL documents with KDE syntax highlighting and a live preview rendered by MDXL itself. Choose Edit, Both, Preview, or Document layout. The formatting ribbon inserts headings, bold, italic, strike-through, links, quotes, bullet and numbered lists, checklists, inline/block code and tables. Undo/redo and autosave are included.
 * **Document view**: an A4-sized paper layout with print-oriented page dimensions. The application chrome continues to use the active Halcyon color theme.
@@ -34,3 +34,8 @@ build/write/nexora-write --self-test book.epub note.mdxl
 ```
 
 Needs Qt 6.5+ (Quick, Quick Controls, WebEngine), KF6 SyntaxHighlighting and libarchive.
+
+
+## Architecture migration
+
+The UI remains Qt Quick/QML. Application operations are being moved into the standalone Rust backend in `backend/`, built and installed beside the UI as `nexora-write-backend`. Its newline-delimited JSON protocol keeps Qt concerns out of the Rust core. The initial Rust implementation covers file reads and atomic writes, word counts, library listing, notes, books and chapters. The existing C++ implementations remain compatibility paths during migration; EPUB, DOCX, PDF, MDXL rendering, autosave and settings are not considered migrated until equivalent Rust implementations are wired in and covered by tests. No existing feature is intentionally removed during this transition.
