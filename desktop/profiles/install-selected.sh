@@ -82,6 +82,11 @@ restore_base() {
     rm -f "$HOME/.config/autostart/distro-desktop-profiles.desktop"
 }
 
+# Also restore the user's normal configuration if an upstream installer is
+# interrupted or exits early. The explicit calls below keep profiles isolated
+# between iterations; this trap is the final safety net.
+trap restore_base EXIT
+
 register_session() {
     local id="$1" name="$2" desktop_file
     desktop_file="$(mktemp)"
