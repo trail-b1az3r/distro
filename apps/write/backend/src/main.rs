@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
@@ -85,13 +86,46 @@ fn create_book(root: &Path, title: &str) -> Result<String, String> {
     Ok(dir.to_string_lossy().into_owned())
 }
 
+fn atomic_write(path: &Path, content: &[u8]) -> Result<(), String> {
+    static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
+    let parent = path.parent().ok_or_else(|| "target has no parent directory".to_string())?;
+    fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    let file_name = path.file_name().and_then(|v| v.to_str())
+        .ok_or_else(|| "invalid target filename".to_string())?;
+    let mut temporary = None;
+    for _ in 0..32 {
+        let id = NEXT_TEMP.fetch_add(1, Ordering::Relaxed);
+        let candidate = parent.join(format!(".{file_name}.{}.{}.tmp", std::process::id(), id));
+        match fs::OpenOptions::new().write(true).create_new(true).open(&candidate) {
+            Ok(mut file) => {
+                use std::io::Write as _;
+                if let Err(error) = file.write_all(content).and_then(|_| file.sync_all()) {
+                    let _ = fs::remove_file(&candidate);
+                    return Err(error.to_string());
+                }
+                temporary = Some(candidate);
+                break;
+            }
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+    let temporary = temporary.ok_or_else(|| "could not allocate a unique temporary file".to_string())?;
+    if let Err(error) = fs::rename(&temporary, path) {
+        let _ = fs::remove_file(&temporary);
+        return Err(error.to_string());
+    }
+    Ok(())
+}
+
 fn create_chapter(book: &Path, title: &str) -> Result<String, String> {
     fs::create_dir_all(book).map_err(|e| e.to_string())?;
     let count = fs::read_dir(book).map_err(|e| e.to_string())?
         .filter_map(Result::ok)
         .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "mdxl"))
         .count();
-    let path = book.join(format!("{count:02}-{}.mdxl", slug(title)));
+    let stem = format!("{count:02}-{}", slug(title));
+    let path = unique_file(book, &stem, "mdxl");
     fs::write(&path, format!("# {}\n\n", title.trim())).map_err(|e| e.to_string())?;
     Ok(path.to_string_lossy().into_owned())
 }
@@ -123,9 +157,7 @@ fn handle(request: Request) -> Result<serde_json::Value, String> {
         Request::Read { path } => fs::read_to_string(path).map(serde_json::Value::String).map_err(|e| e.to_string()),
         Request::Write { path, content } => {
             if let Some(parent) = path.parent() { fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
-            let temporary = path.with_extension("mdxl.tmp");
-            fs::write(&temporary, content).map_err(|e| e.to_string())?;
-            fs::rename(&temporary, &path).map_err(|e| e.to_string())?;
+            atomic_write(&path, content.as_bytes())?;
             Ok(serde_json::Value::Bool(true))
         }
         Request::WordCount { text } => {
