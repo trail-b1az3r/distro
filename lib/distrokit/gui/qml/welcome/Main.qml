@@ -15,6 +15,7 @@ ApplicationWindow {
 
     property string section: "home"
     property string themeMode: "system"
+    property var selectedDesktopProfiles: []
     onThemeModeChanged: Theme.mode = themeMode
     readonly property bool wide: width >= 900
     readonly property var sections: [
@@ -22,6 +23,7 @@ ApplicationWindow {
         { id: "updates", title: qsTr("Updates & drivers"), icon: "refresh" },
         { id: "ai", title: qsTr("AI"), icon: "sparkles" },
         { id: "appearance", title: qsTr("Appearance"), icon: "palette" },
+        { id: "desktops", title: qsTr("Desktop environments"), icon: "monitor" },
         { id: "apps", title: qsTr("Applications"), icon: "package" },
         { id: "privacy", title: qsTr("Privacy"), icon: "shield" },
         { id: "backup", title: qsTr("Backups"), icon: "backup" },
@@ -247,6 +249,69 @@ ApplicationWindow {
                                 spacing: 12
                                 AppButton { text: qsTr("Choose a wallpaper"); iconName: "image"; onClicked: launcher.run("hyprctl dispatch global quickshell:wallpaperSelectorToggle") }
                                 AppButton { text: qsTr("Shell settings"); iconName: "settings"; onClicked: launcher.run("bash -c 'qs -p ~/.config/quickshell/ii/settings.qml'") }
+                            }
+                        }
+
+                        // Desktop environments ---------------------------------------------
+                        ColumnLayout {
+                            visible: win.section === "desktops"
+                            Layout.fillWidth: true
+                            spacing: 16
+                            PageHeader {
+                                Layout.fillWidth: true
+                                title: qsTr("Desktop environments")
+                                subtitle: qsTr("Install multiple Hyprland configurations side by side. Halcyon remains available as your fallback session.")
+                            }
+                            Notice {
+                                Layout.fillWidth: true
+                                kind: "warning"
+                                text: qsTr("These are third-party installers. Review their prompts: they can install packages and change shared system settings.")
+                            }
+                            Repeater {
+                                model: welcome.desktopProfiles
+                                Card {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        CheckBox {
+                                            text: modelData.name
+                                            checked: win.selectedDesktopProfiles.indexOf(modelData.id) >= 0
+                                            onToggled: {
+                                                var next = win.selectedDesktopProfiles.slice()
+                                                var index = next.indexOf(modelData.id)
+                                                if (checked && index < 0) next.push(modelData.id)
+                                                else if (!checked && index >= 0) next.splice(index, 1)
+                                                win.selectedDesktopProfiles = next
+                                            }
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                        Badge { text: modelData.installed ? qsTr("Installed") : qsTr("Available"); color: modelData.installed ? Theme.success : Theme.surface2 }
+                                    }
+                                    Text {
+                                        text: modelData.description
+                                        color: Theme.muted
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                    }
+                                }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text {
+                                    text: qsTr("%1 selected").arg(win.selectedDesktopProfiles.length)
+                                    color: Theme.muted
+                                    Layout.fillWidth: true
+                                }
+                                AppButton {
+                                    kind: "primary"
+                                    text: qsTr("Save selection and install")
+                                    enabled: !welcome.busy && win.selectedDesktopProfiles.length > 0
+                                    onClicked: {
+                                        if (welcome.saveDesktopProfiles(win.selectedDesktopProfiles))
+                                            launcher.runInTerminal("bash /usr/lib/" + brandInfo.id + "/desktop-profiles/install-selected.sh")
+                                    }
+                                }
                             }
                         }
 
