@@ -170,4 +170,16 @@ mod tests {
         assert_ne!(first, second);
         fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn creates_book_with_first_chapter_and_sequential_followup() {
+        let root = std::env::temp_dir().join(format!("nexora-write-book-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let book = PathBuf::from(create_book(&root, "A Test Book").unwrap());
+        assert!(book.join("00-About.mdxl").exists());
+        assert!(book.join("01-Chapter-one.mdxl").exists());
+        let next = PathBuf::from(create_chapter(&book, "Second chapter").unwrap());
+        assert_eq!(next.file_name().unwrap(), "02-second-chapter.mdxl");
+        fs::remove_dir_all(root).unwrap();
+    }
 }
