@@ -208,4 +208,18 @@ mod tests {
         assert_eq!(next.file_name().unwrap(), "02-second-chapter.mdxl");
         fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn imports_images_into_book_assets() {
+        let root = std::env::temp_dir().join(format!("nexora-write-image-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let book = root.join("book");
+        let source = root.join("cover.png");
+        fs::create_dir_all(&root).unwrap();
+        fs::write(&source, b"not-a-real-png-but-a-copy-test").unwrap();
+        assert_eq!(import_image(&source, &book).unwrap(), "images/cover.png");
+        assert!(book.join("images/cover.png").exists());
+        assert!(import_image(&source, &book).unwrap().contains("cover-2.png"));
+        fs::remove_dir_all(root).unwrap();
+    }
 }
