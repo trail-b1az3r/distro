@@ -379,4 +379,20 @@ mod tests {
         assert_eq!(migrated[0]["title"], "Old book");
         fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn epub_positions_are_persisted_without_discarding_other_state() {
+        let root = std::env::temp_dir().join(format!("nexora-write-epub-position-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let store = root.join("state.json");
+        let book = root.join("book.epub");
+        fs::write(&book, "book").unwrap();
+        add_recent_book(&store, book.to_str().unwrap(), "Book", &[]).unwrap();
+        assert_eq!(epub_position(&store, book.to_str().unwrap(), 2).unwrap(), 2);
+        set_epub_position(&store, book.to_str().unwrap(), 7).unwrap();
+        assert_eq!(epub_position(&store, book.to_str().unwrap(), 0).unwrap(), 7);
+        assert_eq!(read_recent_books(&store, &[]).unwrap().len(), 1);
+        fs::remove_dir_all(root).unwrap();
+    }
 }
