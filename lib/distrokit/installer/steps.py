@@ -840,7 +840,7 @@ class Installation:
             # and SDDM session registration; upstream setup is never run as root.
             autostart = self.t(f"{self.home}/.config/autostart")
             autostart.mkdir(parents=True, exist_ok=True)
-            (autostart / "distro-desktop-profiles.desktop").write_text("\\n".join((
+            (autostart / "distro-desktop-profiles.desktop").write_text("\n".join((
                 "[Desktop Entry]",
                 "Type=Application",
                 "Name=Install selected desktop environments",
