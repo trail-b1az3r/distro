@@ -44,8 +44,9 @@ static bool rustRequest(const QJsonObject &request, QJsonValue *result)
     }
 
     const QByteArray payload = QJsonDocument(request).toJson(QJsonDocument::Compact) + '\n';
-    if (process.write(payload) != payload.size() || !process.waitForBytesWritten(1500))
+    if (process.write(payload) != payload.size())
         return false;
+    process.waitForBytesWritten(1500);
 
     int newline = buffer.indexOf('\n');
     while (newline < 0) {
