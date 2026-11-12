@@ -197,27 +197,41 @@ QStringList Files::books() const
 
 void Files::addRecentBook(const QString &path, const QString &title)
 {
-    QSettings s;
-    QVariantList list = s.value(QStringLiteral("recentBooks")).toList();
+    const QString store = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+        + QStringLiteral("/write-state.json");
+    QJsonValue result;
+    if (rustRequest({{"op", "add_recent_book"}, {"store", store},
+                     {"path", path}, {"title", title}}, &result)) {
+        emit recentBooksChanged();
+        return;
+    }
+
+    QSettings settings;
+    QVariantList list = settings.value(QStringLiteral("recentBooks")).toList();
     for (int i = list.size() - 1; i >= 0; --i)
         if (list[i].toMap().value("path").toString() == path)
             list.removeAt(i);
     list.prepend(QVariantMap{{"path", path}, {"title", title}});
     while (list.size() > 12)
         list.removeLast();
-    s.setValue(QStringLiteral("recentBooks"), list);
+    settings.setValue(QStringLiteral("recentBooks"), list);
     emit recentBooksChanged();
 }
 
 QVariantList Files::recentBooks() const
 {
+    const QString store = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+        + QStringLiteral("/write-state.json");
+    QJsonValue result;
+    if (rustRequest({{"op", "recent_books"}, {"store", store}}, &result))
+        return result.toArray().toVariantList();
+
     QVariantList out;
-    for (const QVariant &v : QSettings().value(QStringLiteral("recentBooks")).toList())
-        if (QFileInfo::exists(v.toMap().value("path").toString()))
-            out << v;
+    for (const QVariant &value : QSettings().value(QStringLiteral("recentBooks")).toList())
+        if (QFileInfo::exists(value.toMap().value("path").toString()))
+            out << value;
     return out;
 }
-
 
 static QString escapeXml(QString s)
 {
