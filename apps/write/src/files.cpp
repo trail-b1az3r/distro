@@ -380,6 +380,29 @@ bool Files::exportDocx(const QString &path, const QString &text) const
     return ok;
 }
 
+QString Files::importImage(const QString &source, const QString &documentDir) const
+{
+    QJsonValue result;
+    if (rustRequest({{"op", "import_image"}, {"source", source}, {"book", documentDir}}, &result))
+        return result.toString();
+
+    const QFileInfo input(source);
+    const QString extension = input.suffix().toLower();
+    if (!QStringList{"png", "jpg", "jpeg", "webp", "gif", "svg", "avif", "bmp"}.contains(extension))
+        return {};
+    const QString images = documentDir + QStringLiteral("/images");
+    QDir().mkpath(images);
+    QString name = input.completeBaseName() + u'.' + extension;
+    QString target = images + u'/' + name;
+    for (int index = 2; QFileInfo::exists(target); ++index) {
+        name = input.completeBaseName() + QStringLiteral("-%1.").arg(index) + extension;
+        target = images + u'/' + name;
+    }
+    if (!QFile::copy(source, target))
+        return {};
+    return QStringLiteral("images/") + name;
+}
+
 bool Files::betterbirdInstalled() const
 {
     return !QStandardPaths::findExecutable(QStringLiteral("betterbird")).isEmpty();
