@@ -10,7 +10,7 @@ The distribution's writer and e-book reader (packaged as `<id>-write`): Qt Quick
 * **Notes**: `~/Documents/Notes`, newest first, searchable. Ctrl+N starts one.
 * **Books**: a book is a folder of MDXL chapters in `~/Documents/Books` (`01-…`, `02-…`); **Reading** opens EPUB books a chapter at a time with their table of contents, remembers where you were, and sizes the text.
 * **Theme and interface**: translucent, rounded Material 3 Expressive surfaces inspired by Loaf's visual language; desktop Halcyon colours (`~/.local/state/quickshell/user/generated/colors.json`, followed live), dark copper without one, Google Sans Flex and JetBrains Mono.
-* **Book tiles and reading**: tile-based note/book libraries, a collapsible contents sidebar, immersive full-page reading, keyboard navigation and edge-drag chapter turns. Both EPUBs and native MDXL book folders can be read.
+* **Book tiles and reading**: tile-based note/book libraries, a collapsible contents sidebar, immersive full-page reading, keyboard navigation and edge-drag page turns (with chapter transitions at section boundaries). Both EPUBs and native MDXL book folders can be read.
 * **MDXL books and images**: MDXL books render through the MDXL renderer with their book folder as the asset base URL. Standard Markdown image syntax (for example `![Cover](images/cover.png)`) and MDXL true-color text (for example `/col//Signal /col#B7F77A//`) are rendered as formatted content. Keep referenced images inside the book folder so relative paths resolve.
 
 ## Keyboard shortcuts
