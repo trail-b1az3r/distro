@@ -82,6 +82,11 @@ restore_base() {
     rm -f "$HOME/.config/autostart/distro-desktop-profiles.desktop"
 }
 
+# Also restore the user's normal configuration if an upstream installer is
+# interrupted or exits early. The explicit calls below keep profiles isolated
+# between iterations; this trap is the final safety net.
+trap restore_base EXIT
+
 register_session() {
     local id="$1" name="$2" desktop_file
     desktop_file="$(mktemp)"
@@ -103,9 +108,11 @@ install_packages() {
     [[ -f "$list" ]] || { echo "Missing package list: $list" >&2; return 1; }
     local -a packages=()
     while IFS= read -r line || [[ -n "$line" ]]; do
+        # Strip comments, then split on shell whitespace (spaces and tabs).
         line="${line%%#*}"
-        line="${line//[$'\\t\\r']/ }"
-        [[ -z "${line// /}" ]] || packages+=("$line")
+        [[ -z "${line//[[:space:]]/}" ]] && continue
+        read -r -a entries <<< "$line"
+        packages+=("${entries[@]}")
     done < "$list"
     if (( ${#packages[@]} )); then
         sudo pacman -S --needed --noconfirm -- "${packages[@]}"
