@@ -1,0 +1,170 @@
+//! JSON-lines backend for Nexora Write.
+//!
+//! The Qt Quick process owns presentation. Application operations are handled
+//! here in Rust; each input line is one request and each output line one reply.
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::io::{self, BufRead, Write};
+use std::path::{Path, PathBuf};
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case")]
+enum Request {
+    Read { path: PathBuf },
+    Write { path: PathBuf, content: String },
+    WordCount { text: String },
+    List { path: PathBuf },
+    CreateNote { root: PathBuf, title: String },
+    CreateBook { root: PathBuf, title: String },
+    CreateChapter { book: PathBuf, title: String },
+}
+
+#[derive(Debug, Serialize)]
+struct Reply<T: Serialize> {
+    ok: bool,
+    result: Option<T>,
+    error: Option<String>,
+}
+
+fn reply<T: Serialize>(result: Result<T, String>) -> String {
+    let value = match result {
+        Ok(value) => Reply { ok: true, result: Some(value), error: None },
+        Err(error) => Reply::<serde_json::Value> { ok: false, result: None, error: Some(error) },
+    };
+    serde_json::to_string(&value).unwrap_or_else(|_| r#"{"ok":false,"result":null,"error":"serialization failure"}"#.into())
+}
+
+fn slug(input: &str) -> String {
+    let mut out = String::new();
+    let mut separator = false;
+    for ch in input.trim().chars() {
+        if ch.is_alphanumeric() {
+            if separator && !out.is_empty() { out.push('-'); }
+            for lower in ch.to_lowercase() { out.push(lower); }
+            separator = false;
+        } else {
+            separator = true;
+        }
+    }
+    if out.is_empty() { "untitled".into() } else { out }
+}
+
+fn unique_file(root: &Path, stem: &str, extension: &str) -> PathBuf {
+    let mut candidate = root.join(format!("{stem}.{extension}"));
+    let mut index = 2;
+    while candidate.exists() {
+        candidate = root.join(format!("{stem}-{index}.{extension}"));
+        index += 1;
+    }
+    candidate
+}
+
+fn create_note(root: &Path, title: &str) -> Result<String, String> {
+    fs::create_dir_all(root).map_err(|e| e.to_string())?;
+    let path = unique_file(root, &slug(title), "mdxl");
+    fs::write(&path, format!("# {}\n\n", title.trim())).map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
+fn create_book(root: &Path, title: &str) -> Result<String, String> {
+    fs::create_dir_all(root).map_err(|e| e.to_string())?;
+    let mut dir = root.join(slug(title));
+    let mut index = 2;
+    while dir.exists() {
+        dir = root.join(format!("{}-{index}", slug(title)));
+        index += 1;
+    }
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    fs::write(dir.join("01-introduction.mdxl"), format!("# {}\n\n", title.trim()))
+        .map_err(|e| e.to_string())?;
+    Ok(dir.to_string_lossy().into_owned())
+}
+
+fn create_chapter(book: &Path, title: &str) -> Result<String, String> {
+    fs::create_dir_all(book).map_err(|e| e.to_string())?;
+    let count = fs::read_dir(book).map_err(|e| e.to_string())?
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "mdxl"))
+        .count() + 1;
+    let path = book.join(format!("{count:02}-{}.mdxl", slug(title)));
+    fs::write(&path, format!("# {}\n\n", title.trim())).map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
+fn handle(request: Request) -> Result<serde_json::Value, String> {
+    match request {
+        Request::Read { path } => fs::read_to_string(path).map(serde_json::Value::String).map_err(|e| e.to_string()),
+        Request::Write { path, content } => {
+            if let Some(parent) = path.parent() { fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
+            let temporary = path.with_extension("mdxl.tmp");
+            fs::write(&temporary, content).map_err(|e| e.to_string())?;
+            fs::rename(&temporary, &path).map_err(|e| e.to_string())?;
+            Ok(serde_json::Value::Bool(true))
+        }
+        Request::WordCount { text } => {
+            let count = text.split_whitespace().filter(|word| word.chars().any(char::is_alphanumeric)).count();
+            Ok(serde_json::json!(count))
+        }
+        Request::List { path } => {
+            let mut entries = Vec::new();
+            for entry in fs::read_dir(path).map_err(|e| e.to_string())? {
+                let entry = entry.map_err(|e| e.to_string())?;
+                let metadata = entry.metadata().map_err(|e| e.to_string())?;
+                entries.push(serde_json::json!({
+                    "path": entry.path().to_string_lossy(),
+                    "name": entry.file_name().to_string_lossy(),
+                    "directory": metadata.is_dir(),
+                    "modified": metadata.modified().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs())
+                }));
+            }
+            entries.sort_by(|a, b| a["name"].as_str().cmp(&b["name"].as_str()));
+            Ok(serde_json::Value::Array(entries))
+        }
+        Request::CreateNote { root, title } => create_note(&root, &title).map(serde_json::Value::String),
+        Request::CreateBook { root, title } => create_book(&root, &title).map(serde_json::Value::String),
+        Request::CreateChapter { book, title } => create_chapter(&book, &title).map(serde_json::Value::String),
+    }
+}
+
+fn main() {
+    let stdin = io::stdin();
+    let mut stdout = io::BufWriter::new(io::stdout().lock());
+    for line in stdin.lock().lines() {
+        let response = match line {
+            Ok(line) => match serde_json::from_str::<Request>(&line) {
+                Ok(request) => reply(handle(request)),
+                Err(error) => reply::<serde_json::Value>(Err(format!("invalid request: {error}"))),
+            },
+            Err(error) => reply::<serde_json::Value>(Err(error.to_string())),
+        };
+        if writeln!(stdout, "{response}").is_err() { break; }
+        if stdout.flush().is_err() { break; }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn slug_is_safe_and_stable() {
+        assert_eq!(slug("My First Book!"), "my-first-book");
+        assert_eq!(slug("   "), "untitled");
+    }
+
+    #[test]
+    fn word_count_ignores_whitespace_only_tokens() {
+        let request = Request::WordCount { text: "hello, world!  \n  ".into() };
+        assert_eq!(handle(request).unwrap(), serde_json::json!(2));
+    }
+
+    #[test]
+    fn creates_unique_notes() {
+        let root = std::env::temp_dir().join(format!("nexora-write-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let first = create_note(&root, "Draft").unwrap();
+        let second = create_note(&root, "Draft").unwrap();
+        assert_ne!(first, second);
+        fs::remove_dir_all(root).unwrap();
+    }
+}
