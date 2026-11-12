@@ -75,6 +75,7 @@ fn create_book(root: &Path, title: &str) -> Result<String, String> {
         index += 1;
     }
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    fs::create_dir_all(dir.join("images")).map_err(|e| e.to_string())?;
     fs::write(dir.join("00-About.mdxl"),
         format!("# {}\n\n-# A book written in MDXL. Each chapter is a file in this folder.\n", title.trim()))
         .map_err(|e| e.to_string())?;
@@ -178,6 +179,7 @@ mod tests {
         let book = PathBuf::from(create_book(&root, "A Test Book").unwrap());
         assert!(book.join("00-About.mdxl").exists());
         assert!(book.join("01-Chapter-one.mdxl").exists());
+        assert!(book.join("images").is_dir());
         let next = PathBuf::from(create_chapter(&book, "Second chapter").unwrap());
         assert_eq!(next.file_name().unwrap(), "02-second-chapter.mdxl");
         fs::remove_dir_all(root).unwrap();
