@@ -64,9 +64,15 @@ read -r -p "Continue? [y/N] " answer
 [[ "$answer" =~ ^[Yy]$ ]] || { echo "Cancelled. Run this helper again when ready."; exit 0; }
 
 BASE="$CONFIGS/.base"
-if [[ ! -d "$BASE" ]]; then
+ACTIVE_PROFILE="$STATE/active-profile"
+# Refresh the preserved default configuration when launched from the normal
+# desktop. If launched inside a managed profile session, retain the saved base.
+if [[ ! -f "$ACTIVE_PROFILE" ]]; then
+    rm -rf "$BASE"
     mkdir -p "$BASE"
     [[ ! -d "$HOME/.config" ]] || cp -a "$HOME/.config/." "$BASE/"
+else
+    mkdir -p "$BASE"
 fi
 
 restore_base() {
