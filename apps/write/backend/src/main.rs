@@ -75,7 +75,10 @@ fn create_book(root: &Path, title: &str) -> Result<String, String> {
         index += 1;
     }
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    fs::write(dir.join("01-introduction.mdxl"), format!("# {}\n\n", title.trim()))
+    fs::write(dir.join("00-About.mdxl"),
+        format!("# {}\n\n-# A book written in MDXL. Each chapter is a file in this folder.\n", title.trim()))
+        .map_err(|e| e.to_string())?;
+    fs::write(dir.join("01-Chapter-one.mdxl"), "## Chapter one\n\n")
         .map_err(|e| e.to_string())?;
     Ok(dir.to_string_lossy().into_owned())
 }
