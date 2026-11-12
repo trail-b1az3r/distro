@@ -311,4 +311,24 @@ mod tests {
         assert_eq!(created.file_name().unwrap(), "02-second-chapter-2.mdxl");
         fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn recent_books_are_deduplicated_and_limited_to_twelve() {
+        let root = std::env::temp_dir().join(format!("nexora-write-recents-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let store = root.join("state.json");
+        for index in 0..14 {
+            let path = root.join(format!("book-{index}.epub"));
+            fs::write(&path, "book").unwrap();
+            add_recent_book(&store, path.to_str().unwrap(), &format!("Book {index}")).unwrap();
+        }
+        let oldest = root.join("book-13.epub");
+        add_recent_book(&store, oldest.to_str().unwrap(), "Book 13 renamed").unwrap();
+        let recent = read_recent_books(&store).unwrap();
+        assert_eq!(recent.len(), 12);
+        assert_eq!(recent[0]["title"], "Book 13 renamed");
+        assert_eq!(recent.iter().filter(|item| item["path"] == oldest.to_str().unwrap()).count(), 1);
+        fs::remove_dir_all(root).unwrap();
+    }
 }
