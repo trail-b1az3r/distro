@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-CONFIG=/etc/distro-desktop-profiles.conf
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/nexora/desktop-profiles.conf"
+[[ -f "$CONFIG" ]] || CONFIG=/etc/distro-desktop-profiles.conf
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/distro-desktop-profiles"
 LOG="$STATE/install.log"
 WORK="$HOME/.local/share/distro-desktop-profiles"
