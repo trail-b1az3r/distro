@@ -28,7 +28,7 @@ build() {
 }
 
 check() {
-  cargo test --manifest-path backend/Cargo.toml
+  cargo test --manifest-path "@DISTRO_ID@-$pkgver/apps/write/backend/Cargo.toml"
   # The window, its QML and the EPUB reader load (headless).
   QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 \
     QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu" HOME="$srcdir/home" \
