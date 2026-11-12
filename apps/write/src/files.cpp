@@ -26,7 +26,7 @@ static bool rustRequest(const QJsonObject &request, QJsonValue *result)
 {
     QString program = qEnvironmentVariable("NEXORA_WRITE_BACKEND");
     if (program.isEmpty())
-        program = QStringLiteral(HELPER_DIR "/nexora-write-backend");
+        program = QString::fromUtf8(HELPER_DIR) + QStringLiteral("/nexora-write-backend");
     if (!QFileInfo(program).isExecutable())
         return false;
 
@@ -47,10 +47,6 @@ static bool rustRequest(const QJsonObject &request, QJsonValue *result)
     return true;
 }
 
-static QJsonObject rustOp(const QString &op, const QString &path)
-{
-    return {{ "op", op }, { "path", path }};
-}
 
 Files::Files(QObject *parent) : QObject(parent)
 {
