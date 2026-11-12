@@ -1,4 +1,5 @@
 #include "files.h"
+#include "rustbackend.h"
 
 #include <QDir>
 #include <QFile>
@@ -7,8 +8,6 @@
 #include <QSaveFile>
 #include <QSettings>
 #include <QStandardPaths>
-#include <QProcess>
-#include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <algorithm>
@@ -22,52 +21,6 @@ static QString documents()
     return docs.isEmpty() ? QDir::homePath() + QStringLiteral("/Documents") : docs;
 }
 
-static bool rustRequest(const QJsonObject &request, QJsonValue *result)
-{
-    QString program = qEnvironmentVariable("NEXORA_WRITE_BACKEND");
-    if (program.isEmpty())
-        program = QString::fromUtf8(HELPER_DIR) + QStringLiteral("/nexora-write-backend");
-    if (!QFileInfo(program).isExecutable())
-        return false;
-
-    // Keep one Rust worker alive: QML calls are serialized on the GUI thread,
-    // and JSON-lines gives us one request/reply without repeatedly spawning it.
-    static QProcess process;
-    static QByteArray buffer;
-    if (process.state() == QProcess::NotRunning) {
-        buffer.clear();
-        process.setProgram(program);
-        process.setProcessChannelMode(QProcess::SeparateChannels);
-        process.start();
-        if (!process.waitForStarted(1500))
-            return false;
-    }
-
-    const QByteArray payload = QJsonDocument(request).toJson(QJsonDocument::Compact) + '\n';
-    if (process.write(payload) != payload.size())
-        return false;
-    process.waitForBytesWritten(1500);
-
-    int newline = buffer.indexOf('\n');
-    while (newline < 0) {
-        if (!process.waitForReadyRead(6000)) {
-            if (process.state() == QProcess::NotRunning)
-                buffer.clear();
-            return false;
-        }
-        buffer += process.readAllStandardOutput();
-        newline = buffer.indexOf('\n');
-    }
-
-    const QByteArray line = buffer.left(newline);
-    buffer.remove(0, newline + 1);
-    const QJsonObject response = QJsonDocument::fromJson(line).object();
-    if (!response.value("ok").toBool())
-        return false;
-    if (result)
-        *result = response.value("result");
-    return true;
-}
 
 Files::Files(QObject *parent) : QObject(parent)
 {
@@ -81,7 +34,7 @@ QString Files::booksDir() const { return documents() + QStringLiteral("/Books");
 QString Files::read(const QString &path) const
 {
     QJsonValue result;
-    if (rustRequest({{"op", "read"}, {"path", path}}, &result))
+    if (RustBackend::request({{"op", "read"}, {"path", path}}, &result))
         return result.toString();
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly))
