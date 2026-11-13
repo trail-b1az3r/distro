@@ -807,16 +807,10 @@ class Installation:
         if not source.is_file():
             self.warnings.append("External desktop setup helper is missing; profiles were not scheduled.")
             return
-        target = self.t("/usr/local/bin/distro-install-desktop-profiles")
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
-        target.chmod(0o755)
+        # The desktop package installs both commands in /usr/bin (distro-install-desktop-profiles and
+        # distro-desktop-session); a login entry must point at one SDDM can execute.
         session_source = self.t(f"/usr/share/{self.branding.id}/desktop/profiles/run-session.sh")
         if session_source.is_file():
-            session_target = self.t("/usr/local/bin/distro-desktop-session")
-            session_target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(session_source, session_target)
-            session_target.chmod(0o755)
             session_dir = self.t("/usr/share/wayland-sessions")
             session_dir.mkdir(parents=True, exist_ok=True)
             labels = {"ml4w": "ML4W", "sekaipop": "SekaiPop", "hyde": "HyDE"}
@@ -825,11 +819,12 @@ class Installation:
                     continue
                 entry = "\n".join((
                     "[Desktop Entry]",
-                    "Name=" + labels[profile] + " (isolated profile)",
+                    "Name=" + labels[profile],
                     "Comment=Start Hyprland with the saved " + labels[profile] + " configuration",
-                    "Exec=/usr/local/bin/distro-desktop-session " + profile,
+                    "Exec=/usr/bin/distro-desktop-session " + profile,
                     "TryExec=Hyprland",
                     "DesktopNames=Hyprland",
+                    "X-Nexora-Profile=" + profile,
                     "Type=Application",
                     "",
                 ))
@@ -845,7 +840,7 @@ class Installation:
                 "Type=Application",
                 "Name=Install selected desktop environments",
                 "Comment=Install the additional desktops selected in the ISO installer",
-                "Exec=/usr/local/bin/distro-install-desktop-profiles",
+                "Exec=/usr/bin/distro-install-desktop-profiles",
                 "Terminal=true",
                 "X-GNOME-Autostart-enabled=true",
                 "",

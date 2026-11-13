@@ -36,7 +36,11 @@ systemctl --user import-environment PATH HALCYON_FASTFETCH_LOGO_OVERRIDE WAYLAND
 
 # External desktop profiles: run the upstream setup in a visible terminal once.
 profile_state="${XDG_STATE_HOME:-$HOME/.local/state}/distro-desktop-profiles"
-if [[ -x /usr/local/bin/distro-install-desktop-profiles && ! -e "$profile_state/completed" ]]; then
+# (A selection made in Welcome, or in the installer, that has not finished installing.)
+profile_installer="$(command -v distro-install-desktop-profiles || true)"
+profile_selection="${XDG_CONFIG_HOME:-$HOME/.config}/@DISTRO_ID@/desktop-profiles.conf"
+if [[ -n "$profile_installer" && ! -e "$profile_state/completed" \
+      && ( -f "$profile_selection" || -f /etc/distro-desktop-profiles.conf ) ]]; then
     (
         for _ in {1..180}; do
             [[ -e "$state/firstboot-done" ]] && break
@@ -44,7 +48,18 @@ if [[ -x /usr/local/bin/distro-install-desktop-profiles && ! -e "$profile_state/
         done
         [[ -e "$state/firstboot-done" ]] || exit 0
         sleep 3
-        alacritty -e /usr/local/bin/distro-install-desktop-profiles
+        alacritty -e "$profile_installer"
+    ) &
+fi
+# Halcyon's preview for the login screen's desktop switcher: a small screenshot shortly after login, before apps are
+# open (the extra desktops save theirs from distro-desktop-session). Off with ~/.config/@DISTRO_ID@/no-session-preview.
+previews=/var/lib/@DISTRO_ID@/session-previews
+if [[ -d "$previews" && -w "$previews" && ! -e "${XDG_CONFIG_HOME:-$HOME/.config}/@DISTRO_ID@/no-session-preview" ]] \
+        && command -v grim >/dev/null; then
+    (
+        sleep 10
+        grim -s 0.5 -t png "$previews/.hyprland.png.tmp" 2>/dev/null \
+            && mv -f "$previews/.hyprland.png.tmp" "$previews/hyprland.png" && chmod 0644 "$previews/hyprland.png"
     ) &
 fi
 # Setup tasks left over from an offline installation (no-op when none).

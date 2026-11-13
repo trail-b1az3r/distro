@@ -7,3 +7,7 @@ fg=@BRAND_FG@
 muted=@BRAND_MUTED@
 danger=@BRAND_DANGER@
 distroName=@DISTRO_PRETTY_NAME@
+# Each desktop's preview (<session file name>.png, saved at login) and the system information panel's data
+# (written before SDDM starts by @DISTRO_ID@-sddm-info, from fastfetch with the distribution's config).
+previewDir=/var/lib/@DISTRO_ID@/session-previews
+infoFile=/var/lib/@DISTRO_ID@/sddm/SystemInfo.qml

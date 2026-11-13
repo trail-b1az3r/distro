@@ -63,3 +63,28 @@ def test_external_desktop_setup_script_has_valid_shell_syntax():
     assert 'lock="$state/session.lock"' in wrapper_text
     assert 'mv "$staging" "$configs/$previous"' in wrapper_text
     assert 'rm -f "$active" "$lock"' in wrapper_text
+
+
+def test_profile_sessions_can_start_from_sddm(tmp_path):
+    # The login entries run distro-desktop-session, so the scripts must be executable in the package (git keeps the
+    # mode), both commands are in /usr/bin, and the entries say Hyprland, which the portals are configured for.
+    root = Path(__file__).resolve().parents[2]
+    modes = subprocess.run(["git", "ls-files", "-s", "desktop/profiles"], cwd=root, capture_output=True, text=True).stdout
+    for name in ("install-selected.sh", "run-session.sh"):
+        assert any(line.startswith("100755") and line.endswith(name) for line in modes.splitlines()), modes
+    from distrokit.branding import load as load_branding
+    from distrokit.build import stage
+    b = load_branding()
+    stage.Stage(tmp_path, b).run("desktop")
+    for command, script in (("distro-desktop-session", "run-session.sh"),
+                            ("distro-install-desktop-profiles", "install-selected.sh")):
+        link = tmp_path / "usr/bin" / command
+        assert link.is_symlink() and link.resolve() == (tmp_path / f"usr/share/{b.id}/desktop/profiles/{script}").resolve()
+        assert link.resolve().stat().st_mode & 0o111
+    assert "1777" in (tmp_path / f"usr/lib/tmpfiles.d/{b.id}-session-previews.conf").read_text()
+    installer = (root / "desktop/profiles/install-selected.sh").read_text()
+    assert "DesktopNames=Hyprland" in installer and "/usr/bin/distro-desktop-session" in installer
+    session = (root / "desktop/profiles/run-session.sh").read_text()
+    assert "start-hyprland -- \"$@\"" in session and "session-previews" in session
+    steps = (root / "lib/distrokit/installer/steps.py").read_text()
+    assert "/usr/local/bin/distro" not in steps

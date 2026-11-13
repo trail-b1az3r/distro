@@ -27,8 +27,16 @@ if [[ -z "$DATA_ROOT" || ! -d "$DATA_ROOT/packages/lists" ]]; then
 fi
 LISTS="$DATA_ROOT/packages/lists"
 SESSION_DIR="/usr/share/wayland-sessions"
-SESSION_RUNNER="/usr/local/bin/distro-desktop-session"
-[[ -x "$SESSION_RUNNER" ]] || SESSION_RUNNER="$SCRIPT_DIR/run-session.sh"
+# The packaged session wrapper (nexora-desktop installs it in /usr/bin); an ISO-era copy in /usr/local/bin, or the
+# script next to this one, otherwise. The login entry must point at something SDDM can execute.
+SESSION_RUNNER=""
+for candidate in /usr/bin/distro-desktop-session /usr/local/bin/distro-desktop-session "$SCRIPT_DIR/run-session.sh"; do
+    if [[ -x "$candidate" ]]; then SESSION_RUNNER="$candidate"; break; fi
+done
+if [[ -z "$SESSION_RUNNER" ]]; then
+    echo "The desktop session wrapper (distro-desktop-session) is missing; reinstall the desktop package." >&2
+    exit 1
+fi
 
 mkdir -p "$STATE" "$WORK" "$CONFIGS"
 touch "$LOG"
@@ -97,7 +105,8 @@ Comment=$name desktop profile for Nexora
 Exec=$SESSION_RUNNER $id
 TryExec=Hyprland
 Type=Application
-DesktopNames=$name
+DesktopNames=Hyprland
+X-Nexora-Profile=$id
 EOF
     sudo install -D -m 0644 "$desktop_file" "$SESSION_DIR/nexora-$id.desktop"
     rm -f "$desktop_file"

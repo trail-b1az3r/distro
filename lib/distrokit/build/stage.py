@@ -150,6 +150,26 @@ class Stage:
             f"Exec = {lib}/bin/{b.id}-update-boot\n"
         ))
 
+        # The login screen's system information panel (branding/sddm/Main.qml): fastfetch with the distribution's
+        # config, written for the greeter before SDDM starts. A drop-in on sddm.service pulls it in, so it needs no
+        # enabling; it does nothing where SDDM is not used.
+        self.python_entry(f"{lib}/bin/{b.id}-sddm-info", "distrokit.sddm_info",
+                          comment="System information for the login screen")
+        self.text(f"/usr/lib/systemd/system/{b.id}-sddm-info.service", (
+            "[Unit]\n"
+            f"Description={b.pretty_name} login screen: system information (fastfetch)\n"
+            "After=local-fs.target systemd-tmpfiles-setup.service\n"
+            "Before=display-manager.service sddm.service\n\n"
+            "[Service]\nType=oneshot\n"
+            f"ExecStart={lib}/bin/{b.id}-sddm-info\n"
+            "TimeoutStartSec=20\n"
+        ))
+        self.text(f"/usr/lib/systemd/system/sddm.service.d/{b.id}-sddm-info.conf", (
+            "[Unit]\n"
+            f"Wants={b.id}-sddm-info.service\n"
+            f"After={b.id}-sddm-info.service\n"
+        ))
+
         # Marvell mwifiex Wi-Fi (Surface Pro 3-6, Surface Book and Laptop 1-2...)
         # drops the connection and stalls with power saving on; only these cards.
         self.text(f"/usr/lib/NetworkManager/conf.d/50-{b.id}-mwifiex.conf", (
@@ -276,6 +296,14 @@ class Stage:
         self.text(f"{share}/desktop/VERSION", desktop_version(self.src) + "\n")
         if (self.src / "desktop" / "profiles").is_dir():
             self.tree("desktop/profiles", f"{share}/desktop/profiles")
+            # Extra Hyprland desktops (ML4W, HyDE, SekaiPop), installed from Welcome or the installer: the installer
+            # helper, and the wrapper their login entries start (SDDM must be able to execute it).
+            self.link("/usr/bin/distro-install-desktop-profiles", f"../share/{b.id}/desktop/profiles/install-selected.sh")
+            self.link("/usr/bin/distro-desktop-session", f"../share/{b.id}/desktop/profiles/run-session.sh")
+        # Each desktop's preview for the login screen's desktop switcher, saved by the user's sessions (sticky and
+        # world-writable, like /tmp: each user replaces only their own files).
+        self.text(f"/usr/lib/tmpfiles.d/{b.id}-session-previews.conf",
+                  f"d /var/lib/{b.id}/session-previews 1777 root root -\n")
         self.template("desktop/overlay/fish/vendor.fish.in", f"/usr/share/fish/vendor_conf.d/{b.id}.fish")
         self.template("desktop/overlay/profile.d/profile.sh.in", f"/etc/profile.d/{b.id}.sh")
         self.template("desktop/overlay/bin/session-start.in", f"{lib}/bin/{b.id}-session-start", 0o755)

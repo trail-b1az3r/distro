@@ -1,6 +1,14 @@
 // Login screen theme for SDDM (Qt 6 greeter, theme API 2.0).
-// Colours and the distribution name come from theme.conf, which the branding
-// generator writes from distro.conf.
+//
+//   left    the desktop switcher: each installed desktop (Halcyon, and ML4W, HyDE, SekaiPop when installed) as a
+//           preview; scroll the mouse wheel over it (or Up/Down in the password field) to change desktop
+//   middle  the clock and the login card
+//   right   the system, as fastfetch shows it with the distribution's own config
+//
+// Colours, the distribution's name and the two data paths come from theme.conf, which the branding generator writes
+// from distro.conf. A desktop's preview is a screenshot its own session saves shortly after login
+// (<previewDir>/<session file name>.png); until there is one, a card is drawn. The system information is written
+// before SDDM starts (<infoFile>, a small QML file); without it the panel shows the distribution's name.
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
@@ -12,22 +20,42 @@ Rectangle {
     color: "#0B0E1A"
 
     readonly property color accent: config.accent || "#7C6CFF"
+    readonly property color accent2: config.accent2 || "#4FD1C5"
     readonly property color fg: config.fg || "#E8ECF8"
     readonly property color muted: config.muted || "#8A93B2"
     readonly property color surface: config.surface || "#151A2C"
     readonly property color danger: config.danger || "#FF5C7A"
+    readonly property string mono: "JetBrains Mono"
     property int sessionIndex: sessionModel.lastIndex >= 0 ? sessionModel.lastIndex : 0
     property string errorText: ""
 
+    // hyprland.desktop (and its uwsm twin) starts Halcyon here: say so.
+    function desktopName(name, file) {
+        const stem = (file || "").split("/").pop().replace(/\.desktop$/, "")
+        return stem === "hyprland" || stem === "hyprland-uwsm" ? (config.defaultDesktop || "Halcyon") : (name || "")
+    }
+    function glass(alpha) { return Qt.rgba(root.surface.r, root.surface.g, root.surface.b, alpha) }
+
+    function doLogin() {
+        errorText = ""
+        sddm.login(userBox.visible && userBox.currentValue ? userBox.currentValue : userField.text, password.text,
+                   root.sessionIndex)
+    }
+    function stepSession(delta) {
+        const n = switcher.count
+        if (n > 0)
+            root.sessionIndex = (root.sessionIndex + delta + n) % n
+    }
+
     component Field: TextField {
-        implicitHeight: 44
+        implicitHeight: 46
         color: root.fg
         placeholderTextColor: root.muted
         selectionColor: root.accent
         font.pixelSize: 15
-        leftPadding: 14
+        leftPadding: 16
         background: Rectangle {
-            radius: 12
+            radius: 14
             color: Qt.rgba(1, 1, 1, 0.07)
             border.width: parent.activeFocus ? 2 : 1
             border.color: parent.activeFocus ? root.accent : Qt.rgba(1, 1, 1, 0.16)
@@ -36,10 +64,10 @@ Rectangle {
 
     component Choice: ComboBox {
         id: choice
-        implicitHeight: 44
+        implicitHeight: 46
         font.pixelSize: 15
         contentItem: Text {
-            leftPadding: 14
+            leftPadding: 16
             text: choice.displayText
             color: root.fg
             font: choice.font
@@ -49,12 +77,12 @@ Rectangle {
         indicator: Text {
             x: choice.width - width - 14
             anchors.verticalCenter: parent.verticalCenter
-            text: "\u25BE"
+            text: "▾"
             color: root.muted
             font.pixelSize: 14
         }
         background: Rectangle {
-            radius: 12
+            radius: 14
             color: Qt.rgba(1, 1, 1, 0.07)
             border.width: choice.activeFocus ? 2 : 1
             border.color: choice.activeFocus ? root.accent : Qt.rgba(1, 1, 1, 0.16)
@@ -75,9 +103,81 @@ Rectangle {
         popup.background: Rectangle { color: root.surface; radius: 12; border.color: Qt.rgba(1, 1, 1, 0.16) }
     }
 
-    function doLogin() {
-        errorText = ""
-        sddm.login(userBox.currentText !== "" ? userBox.currentValue : userField.text, password.text, root.sessionIndex)
+    // A panel of frosted glass.
+    component Panel: Rectangle {
+        radius: 28
+        color: root.glass(0.72)
+        border.color: Qt.rgba(1, 1, 1, 0.10)
+    }
+
+    // A desktop's preview: its saved screenshot, or a drawn desktop until it has one.
+    component Preview: Item {
+        id: preview
+        property string name: ""
+        property string file: ""
+        readonly property string title: root.desktopName(name, file)
+        readonly property string stem: {
+            const base = (file || "").split("/").pop()
+            return base.replace(/\.desktop$/, "") || name.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+        }
+        readonly property var sources: [
+            config.previewDir ? "file://" + config.previewDir + "/" + stem + ".png" : "",
+            "previews/" + stem + ".png"
+        ].filter(s => s !== "")
+        property int attempt: 0
+        onStemChanged: attempt = 0
+        readonly property bool hasShot: shot.status === Image.Ready
+
+        // The drawn desktop: a wallpaper of the theme's colours, a bar, two windows and the desktop's initial.
+        Rectangle {
+            id: drawn
+            anchors.fill: parent
+            clip: true
+            visible: !preview.hasShot
+            gradient: Gradient {
+                orientation: Gradient.Vertical
+                GradientStop { position: 0; color: Qt.darker(root.accent, 1.6) }
+                GradientStop { position: 1; color: Qt.darker(root.accent2, 2.2) }
+            }
+            Rectangle { x: 0; y: 0; width: parent.width; height: parent.height * 0.06; color: Qt.rgba(0, 0, 0, 0.35) }
+            Rectangle {
+                x: parent.width * 0.08; y: parent.height * 0.16; width: parent.width * 0.5; height: parent.height * 0.62
+                radius: 10; color: Qt.rgba(1, 1, 1, 0.10); border.color: Qt.rgba(1, 1, 1, 0.18)
+            }
+            Rectangle {
+                x: parent.width * 0.62; y: parent.height * 0.16; width: parent.width * 0.3; height: parent.height * 0.3
+                radius: 10; color: Qt.rgba(1, 1, 1, 0.08); border.color: Qt.rgba(1, 1, 1, 0.16)
+            }
+            Text {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: parent.height * 0.06
+                text: (preview.title || "?").charAt(0)
+                color: Qt.rgba(1, 1, 1, 0.85)
+                font.pixelSize: parent.height * 0.34
+                font.weight: Font.Bold
+            }
+        }
+        Item {
+            anchors.fill: parent
+            clip: true
+            Image {
+                id: shot
+                anchors.fill: parent
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                cache: false
+                source: preview.attempt < preview.sources.length ? preview.sources[preview.attempt] : ""
+                onStatusChanged: if (status === Image.Error) preview.attempt += 1
+            }
+        }
+        Rectangle {
+            anchors.fill: parent
+            radius: 3
+            color: "transparent"
+            border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.18)
+        }
     }
 
     Connections {
@@ -96,12 +196,169 @@ Rectangle {
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
     }
-    Rectangle { anchors.fill: parent; color: "#000000"; opacity: 0.25 }
+    Rectangle {
+        anchors.fill: parent
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0; color: Qt.rgba(0, 0, 0, 0.55) }
+            GradientStop { position: 0.5; color: Qt.rgba(0, 0, 0, 0.18) }
+            GradientStop { position: 1; color: Qt.rgba(0, 0, 0, 0.55) }
+        }
+    }
 
-    // Clock ----------------------------------------------------------------------
+    // Left: the desktop switcher -------------------------------------------------------------------------------------
+    Item {
+        id: desktops
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: Math.max(28, parent.width * 0.04)
+        width: Math.max(260, Math.min(600, (parent.width - card.width) / 2 - anchors.leftMargin - 48))
+
+        readonly property real cardWidth: width
+        readonly property real cardHeight: cardWidth * 10 / 16
+
+        Text {
+            id: desktopsTitle
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.topMargin: parent.height * 0.10
+            text: qsTr("Desktop")
+            color: root.muted
+            font.pixelSize: 15
+            font.letterSpacing: 2
+            font.capitalization: Font.AllUppercase
+        }
+
+        PathView {
+            id: switcher
+            objectName: "switcher"
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: desktopsTitle.bottom
+            anchors.bottom: hint.top
+            anchors.topMargin: 12
+            anchors.bottomMargin: 12
+            model: sessionModel
+            pathItemCount: 3
+            preferredHighlightBegin: 0.5
+            preferredHighlightEnd: 0.5
+            highlightRangeMode: PathView.StrictlyEnforceRange
+            highlightMoveDuration: 380
+            interactive: count > 1
+            clip: true
+            currentIndex: root.sessionIndex
+            onCurrentIndexChanged: if (currentIndex !== root.sessionIndex) root.sessionIndex = currentIndex
+            path: Path {
+                startX: switcher.width / 2; startY: -desktops.cardHeight * 0.95
+                PathAttribute { name: "itemScale"; value: 0.62 }
+                PathAttribute { name: "itemOpacity"; value: 0.25 }
+                PathAttribute { name: "itemZ"; value: 0 }
+                PathLine { x: switcher.width / 2; y: switcher.height / 2 }
+                PathAttribute { name: "itemScale"; value: 1.0 }
+                PathAttribute { name: "itemOpacity"; value: 1.0 }
+                PathAttribute { name: "itemZ"; value: 2 }
+                PathLine { x: switcher.width / 2; y: switcher.height + desktops.cardHeight * 0.95 }
+                PathAttribute { name: "itemScale"; value: 0.62 }
+                PathAttribute { name: "itemOpacity"; value: 0.25 }
+                PathAttribute { name: "itemZ"; value: 0 }
+            }
+            delegate: Item {
+                id: desk
+                required property int index
+                required property var model
+                readonly property bool current: PathView.isCurrentItem
+                width: desktops.cardWidth
+                height: desktops.cardHeight + 74
+                scale: PathView.itemScale
+                opacity: PathView.itemOpacity
+                z: PathView.itemZ
+
+                Preview {
+                    id: cardPreview
+                    width: desktops.cardWidth
+                    height: desktops.cardHeight
+                    name: desk.model.name || ""
+                    file: desk.model.file || ""
+                }
+                Column {
+                    anchors.top: cardPreview.bottom
+                    anchors.topMargin: 14
+                    anchors.left: parent.left
+                    width: parent.width
+                    spacing: 2
+                    opacity: desk.current ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: 200 } }
+                    Text {
+                        width: parent.width
+                        text: root.desktopName(desk.model.name, desk.model.file)
+                        color: root.fg
+                        font.pixelSize: 26
+                        font.weight: Font.DemiBold
+                        elide: Text.ElideRight
+                    }
+                    Text {
+                        width: parent.width
+                        text: desk.model.comment || ""
+                        color: root.muted
+                        font.pixelSize: 14
+                        elide: Text.ElideRight
+                    }
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: !desk.current
+                    onClicked: root.sessionIndex = desk.index
+                }
+            }
+        }
+        // The mouse wheel over the switcher changes desktop, a notch at a time (touchpads add up to a notch).
+        WheelHandler {
+            id: wheel
+            objectName: "desktopWheel"
+            target: null
+            property real pending: 0
+            onWheel: event => {
+                pending += event.angleDelta.y !== 0 ? event.angleDelta.y : -event.angleDelta.x
+                while (pending <= -120) { pending += 120; root.stepSession(1) }
+                while (pending >= 120) { pending -= 120; root.stepSession(-1) }
+            }
+        }
+        // Where you are among the desktops.
+        Row {
+            anchors.left: desktopsTitle.right
+            anchors.leftMargin: 14
+            anchors.verticalCenter: desktopsTitle.verticalCenter
+            spacing: 6
+            visible: switcher.count > 1
+            Repeater {
+                model: switcher.count
+                Rectangle {
+                    required property int index
+                    height: 6
+                    width: index === root.sessionIndex ? 22 : 6
+                    radius: 3
+                    color: index === root.sessionIndex ? root.accent : Qt.rgba(1, 1, 1, 0.35)
+                    Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                }
+            }
+        }
+        Text {
+            id: hint
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: parent.height * 0.10
+            visible: switcher.count > 1
+            text: qsTr("Scroll to change desktop")
+            color: root.muted
+            font.pixelSize: 13
+        }
+    }
+
+    // Middle: clock and login ----------------------------------------------------------------------------------------
     Column {
         anchors.horizontalCenter: parent.horizontalCenter
-        y: parent.height * 0.14
+        y: parent.height * 0.13
         spacing: 4
         Text {
             id: clock
@@ -124,16 +381,12 @@ Rectangle {
         }
     }
 
-    // Login card -----------------------------------------------------------------
-    Rectangle {
+    Panel {
         id: card
-        width: 420
+        width: 400
         height: form.implicitHeight + 56
         anchors.centerIn: parent
-        anchors.verticalCenterOffset: 80
-        radius: 24
-        color: Qt.rgba(root.surface.r, root.surface.g, root.surface.b, 0.82)
-        border.color: Qt.rgba(1, 1, 1, 0.12)
+        anchors.verticalCenterOffset: 70
 
         SequentialAnimation {
             id: shake
@@ -151,14 +404,7 @@ Rectangle {
             Image {
                 Layout.alignment: Qt.AlignHCenter
                 source: "logo.png"
-                sourceSize: Qt.size(72, 72)
-            }
-            Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: config.distroName || "Welcome"
-                color: root.fg
-                font.pixelSize: 20
-                font.weight: Font.DemiBold
+                sourceSize: Qt.size(64, 64)
             }
             Choice {
                 id: userBox
@@ -187,6 +433,9 @@ Rectangle {
                 Accessible.name: qsTr("Password")
                 Keys.onReturnPressed: root.doLogin()
                 Keys.onEnterPressed: root.doLogin()
+                // Up and Down change desktop from the keyboard too.
+                Keys.onUpPressed: root.stepSession(-1)
+                Keys.onDownPressed: root.stepSession(1)
             }
             Text {
                 visible: keyboard.capsLock
@@ -203,32 +452,111 @@ Rectangle {
                 wrapMode: Text.WordWrap
             }
             Button {
+                objectName: "loginButton"
                 Layout.fillWidth: true
-                text: qsTr("Log in")
+                text: switcher.currentItem && switcher.currentItem.model && switcher.currentItem.model.name
+                      ? qsTr("Log in to %1").arg(root.desktopName(switcher.currentItem.model.name, switcher.currentItem.model.file))
+                      : qsTr("Log in")
                 onClicked: root.doLogin()
-                contentItem: Text { text: parent.text; color: "#FFFFFF"; font.pixelSize: 16; font.weight: Font.DemiBold; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                background: Rectangle { implicitHeight: 44; radius: 12; color: parent.down ? Qt.darker(root.accent, 1.2) : root.accent }
+                contentItem: Text { text: parent.text; color: "#FFFFFF"; font.pixelSize: 16; font.weight: Font.DemiBold; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { implicitHeight: 46; radius: 14; color: parent.down ? Qt.darker(root.accent, 1.2) : root.accent }
             }
         }
     }
 
-    // Session and power ------------------------------------------------------------
-    RowLayout {
-        anchors.left: parent.left
-        anchors.bottom: parent.bottom
-        anchors.margins: 28
-        spacing: 10
-        Text { text: qsTr("Session"); color: root.muted; font.pixelSize: 14 }
-        Choice {
-            id: sessionBox
-            model: sessionModel
-            textRole: "name"
-            currentIndex: root.sessionIndex
-            onActivated: (index) => root.sessionIndex = index
-            implicitWidth: 240
-            Accessible.name: qsTr("Session")
+    // Right: the system, as fastfetch shows it ----------------------------------------------------------------------
+    Loader {
+        id: info
+        source: config.infoFile ? "file://" + config.infoFile : ""
+    }
+    Panel {
+        id: system
+        objectName: "system"
+        anchors.right: parent.right
+        anchors.rightMargin: Math.max(28, parent.width * 0.04)
+        anchors.verticalCenter: parent.verticalCenter
+        width: Math.max(300, Math.min(470, (parent.width - card.width) / 2 - anchors.rightMargin - 48))
+        height: sysColumn.implicitHeight + 52
+        readonly property var rows: info.status === Loader.Ready && info.item ? info.item.rows : []
+
+        ColumnLayout {
+            id: sysColumn
+            anchors.fill: parent
+            anchors.margins: 26
+            spacing: 10
+
+            RowLayout {
+                spacing: 16
+                Image {
+                    source: "logo.png"
+                    sourceSize: Qt.size(76, 76)
+                    Layout.alignment: Qt.AlignTop
+                }
+                ColumnLayout {
+                    spacing: 2
+                    Text {
+                        text: config.distroName || "Welcome"
+                        color: root.accent
+                        font.family: root.mono
+                        font.pixelSize: 19
+                        font.weight: Font.Bold
+                    }
+                    Text {
+                        visible: text !== ""
+                        text: info.status === Loader.Ready && info.item ? info.item.host : ""
+                        color: root.fg
+                        font.family: root.mono
+                        font.pixelSize: 14
+                    }
+                    Rectangle { Layout.topMargin: 4; implicitWidth: 120; implicitHeight: 2; radius: 1; color: root.accent }
+                }
+            }
+            GridLayout {
+                columns: 2
+                columnSpacing: 14
+                rowSpacing: 6
+                Layout.fillWidth: true
+                Layout.topMargin: 6
+                Repeater {
+                    model: system.rows.length * 2
+                    Text {
+                        required property int index
+                        readonly property var row: system.rows[Math.floor(index / 2)]
+                        readonly property bool isKey: index % 2 === 0
+                        Layout.fillWidth: !isKey
+                        Layout.alignment: Qt.AlignTop
+                        text: row ? row[isKey ? 0 : 1] : ""
+                        color: isKey ? root.accent : root.fg
+                        font.family: root.mono
+                        font.pixelSize: 13
+                        font.weight: isKey ? Font.Bold : Font.Normal
+                        wrapMode: isKey ? Text.NoWrap : Text.Wrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                    }
+                }
+            }
+            Text {
+                visible: system.rows.length === 0
+                text: qsTr("System information appears here after the next start.")
+                color: root.muted
+                font.pixelSize: 13
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            // fastfetch's colour blocks, in the theme's colours.
+            Row {
+                Layout.topMargin: 6
+                spacing: 6
+                Repeater {
+                    model: [root.accent, root.accent2, root.fg, root.muted, root.danger, Qt.lighter(root.surface, 2.2)]
+                    Rectangle { required property var modelData; width: 26; height: 14; radius: 4; color: modelData }
+                }
+            }
         }
     }
+
+    // Power ----------------------------------------------------------------------------------------------------------
     RowLayout {
         anchors.right: parent.right
         anchors.bottom: parent.bottom

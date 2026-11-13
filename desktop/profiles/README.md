@@ -19,7 +19,7 @@ pacman to install shared system packages with `--needed`, so applications
 are installed once for the whole system and are available in every desktop.
 It does not create separate application installations per profile.
 
-After installation, log out. In SDDM, open the session selector and choose
+After installation, log out. On the login screen, scroll over the desktop previews on the left to choose
 Halcyon, ML4W, HyDE or SekaiPop.
 
 ## Configuration safety
