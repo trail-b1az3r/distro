@@ -1,91 +1,33 @@
 #!/usr/bin/env bash
+# The login entry of an extra desktop (ML4W, HyDE, SekaiPop): Hyprland with that desktop's own home
+# (profile-home.sh), so its configuration, and anything it writes, never mixes with Halcyon's.
 set -Eeuo pipefail
 
 profile="${1:-}"
 case "$profile" in ml4w|hyde|sekaipop) ;; *) echo "Unknown desktop profile: $profile" >&2; exit 2 ;; esac
 shift || true
 
-root="$HOME/.local/share/distro-desktop-profiles"
-configs="$root/configs"
-snapshot="$configs/$profile"
-base="$HOME/.config"
-state="$HOME/.local/state/distro-desktop-profiles"
-active="$state/active-profile"
-lock="$state/session.lock"
-mkdir -p "$state"
+REAL_HOME="${REAL_HOME:-$HOME}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd)"
+# shellcheck source=profile-home.sh
+. "$SCRIPT_DIR/profile-home.sh"
 
-[[ -d "$snapshot" ]] || { echo "No saved config for $profile. Install it first with distro-install-desktop-profiles $profile." >&2; exit 1; }
-if [[ -e "$lock" ]]; then
-    echo "A desktop profile switch/recovery is already in progress ($lock)." >&2
+home="$(profile_home "$profile")"
+if [[ ! -d "$home" && ! -d "$PROFILE_ROOT/configs/$profile" ]]; then
+    echo "$profile is not installed. Install it with distro-install-desktop-profiles $profile." >&2
     exit 1
 fi
-: > "$lock"
-backup="$(mktemp -d "$HOME/.config.distro-session.XXXXXX")"
-had_base=0
-if [[ -e "$base" || -L "$base" ]]; then
-    cp -a "$base/." "$backup/"
-    had_base=1
-fi
-previous=""
-[[ ! -f "$active" ]] || previous="$(cat "$active")"
-
-restore() {
-    status=$?
-    trap - EXIT INT TERM
-    # Save any changes made in this session back to its own profile snapshot.
-    if [[ -f "$active" ]]; then
-        running="$(cat "$active")"
-        case "$running" in
-            ml4w|hyde|sekaipop)
-                if [[ -d "$base" ]]; then
-                    staging="$(mktemp -d "$configs/.save-$running.XXXXXX")"
-                    cp -a "$base/." "$staging/"
-                    old="$configs/.$running.old"
-                    rm -rf "$old"
-                    [[ ! -d "$snapshot" ]] || mv "$configs/$running" "$old"
-                    mv "$staging" "$configs/$running"
-                    rm -rf "$old"
-                fi
-                ;;
-        esac
-    fi
-    rm -rf "$base"
-    mkdir -p "$base"
-    if (( had_base )); then cp -a "$backup/." "$base/"; fi
-    rm -rf "$backup"
-    rm -f "$active" "$lock"
-    exit "$status"
-}
-trap restore EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-# Persist the previous profile's latest state before switching. Its snapshot
-# remains isolated; no other profile's config directory is touched.
-if [[ "$previous" =~ ^(ml4w|hyde|sekaipop)$ && -d "$base" ]]; then
-    staging="$(mktemp -d "$configs/.save-$previous.XXXXXX")"
-    cp -a "$base/." "$staging/"
-    rm -rf "$configs/.$previous.old"
-    [[ ! -d "$configs/$previous" ]] || mv "$configs/$previous" "$configs/.$previous.old"
-    mv "$staging" "$configs/$previous"
-    rm -rf "$configs/.$previous.old"
-fi
-
-# Install the requested profile as the active XDG config tree. Restore the
-# original Halcyon/user config after Hyprland exits; the profile snapshot is
-# saved independently by the EXIT trap above.
-rm -rf "$base"
-mkdir -p "$base"
-cp -a "$snapshot/." "$base/"
-printf "%s\n" "$profile" > "$active"
+profile_home_setup "$profile"
 
 # A preview of this desktop for the login screen's desktop switcher: a small screenshot a few seconds after it starts
-# (before apps are open), in the shared previews folder. Off with ~/.config/nexora/no-session-preview.
+# (before apps are open), in the shared previews folder. Off with ~/.config/nexora/no-session-preview (in the real
+# home).
 previews=/var/lib/nexora/session-previews
-if [[ -d "$previews" && -w "$previews" && ! -e "$HOME/.config/nexora/no-session-preview" ]] && command -v grim >/dev/null; then
+if [[ -d "$previews" && -w "$previews" && ! -e "$REAL_HOME/.config/nexora/no-session-preview" ]] && command -v grim >/dev/null; then
     (
         runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
         before="$(ls "$runtime"/wayland-* 2>/dev/null | grep -v '\.lock$' || true)"
+        socket=""
         for _ in {1..30}; do
             sleep 1
             socket="$(ls "$runtime"/wayland-* 2>/dev/null | grep -v '\.lock$' | grep -vxF -- "$before" | head -n1 || true)"
@@ -99,6 +41,17 @@ if [[ -d "$previews" && -w "$previews" && ! -e "$HOME/.config/nexora/no-session-
     ) &
 fi
 
+# The user's systemd and D-Bus services follow the session's environment while it runs (desktops export it); set
+# the real home back for them when it ends, so the next Halcyon session's services are Halcyon's.
+reset_services() {
+    systemctl --user unset-environment XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_CACHE_HOME 2>/dev/null || true
+    systemctl --user set-environment HOME="$REAL_HOME" 2>/dev/null || true
+    dbus-update-activation-environment --systemd HOME="$REAL_HOME" 2>/dev/null || true
+}
+trap reset_services EXIT
+
+profile_env "$profile"
+cd "$HOME"
 # start-hyprland (Hyprland 0.57+) watches Hyprland and is how a login manager should start it.
 if command -v start-hyprland >/dev/null; then
     if (( $# )); then start-hyprland -- "$@"; else start-hyprland; fi

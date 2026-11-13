@@ -57,14 +57,9 @@ def test_external_desktop_setup_script_has_valid_shell_syntax():
         result = subprocess.run(["bash", "-n", str(path)], capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stderr
     wrapper_text = wrapper.read_text()
-    # Which profile is running lives in the state directory, with a lock against two switches at once; the
-    # previous profile's config goes back to its own snapshot, and both are cleared when the session ends.
-    assert 'state="$HOME/.local/state/distro-desktop-profiles"' in wrapper_text
-    assert 'active="$state/active-profile"' in wrapper_text
-    assert 'lock="$state/session.lock"' in wrapper_text
-    assert 'mv "$staging" "$configs/$previous"' in wrapper_text
-    assert 'rm -f "$active" "$lock"' in wrapper_text
-
+    # Each desktop runs in a home of its own; nothing swaps ~/.config in and out any more.
+    assert ". \"$SCRIPT_DIR/profile-home.sh\"" in wrapper_text and 'profile_env "$profile"' in wrapper_text
+    assert "rm -rf" not in wrapper_text and "rm -rf" not in script.read_text()
 
 def test_profile_sessions_can_start_from_sddm(tmp_path):
     # The login entries run distro-desktop-session, so the scripts must be executable in the package (git keeps the
@@ -89,3 +84,101 @@ def test_profile_sessions_can_start_from_sddm(tmp_path):
     assert "start-hyprland -- \"$@\"" in session and "session-previews" in session
     steps = (root / "lib/distrokit/installer/steps.py").read_text()
     assert "/usr/local/bin/distro" not in steps
+
+
+
+def _fake_tools(tmp_path):
+    """sudo, pacman, chsh, getent and git stand-ins, and an upstream installer that writes all over HOME."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    calls = tmp_path / "calls"
+    def tool(name, body):
+        (bin_dir / name).write_text("#!/bin/bash\n" + body)
+        (bin_dir / name).chmod(0o755)
+    tool("sudo", f'echo "sudo $*" >> {calls}\nif [[ "$1" == install ]]; then exit 0; fi\nif [[ "$1" == tee ]]; then cat >/dev/null; exit 0; fi\nexit 0\n')
+    tool("pacman", "exit 0\n")
+    tool("getent", 'echo "me:x:1000:1000::/home/me:/usr/bin/fish"\n')
+    # The upstream repository: HyDE's Scripts/install.sh writes config, shell rc, themes and data under $HOME.
+    tool("git", r"""if [[ "$1" == clone ]]; then
+  dir="${@: -1}"; mkdir -p "$dir/.git" "$dir/Scripts"
+  cat > "$dir/Scripts/install.sh" <<'INSTALL'
+#!/bin/bash
+mkdir -p "$HOME/.config/hypr" "$HOME/.local/share/hyde" "$HOME/.themes/Hyde"
+echo "hyde" > "$HOME/.config/hypr/hyprland.conf"
+echo "hyde" > "$HOME/.zshrc"
+echo "hyde" > "$HOME/.local/share/hyde/data"
+echo "$XDG_CONFIG_HOME" > "$HOME/.xdg-seen"
+INSTALL
+  chmod +x "$dir/Scripts/install.sh"
+fi
+exit 0
+""")
+    return bin_dir, calls
+
+
+def test_extra_desktops_install_in_their_own_home(tmp_path):
+    # The real installer, with stand-ins for the system tools: HyDE's installer writes all over HOME, and none of it
+    # may land in Halcyon's home.
+    root = Path(__file__).resolve().parents[2]
+    bin_dir, calls = _fake_tools(tmp_path)
+    home = tmp_path / "home"
+    (home / ".config/hypr").mkdir(parents=True)
+    (home / ".config/hypr/hyprland.conf").write_text("halcyon")
+    (home / ".zshrc").write_text("halcyon")
+    (home / ".ssh").mkdir()
+    data = tmp_path / "share/nexora"
+    (data / "packages/lists").mkdir(parents=True)
+    for p in ("ml4w", "hyde", "sekaipop"):
+        (data / f"packages/lists/desktop-{p}.list").write_text("kitty\n")
+    env = {"HOME": str(home), "PATH": f"{bin_dir}:/usr/bin:/bin", "DISTRO_DATA_ROOT": str(data),
+           "XDG_CONFIG_HOME": str(home / ".config"), "XDG_STATE_HOME": str(home / ".local/state")}
+    res = subprocess.run(["bash", str(root / "desktop/profiles/install-selected.sh"), "hyde"], input="y\n",
+                         capture_output=True, text=True, env=env, timeout=60)
+    assert res.returncode == 0, res.stdout + res.stderr
+
+    # Halcyon's files are as they were; nothing new in its config or data.
+    assert (home / ".config/hypr/hyprland.conf").read_text() == "halcyon"
+    assert (home / ".zshrc").read_text() == "halcyon"
+    assert not (home / ".local/share/hyde").exists() and not (home / ".themes").exists()
+
+    # HyDE has its own home with all of it, and shares the user's files and keys.
+    hyde = home / ".local/share/distro-desktop-profiles/homes/hyde"
+    assert (hyde / ".config/hypr/hyprland.conf").read_text().strip() == "hyde"
+    assert (hyde / ".zshrc").exists() and (hyde / ".local/share/hyde/data").exists() and (hyde / ".themes/Hyde").is_dir()
+    assert (hyde / ".xdg-seen").read_text().strip() == str(hyde / ".config")
+    assert (hyde / "Documents").resolve() == (home / "Documents").resolve() and (hyde / ".ssh").is_symlink()
+    assert (home / ".local/state/distro-desktop-profiles/hyde.done").exists() and (hyde / ".installed-here").exists()
+
+    # Run again: installed in its own home, so only its login entry is checked.
+    calls.write_text("")
+    res = subprocess.run(["bash", str(root / "desktop/profiles/install-selected.sh"), "hyde"], input="y\n",
+                         capture_output=True, text=True, env=env, timeout=60)
+    assert res.returncode == 0 and "already installed" in res.stdout and "pacman" not in calls.read_text()
+    log = calls.read_text()
+    assert "sudo install -D -m 0644" in log and "/usr/share/wayland-sessions/nexora-hyde.desktop" in log
+    assert "chsh" not in log  # the shell did not change (the login theme is only re-set where it is installed)
+
+
+def test_extra_desktop_session_runs_in_its_home(tmp_path):
+    root = Path(__file__).resolve().parents[2]
+    home = tmp_path / "home"
+    hyde = home / ".local/share/distro-desktop-profiles/homes/hyde"
+    hyde.mkdir(parents=True)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    seen = tmp_path / "seen"
+    (bin_dir / "start-hyprland").write_text(f'#!/bin/bash\necho "$HOME|$XDG_CONFIG_HOME|$PWD|$PATH" > {seen}\n')
+    (bin_dir / "start-hyprland").chmod(0o755)
+    (bin_dir / "systemctl").write_text("#!/bin/sh\nexit 0\n")
+    (bin_dir / "systemctl").chmod(0o755)
+    env = {"HOME": str(home), "PATH": f"{bin_dir}:{home}/.local/bin:/usr/bin:/bin"}
+    res = subprocess.run(["bash", str(root / "desktop/profiles/run-session.sh"), "hyde"], capture_output=True,
+                         text=True, env=env, timeout=30)
+    assert res.returncode == 0, res.stderr
+    h, xdg, pwd, path = seen.read_text().strip().split("|")
+    assert h == str(hyde) and xdg == str(hyde / ".config") and pwd == str(hyde)
+    assert path.split(":")[0] == str(hyde / ".local/bin") and f"{home}/.local/bin" not in path.split(":")
+    # A desktop that was never installed does not start.
+    res = subprocess.run(["bash", str(root / "desktop/profiles/run-session.sh"), "ml4w"], capture_output=True,
+                         text=True, env=env, timeout=30)
+    assert res.returncode == 1 and "not installed" in res.stderr

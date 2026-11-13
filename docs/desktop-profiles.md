@@ -5,10 +5,18 @@ The ISO installer offers Halcyon, ML4W Dotfiles, SekaiPop and HyDE.
 - Halcyon is retained as the bootstrap and fallback session.
 - Select one external profile as the primary profile, then optionally select any of the others as additional profiles.
 - External installers run on the first Halcyon login in a visible terminal and require the user to confirm before any upstream script runs.
-- Each external profile's `~/.config` is saved independently under `~/.local/share/distro-desktop-profiles/configs/`.
-- Each installed profile gets its own login entry (`/usr/share/wayland-sessions/nexora-<profile>.desktop`, started by `/usr/bin/distro-desktop-session`). The session wrapper swaps in that profile's saved configuration while Hyprland runs, saves changes when you log out, and restores the Halcyon config.
-
-Upstream installers still install packages and may change system-wide themes, SDDM settings, portals or other shared files. The profile wrapper isolates the user's config tree; it cannot sandbox arbitrary upstream system changes. Review the upstream prompts, especially when installing more than one profile.
+- **Each extra desktop has a home of its own**, `~/.local/share/distro-desktop-profiles/homes/<profile>/`. Its upstream
+  installer runs with `HOME` (and the XDG directories) there, and so does its login session, so nothing it writes
+  (`~/.config`, `~/.local`, `~/.themes`, `~/.icons`, `~/.zshrc`, `~/.mydotfiles`...) touches Halcyon's home. What every
+  desktop should share is linked in from your real home: Desktop, Documents, Downloads, Music, Pictures, Videos,
+  Projects, and `.ssh`, `.gnupg`, browser and mail profiles, keyrings, `.var` (Flatpak app data), your Git config.
+- Each installed desktop gets a login entry (`/usr/share/wayland-sessions/nexora-<profile>.desktop`, started by
+  `/usr/bin/distro-desktop-session`).
+- Packages are installed system-wide, once for every desktop. If an upstream installer changes your login shell it is
+  put back, and the login screen stays Nexora's. Anything an installer still writes into your real home (one that
+  ignores `HOME`) is listed at the end; `nexora reset-desktop` restores Halcyon (your changes are backed up first).
+- Desktops installed by the older helper (which installed over Halcyon's home and kept only a copy of `~/.config`)
+  are installed again, in their own home, the next time the helper runs; their saved configuration is carried over.
 
 ## Selecting multiple profiles from Welcome
 

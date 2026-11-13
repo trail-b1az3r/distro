@@ -24,23 +24,15 @@ Halcyon, ML4W, HyDE or SekaiPop.
 
 ## Configuration safety
 
-Each additional desktop has its own snapshot under
-`~/.local/share/distro-desktop-profiles/configs/<profile>`. The active
-profile's configuration is copied into `~/.config` only while that session
-runs, then saved back to that profile when the session exits. The user's
-normal `~/.config` is restored afterwards.
+Each additional desktop has a home of its own under
+`~/.local/share/distro-desktop-profiles/homes/<profile>`: its installer and its sessions run there, so it cannot
+overwrite Halcyon's files. Your documents, keys and browser profiles are linked in and shared. If Halcyon was changed
+by an install made before this, `nexora reset-desktop` restores it.
 
-Switching sessions therefore does not copy one desktop's settings over
-another desktop's settings. Existing profile snapshots are not deleted or
-replaced by a repeat install. Re-running the helper for an already installed
-profile only repairs its SDDM session entry.
-
-Installer logs are stored at
-`~/.local/state/distro-desktop-profiles/install.log`.
+Installer logs are stored at `~/.local/state/distro-desktop-profiles/install.log`.
 
 ## Notes
 
-The upstream desktop installers are third-party scripts and may install
-additional packages or modify system-wide themes and portal settings. The
-profile configurations themselves remain isolated, but shared system
-components are necessarily shared across sessions.
+The upstream desktop installers are third-party scripts and may install additional packages or modify system-wide
+themes and portal settings. Each desktop's own files stay in its home; system packages are shared by all of them.
+If an installer changes your login shell it is put back, and the login screen stays Nexora's.

@@ -31,6 +31,10 @@ if [[ -e /etc/@DISTRO_ID@/live ]]; then
     exit 0
 fi
 
+# An extra desktop (its own home, distro-desktop-session) may have left its HOME and XDG directories on the user's
+# services if it did not end cleanly: Halcyon's services use the real ones.
+systemctl --user unset-environment XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_CACHE_HOME 2>/dev/null || true
+systemctl --user set-environment HOME="$HOME" 2>/dev/null || true
 # Make the session's PATH (with ~/.local/bin) visible to user services.
 systemctl --user import-environment PATH HALCYON_FASTFETCH_LOGO_OVERRIDE WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE 2>/dev/null || true
 
