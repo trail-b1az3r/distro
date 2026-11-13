@@ -1,4 +1,5 @@
 """Desktop profile selection and staged upstream setup smoke tests."""
+import os
 import subprocess
 from pathlib import Path
 
@@ -69,9 +70,9 @@ def test_profile_sessions_can_start_from_sddm(tmp_path):
     # The login entries run distro-desktop-session, so the scripts must be executable in the package (git keeps the
     # mode), both commands are in /usr/bin, and the entries say Hyprland, which the portals are configured for.
     root = Path(__file__).resolve().parents[2]
-    modes = subprocess.run(["git", "ls-files", "-s", "desktop/profiles"], cwd=root, capture_output=True, text=True).stdout
+    # On the files themselves: the packages' check() runs these tests from the source tarball, with no git.
     for name in ("install-selected.sh", "run-session.sh"):
-        assert any(line.startswith("100755") and line.endswith(name) for line in modes.splitlines()), modes
+        assert os.access(root / "desktop/profiles" / name, os.X_OK), name
     from distrokit.branding import load as load_branding
     from distrokit.build import stage
     b = load_branding()
