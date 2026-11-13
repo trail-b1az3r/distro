@@ -78,4 +78,30 @@ rm -rf "$base"
 mkdir -p "$base"
 cp -a "$snapshot/." "$base/"
 printf "%s\n" "$profile" > "$active"
-Hyprland "$@"
+
+# A preview of this desktop for the login screen's desktop switcher: a small screenshot a few seconds after it starts
+# (before apps are open), in the shared previews folder. Off with ~/.config/nexora/no-session-preview.
+previews=/var/lib/nexora/session-previews
+if [[ -d "$previews" && -w "$previews" && ! -e "$HOME/.config/nexora/no-session-preview" ]] && command -v grim >/dev/null; then
+    (
+        runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+        before="$(ls "$runtime"/wayland-* 2>/dev/null | grep -v '\.lock$' || true)"
+        for _ in {1..30}; do
+            sleep 1
+            socket="$(ls "$runtime"/wayland-* 2>/dev/null | grep -v '\.lock$' | grep -vxF -- "$before" | head -n1 || true)"
+            [[ -n "$socket" ]] && break
+        done
+        [[ -n "$socket" ]] || exit 0
+        sleep 8
+        WAYLAND_DISPLAY="$(basename "$socket")" grim -s 0.5 -t png "$previews/.nexora-$profile.png.tmp" 2>/dev/null \
+            && mv -f "$previews/.nexora-$profile.png.tmp" "$previews/nexora-$profile.png" \
+            && chmod 0644 "$previews/nexora-$profile.png"
+    ) &
+fi
+
+# start-hyprland (Hyprland 0.57+) watches Hyprland and is how a login manager should start it.
+if command -v start-hyprland >/dev/null; then
+    if (( $# )); then start-hyprland -- "$@"; else start-hyprland; fi
+else
+    Hyprland "$@"
+fi

@@ -68,6 +68,19 @@ function sysinfo --description 'Show system information'
     fastfetch --config /usr/share/@DISTRO_ID@/fastfetch.jsonc $argv
 end
 
+# Plain `fastfetch` shows @DISTRO_NAME@'s too: Halcyon's ~/.config/fastfetch (its logo) would otherwise take its place.
+# A config of your own (one that is not Halcyon's), or --config/-c, is still used.
+function fastfetch --wraps fastfetch --description 'fastfetch with the distribution\'s config'
+    set -l own (set -q XDG_CONFIG_HOME; and echo $XDG_CONFIG_HOME; or echo $HOME/.config)/fastfetch/config.jsonc
+    if contains -- --config $argv; or contains -- -c $argv
+        command fastfetch $argv
+    else if test -f $own; and not string match -q '*halcyon.txt*' -- (string join ' ' < $own)
+        command fastfetch $argv
+    else
+        command fastfetch --config /usr/share/@DISTRO_ID@/fastfetch.jsonc $argv
+    end
+end
+
 command -q zoxide; and zoxide init fish | source
 command -q fzf; and fzf --fish 2>/dev/null | source
 command -q direnv; and direnv hook fish | source
