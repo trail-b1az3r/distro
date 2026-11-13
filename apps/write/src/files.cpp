@@ -10,6 +10,10 @@
 #include <QStandardPaths>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QJsonDocument>
+#include <QProcess>
+#include <QHash>
+#include <QLocale>
 #include <algorithm>
 #include <QXmlStreamReader>
 #include <archive.h>
@@ -45,7 +49,7 @@ QString Files::read(const QString &path) const
 bool Files::write(const QString &path, const QString &text) const
 {
     QJsonValue result;
-    if (rustRequest({{"op", "write"}, {"path", path}, {"content", text}}, &result))
+    if (RustBackend::request({{"op", "write"}, {"path", path}, {"content", text}}, &result))
         return result.toBool();
     QDir().mkpath(QFileInfo(path).absolutePath());
     QSaveFile f(path);  // written whole or not at all
@@ -78,7 +82,7 @@ static QString unique(const QString &dir, const QString &name, const QString &su
 QString Files::newNote(const QString &title) const
 {
     QJsonValue result;
-    if (rustRequest({{"op", "create_note"}, {"root", notesDir()}, {"title", title}}, &result))
+    if (RustBackend::request({{"op", "create_note"}, {"root", notesDir()}, {"title", title}}, &result))
         return result.toString();
     const QString name = slug(title);
     const QString path = unique(notesDir(), name, QStringLiteral(".mdxl"));
@@ -89,7 +93,7 @@ QString Files::newNote(const QString &title) const
 QString Files::newBook(const QString &title) const
 {
     QJsonValue result;
-    if (rustRequest({{"op", "create_book"}, {"root", booksDir()}, {"title", title}}, &result))
+    if (RustBackend::request({{"op", "create_book"}, {"root", booksDir()}, {"title", title}}, &result))
         return result.toString();
     const QString name = slug(title);
     const QString dir = unique(booksDir(), name, QString());
@@ -104,7 +108,7 @@ QStringList Files::chapters(const QString &bookDir) const
 {
     QStringList out;
     QJsonValue listed;
-    if (rustRequest({{"op", "list"}, {"path", bookDir}}, &listed)) {
+    if (RustBackend::request({{"op", "list"}, {"path", bookDir}}, &listed)) {
         for (const QJsonValue &entry : listed.toArray()) {
             const QString name = entry.toObject().value("name").toString();
             if ((name.endsWith(".mdxl") || name.endsWith(".md"))
@@ -123,7 +127,7 @@ QStringList Files::chapters(const QString &bookDir) const
 QString Files::newChapter(const QString &bookDir, const QString &title) const
 {
     QJsonValue result;
-    if (rustRequest({{"op", "create_chapter"}, {"book", bookDir}, {"title", title}}, &result))
+    if (RustBackend::request({{"op", "create_chapter"}, {"book", bookDir}, {"title", title}}, &result))
         return result.toString();
     const int next = chapters(bookDir).size();
     const QString name = QStringLiteral("%1-%2").arg(next, 2, 10, QLatin1Char('0')).arg(slug(title));
@@ -136,7 +140,7 @@ QStringList Files::books() const
 {
     QStringList out;
     QJsonValue listed;
-    if (rustRequest({{"op", "list"}, {"path", booksDir()}}, &listed)) {
+    if (RustBackend::request({{"op", "list"}, {"path", booksDir()}}, &listed)) {
         for (const QJsonValue &entry : listed.toArray())
             if (entry.toObject().value("directory").toBool())
                 out << entry.toObject().value("path").toString();
@@ -154,7 +158,7 @@ void Files::addRecentBook(const QString &path, const QString &title)
         + QStringLiteral("/write-state.json");
     const QVariantList legacy = QSettings().value(QStringLiteral("recentBooks")).toList();
     QJsonValue result;
-    if (rustRequest({{"op", "add_recent_book"}, {"store", store},
+    if (RustBackend::request({{"op", "add_recent_book"}, {"store", store},
                      {"path", path}, {"title", title},
                      {"legacy", QJsonArray::fromVariantList(legacy)}}, &result)) {
         emit recentBooksChanged();
@@ -179,7 +183,7 @@ QVariantList Files::recentBooks() const
         + QStringLiteral("/write-state.json");
     const QVariantList legacy = QSettings().value(QStringLiteral("recentBooks")).toList();
     QJsonValue result;
-    if (rustRequest({{"op", "recent_books"}, {"store", store},
+    if (RustBackend::request({{"op", "recent_books"}, {"store", store},
                      {"legacy", QJsonArray::fromVariantList(legacy)}}, &result))
         return result.toArray().toVariantList();
 
@@ -357,7 +361,7 @@ bool Files::exportDocx(const QString &path, const QString &text) const
 QString Files::importImage(const QString &source, const QString &documentDir) const
 {
     QJsonValue result;
-    if (rustRequest({{"op", "import_image"}, {"source", source}, {"book", documentDir}}, &result))
+    if (RustBackend::request({{"op", "import_image"}, {"source", source}, {"book", documentDir}}, &result))
         return result.toString();
 
     const QFileInfo input(source);
@@ -386,7 +390,7 @@ bool Files::betterbirdInstalled() const
 int Files::words(const QString &text) const
 {
     QJsonValue result;
-    if (rustRequest({{"op", "word_count"}, {"text", text}}, &result))
+    if (RustBackend::request({{"op", "word_count"}, {"text", text}}, &result))
         return result.toInt();
     static const QRegularExpression word(QStringLiteral(R"(\w[\w'’-]*)"),
                                          QRegularExpression::UseUnicodePropertiesOption);
@@ -394,4 +398,183 @@ int Files::words(const QString &text) const
     for (auto it = word.globalMatch(text); it.hasNext(); it.next())
         ++n;
     return n;
+}
+
+
+// ---- EPUB-MXL ----------------------------------------------------------------------------------------------------
+
+static QString renderHelper()
+{
+    const QString env = qEnvironmentVariable("WRITE_MDXL_RENDER");
+    return env.isEmpty() ? QStringLiteral(HELPER_DIR "/mdxl-render") : env;
+}
+
+// A chapter's title: its first heading, else its file name without the "01-" number.
+static QString chapterTitle(const QString &path, const QString &text)
+{
+    static const QRegularExpression heading(QStringLiteral(R"(^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$)"),
+                                            QRegularExpression::MultilineOption);
+    const auto match = heading.match(text);
+    if (match.hasMatch())
+        return match.captured(1).trimmed();
+    QString name = QFileInfo(path).completeBaseName();
+    name.remove(QRegularExpression(QStringLiteral(R"(^\d+[-_ ]*)")));
+    return name.replace(u'-', u' ').trimmed();
+}
+
+QString Files::exportEpubMxl(const QString &bookDir, const QString &out, const QString &author) const
+{
+    const QStringList list = chapters(bookDir);
+    if (list.isEmpty())
+        return tr("This book has no chapters.");
+
+    // Every chapter through MDXL's renderer at once, as XHTML.
+    QProcess helper;
+    helper.setProgram(renderHelper());
+    helper.setProcessChannelMode(QProcess::SeparateChannels);
+    helper.start();
+    if (!helper.waitForStarted(5000))
+        return tr("The MDXL renderer could not start (%1).").arg(renderHelper());
+    QStringList texts;
+    for (int i = 0; i < list.size(); ++i) {
+        texts << read(list[i]);
+        const QJsonObject req{{"id", i + 1}, {"text", texts.last()}, {"xhtml", true}};
+        helper.write(QJsonDocument(req).toJson(QJsonDocument::Compact) + '\n');
+    }
+    helper.closeWriteChannel();
+    if (!helper.waitForFinished(120000)) {
+        helper.kill();
+        return tr("The MDXL renderer took too long.");
+    }
+    QHash<int, QJsonObject> answers;
+    for (const QByteArray &line : helper.readAllStandardOutput().split('\n')) {
+        const QJsonObject answer = QJsonDocument::fromJson(line).object();
+        if (answer.contains(QStringLiteral("error")))
+            return tr("MDXL could not render a chapter: %1").arg(answer.value("error").toString());
+        if (!answer.isEmpty())
+            answers.insert(answer.value("id").toInt(), answer);
+    }
+
+    QJsonArray chapterList;
+    QString css;
+    for (int i = 0; i < list.size(); ++i) {
+        const QJsonObject answer = answers.value(i + 1);
+        if (answer.isEmpty())
+            return tr("MDXL did not render %1.").arg(QFileInfo(list[i]).fileName());
+        if (css.isEmpty())
+            css = answer.value("css").toString();
+        chapterList.append(QJsonObject{{"title", chapterTitle(list[i], texts[i])},
+                                       {"source", QFileInfo(list[i]).fileName()},
+                                       {"body", answer.value("html").toString()}});
+    }
+    // The book's title: the About page's heading, else the folder's name.
+    const QString about = bookDir + QStringLiteral("/00-About.mdxl");
+    const QString title = QFileInfo::exists(about) ? chapterTitle(about, read(about)) : baseName(bookDir);
+    QJsonValue result;
+    if (!RustBackend::request({{"op", "pack_epub_mxl"}, {"out", out}, {"book", bookDir}, {"title", title},
+                               {"author", author}, {"language", QLocale().name().section(u'_', 0, 0)},
+                               {"css", css}, {"chapters", chapterList}}, &result))
+        return tr("The book could not be written to %1.").arg(out);
+    return {};
+}
+
+// Calls `take` for each regular file in an EPUB (ZIP) with its name; `take` reads the data or not.
+template<typename Take>
+static bool eachEntry(const QString &path, Take take)
+{
+    archive *a = archive_read_new();
+    archive_read_support_format_zip(a);
+    if (archive_read_open_filename(a, QFile::encodeName(path).constData(), 64 * 1024) != ARCHIVE_OK) {
+        archive_read_free(a);
+        return false;
+    }
+    archive_entry *entry;
+    bool more = true;
+    while (more && archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+        const char *utf8 = archive_entry_pathname_utf8(entry);
+        const QString name = QString::fromUtf8(utf8 ? utf8 : archive_entry_pathname(entry));
+        if (archive_entry_filetype(entry) == AE_IFREG)
+            more = take(a, name);
+        else
+            archive_read_data_skip(a);
+    }
+    archive_read_free(a);
+    return true;
+}
+
+static QByteArray entryData(archive *a)
+{
+    QByteArray data;
+    const void *buf;
+    size_t size;
+    la_int64_t offset;
+    while (archive_read_data_block(a, &buf, &size, &offset) == ARCHIVE_OK)
+        data.append(static_cast<const char *>(buf), qsizetype(size));
+    return data;
+}
+
+bool Files::isEpubMxl(const QString &path) const
+{
+    bool found = false;
+    eachEntry(path, [&](archive *a, const QString &name) {
+        if (name.startsWith(QLatin1String("OEBPS/mdxl/")) && name.endsWith(QLatin1String(".mdxl")))
+            found = true;
+        archive_read_data_skip(a);
+        return !found;
+    });
+    return found;
+}
+
+QString Files::importEpubMxl(const QString &path) const
+{
+    // The title from the package, for the folder's name.
+    QString title;
+    eachEntry(path, [&](archive *a, const QString &name) {
+        if (name != QLatin1String("OEBPS/content.opf")) {
+            archive_read_data_skip(a);
+            return true;
+        }
+        QXmlStreamReader xml(entryData(a));
+        while (!xml.atEnd())
+            if (xml.readNext() == QXmlStreamReader::StartElement && xml.name() == QLatin1String("title")) {
+                title = xml.readElementText().trimmed();
+                break;
+            }
+        return false;
+    });
+    if (title.isEmpty())
+        title = baseName(path);
+
+    const QString dir = unique(booksDir(), slug(title), QString());
+    bool any = false;
+    const bool opened = eachEntry(path, [&](archive *a, const QString &name) {
+        QString target;
+        static const QRegularExpression plain(QStringLiteral(R"(^[^/\\]+$)"));
+        if (name.startsWith(QLatin1String("OEBPS/mdxl/"))) {
+            const QString file = name.mid(11);
+            if (plain.match(file).hasMatch() && file != u"." && file != u".."
+                    && (file.endsWith(QLatin1String(".mdxl")) || file.endsWith(QLatin1String(".md"))))
+                target = dir + u'/' + file;
+        } else if (name.startsWith(QLatin1String("OEBPS/images/"))) {
+            const QString file = name.mid(13);
+            if (plain.match(file).hasMatch() && file != u"." && file != u"..")
+                target = dir + QStringLiteral("/images/") + file;
+        }
+        if (target.isEmpty()) {
+            archive_read_data_skip(a);
+            return true;
+        }
+        QDir().mkpath(QFileInfo(target).absolutePath());
+        QSaveFile f(target);
+        if (f.open(QIODevice::WriteOnly)) {
+            f.write(entryData(a));
+            any = f.commit() || any;
+        }
+        return true;
+    });
+    if (!opened || !any) {
+        QDir(dir).removeRecursively();
+        return {};
+    }
+    return dir;
 }

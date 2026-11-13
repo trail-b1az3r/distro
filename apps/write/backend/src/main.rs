@@ -8,6 +8,8 @@ use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+mod epub_mxl;
+
 #[derive(Debug, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
 enum Request {
@@ -23,6 +25,7 @@ enum Request {
     AddRecentBook { store: PathBuf, path: String, title: String, #[serde(default)] legacy: Vec<serde_json::Value> },
     EpubPosition { store: PathBuf, path: String, #[serde(default)] legacy: u64 },
     SetEpubPosition { store: PathBuf, path: String, index: u64 },
+    PackEpubMxl(epub_mxl::Pack),
 }
 
 #[derive(Debug, Serialize)]
@@ -90,7 +93,7 @@ fn create_book(root: &Path, title: &str) -> Result<String, String> {
     Ok(dir.to_string_lossy().into_owned())
 }
 
-fn atomic_write(path: &Path, content: &[u8]) -> Result<(), String> {
+pub(crate) fn atomic_write(path: &Path, content: &[u8]) -> Result<(), String> {
     static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
     let parent = path.parent().ok_or_else(|| "target has no parent directory".to_string())?;
     fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -247,6 +250,7 @@ fn handle(request: Request) -> Result<serde_json::Value, String> {
         Request::AddRecentBook { store, path, title, legacy } => add_recent_book(&store, &path, &title, &legacy).map(serde_json::Value::Array),
         Request::EpubPosition { store, path, legacy } => epub_position(&store, &path, legacy).map(serde_json::Value::from),
         Request::SetEpubPosition { store, path, index } => set_epub_position(&store, &path, index).map(serde_json::Value::Bool),
+        Request::PackEpubMxl(pack) => epub_mxl::pack(&pack).map(serde_json::Value::String),
     }
 }
 

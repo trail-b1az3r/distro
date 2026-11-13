@@ -13,6 +13,22 @@ The distribution's writer and e-book reader (packaged as `<id>-write`): Qt Quick
 * **Book tiles and reading**: tile-based note/book libraries, a collapsible contents sidebar, immersive full-page reading, keyboard navigation and edge-drag page turns (with chapter transitions at section boundaries). Both EPUBs and native MDXL book folders can be read.
 * **MDXL books and images**: MDXL books render through the MDXL renderer with their book folder as the asset base URL. Standard Markdown image syntax (for example `![Cover](images/cover.png)`) and MDXL true-color text (for example `/col//Signal /col#B7F77A//`) are rendered as formatted content. Keep referenced images inside the book folder so relative paths resolve.
 
+## EPUB-MXL books
+
+An **EPUB-MXL** book (`*.epub-mxl`) is MDXL, EPUB and rich text in one file: a standard EPUB 3 whose chapters are the
+book's MDXL chapters rendered as rich text (XHTML, with MDXL's formatting kept in a stylesheet that suits any reader's
+page), carrying the MDXL sources and the book's images with it. Any e-book reader opens it as an ordinary EPUB (rename
+it to `.epub` if a reader insists on the extension); Write opens it in Reading, and **Edit** there unpacks it into
+`~/Documents/Books` as an MDXL book again.
+
+* **Export**: Books, select a book, **Export EPUB-MXL…**.
+* Inside: `OEBPS/chapter-NNN.xhtml` (the rich text, in reading order), `OEBPS/mdxl/` (the MDXL files, unchanged),
+  `OEBPS/images/`, `OEBPS/nav.xhtml` (contents) and `OEBPS/content.opf`, which marks the book with
+  `<meta property="nexora:format">epub-mxl 1</meta>`.
+* From a terminal: `nexora-write --export-epub-mxl BOOK_FOLDER OUT.epub-mxl [AUTHOR]` and
+  `nexora-write --import-epub-mxl BOOK.epub-mxl` (prints the new book folder).
+* The container is written by the Rust backend; MDXL's renderer makes the chapters' rich text.
+
 ## Keyboard shortcuts
 
 | Shortcut | Action |
