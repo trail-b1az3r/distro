@@ -11,7 +11,8 @@ ApplicationWindow {
     minimumHeight: 480
     visible: true
     title: qsTr("System Update")
-    color: Theme.bg
+    color: Theme.background
+    font.family: Theme.font
     property string themeMode: "system"
     onThemeModeChanged: Theme.mode = themeMode
     property var selected: ["packages", "aur", "flatpak", "desktop", "ai"]
@@ -78,7 +79,7 @@ ApplicationWindow {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 2
-                                Text { text: modelData.label; color: Theme.fg; font.pixelSize: Theme.textLarge; font.weight: Font.DemiBold }
+                                Text { text: modelData.label; color: Theme.surfaceContent; font.family: Theme.font; font.pixelSize: Theme.titleMedium; font.weight: Font.DemiBold }
                                 Text {
                                     text: modelData.error ? modelData.error : (modelData.count ? qsTr("%1 update(s)").arg(modelData.count) : qsTr("Up to date"))
                                     color: modelData.error ? Theme.warning : Theme.muted
@@ -105,8 +106,10 @@ ApplicationWindow {
                     AppButton { text: qsTr("Check again"); iconName: "refresh"; enabled: !updater.busy; onClicked: updater.check() }
                     AppButton { text: qsTr("Update in a terminal"); iconName: "terminal"; onClicked: updater.openTerminal() }
                     Item { Layout.fillWidth: true }
+                    LoadingIndicator { running: updater.busy; size: 40 }
                     AppButton {
                         kind: "primary"
+                        size: "medium"
                         text: updater.busy ? qsTr("Working…") : qsTr("Install updates")
                         iconName: "download"
                         enabled: !updater.busy && updater.total > 0

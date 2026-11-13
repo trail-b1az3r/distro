@@ -11,7 +11,8 @@ ApplicationWindow {
     minimumHeight: 480
     visible: true
     title: qsTr("AI Assistant")
-    color: Theme.bg
+    color: Theme.background
+    font.family: Theme.font
     property string tab: ai.startTab
     property string themeMode: "system"
     onThemeModeChanged: Theme.mode = themeMode
@@ -54,9 +55,12 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     spacing: 10
                     Icon { name: "sparkles"; size: 30; color: Theme.accent }
-                    Text { text: qsTr("AI"); color: Theme.fg; font.pixelSize: Theme.title; font.weight: Font.Bold; Layout.fillWidth: true }
-                    AppButton { kind: win.tab === "launcher" ? "primary" : "secondary"; text: qsTr("Launcher"); onClicked: win.tab = "launcher" }
-                    AppButton { kind: win.tab === "models" ? "primary" : "secondary"; text: qsTr("Models"); onClicked: win.tab = "models" }
+                    Text { text: qsTr("AI"); color: Theme.surfaceContent; font.family: Theme.font; font.pixelSize: Theme.headlineLarge; font.weight: Theme.emphasized; Layout.fillWidth: true }
+                    ConnectedButtons {
+                        options: [{ id: "launcher", label: qsTr("Launcher"), icon: "rocket" }, { id: "models", label: qsTr("Models"), icon: "model" }]
+                        current: win.tab
+                        onChosen: (id) => win.tab = id
+                    }
                     ThemeSwitch {}
                 }
 

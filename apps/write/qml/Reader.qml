@@ -187,9 +187,9 @@ Item {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.margins: 12
-                implicitHeight: 54
+                implicitHeight: 56
                 visible: !root.immersive
-                radius: 18
+                radius: height / 2
                 color: Qt.rgba(Qt.color(Theme.c.surfaceContainerHigh).r,
                                Qt.color(Theme.c.surfaceContainerHigh).g,
                                Qt.color(Theme.c.surfaceContainerHigh).b, 0.78)
@@ -231,7 +231,7 @@ Item {
                 Layout.leftMargin: 12
                 Layout.rightMargin: 12
                 Layout.bottomMargin: 12
-                radius: 24
+                radius: 28
                 clip: true
                 color: Qt.rgba(Qt.color(Theme.c.surfaceContainer).r,
                                Qt.color(Theme.c.surfaceContainer).g,

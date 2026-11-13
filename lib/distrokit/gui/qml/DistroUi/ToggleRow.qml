@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
-// A labelled switch with a description.
+// A labelled M3 switch with a description: the thumb grows when on and shows a check.
 Item {
     id: root
     property string title
@@ -25,12 +25,12 @@ Item {
             spacing: 2
             RowLayout {
                 spacing: 8
-                Text { text: root.title; color: Theme.fg; font.pixelSize: Theme.text; font.weight: Font.DemiBold }
+                Text { text: root.title; color: Theme.surfaceContent; font.family: Theme.font; font.pixelSize: Theme.titleMedium; font.weight: Font.Medium }
                 Badge { visible: root.badge !== ""; text: root.badge }
             }
             Text {
                 visible: root.description !== ""
-                text: root.description; color: Theme.muted; font.pixelSize: Theme.textSmall
+                text: root.description; color: Theme.surfaceVariantContent; font.family: Theme.font; font.pixelSize: Theme.bodyMedium
                 wrapMode: Text.WordWrap; Layout.fillWidth: true
             }
         }
@@ -41,18 +41,32 @@ Item {
             Accessible.name: root.title
             onToggled: root.toggled(checked)
             indicator: Rectangle {
-                implicitWidth: 46; implicitHeight: 26
+                implicitWidth: 52; implicitHeight: 32
                 x: sw.leftPadding; y: parent.height / 2 - height / 2
-                radius: 13
-                color: sw.checked ? Theme.accent : Theme.surface2
-                border.color: sw.visualFocus ? Theme.focus : Theme.border
-                border.width: sw.visualFocus ? 2 : 1
+                radius: 16
+                color: sw.checked ? Theme.primary : Theme.surfaceContainerHighest
+                border.width: sw.checked ? 0 : 2
+                border.color: Theme.outline
+                Behavior on color { ColorAnimation { duration: Theme.durationShort } }
                 Rectangle {
-                    x: sw.checked ? parent.width - width - 3 : 3
+                    id: thumb
+                    property real thumbSize: sw.pressed ? 28 : sw.checked ? 24 : 16
+                    width: thumbSize; height: thumbSize; radius: thumbSize / 2
+                    x: sw.checked ? parent.width - width - 4 : (sw.pressed ? 2 : 8)
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 20; height: 20; radius: 10
-                    color: "#FFFFFF"
-                    Behavior on x { NumberAnimation { duration: Theme.animation } }
+                    color: sw.checked ? Theme.primaryContent : Theme.outline
+                    Behavior on x { SpringAnimation { spring: Theme.springSpatial; damping: Theme.dampingSpatial } }
+                    Behavior on thumbSize { SpringAnimation { spring: Theme.springFast; damping: Theme.dampingFast } }
+                    Icon { anchors.centerIn: parent; visible: sw.checked; name: "check"; size: 16; color: Theme.primaryContainerContent }
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -3
+                    radius: parent.radius + 3
+                    color: "transparent"
+                    border.width: 2
+                    border.color: Theme.secondary
+                    visible: sw.visualFocus
                 }
             }
         }

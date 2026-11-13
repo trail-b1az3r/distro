@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 
-// Styled combo box. `options` is [{id, label}]; `current` is the selected id.
+// An M3 exposed dropdown menu. `options` is [{id, label}]; `current` is the selected id.
 ComboBox {
     id: control
     property var options: []
@@ -11,40 +11,61 @@ ComboBox {
     textRole: "label"
     valueRole: "id"
     currentIndex: Math.max(0, options.findIndex(o => o.id === current))
-    font.pixelSize: Theme.text
-    implicitHeight: 42
+    font.family: Theme.font
+    font.pixelSize: Theme.bodyLarge
+    implicitHeight: 56
     Accessible.role: Accessible.ComboBox
     onActivated: (index) => chosen(options[index].id)
     contentItem: Text {
-        leftPadding: 12
-        rightPadding: 30
+        leftPadding: 16
+        rightPadding: 40
         text: control.displayText
-        color: Theme.fg
+        color: Theme.surfaceContent
         font: control.font
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }
     indicator: Icon {
-        x: control.width - width - 10
+        x: control.width - width - 16
         y: (control.height - height) / 2
         name: "arrow-right"
-        rotation: 90
-        size: 16
-        color: Theme.muted
+        rotation: control.popup.visible ? -90 : 90
+        Behavior on rotation { SpringAnimation { spring: Theme.springFast; damping: Theme.dampingFast } }
+        size: 18
+        color: Theme.surfaceVariantContent
     }
     background: Rectangle {
-        radius: Theme.radiusSmall
-        color: Theme.surface2
-        border.width: control.visualFocus ? 2 : 1
-        border.color: control.visualFocus ? Theme.focus : Theme.border
+        radius: Theme.shapeLarge
+        color: Theme.surfaceContainerHighest
+        border.width: control.visualFocus ? 2 : 0
+        border.color: Theme.primary
+        Rectangle {
+            anchors.fill: parent
+            radius: parent.radius
+            color: Theme.surfaceContent
+            opacity: control.hovered ? 0.08 : 0
+        }
     }
     delegate: ItemDelegate {
         required property var modelData
         required property int index
-        width: control.width
+        width: control.width - 16
+        x: 8
+        height: 48
         highlighted: control.highlightedIndex === index
-        contentItem: Text { text: modelData.label; color: Theme.fg; font.pixelSize: Theme.text; elide: Text.ElideRight }
-        background: Rectangle { color: highlighted ? Theme.accentSoft : Theme.surface }
+        contentItem: Text {
+            leftPadding: 4
+            text: modelData.label; color: control.currentIndex === index ? Theme.secondaryContainerContent : Theme.surfaceContent
+            font.family: Theme.font; font.pixelSize: Theme.bodyLarge; elide: Text.ElideRight
+            verticalAlignment: Text.AlignVCenter
+        }
+        background: Rectangle {
+            radius: Theme.shapeMedium
+            color: control.currentIndex === index ? Theme.secondaryContainer
+                 : highlighted ? Theme.alpha(Theme.surfaceContent, 0.08) : "transparent"
+        }
     }
-    popup.background: Rectangle { color: Theme.surface; border.color: Theme.border; radius: Theme.radiusSmall }
+    popup.topPadding: 8
+    popup.bottomPadding: 8
+    popup.background: Rectangle { color: Theme.surfaceContainer; radius: Theme.shapeLarge }
 }

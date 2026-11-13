@@ -173,7 +173,9 @@ ApplicationWindow {
                     Layout.alignment: Qt.AlignHCenter
                     implicitWidth: 56
                     implicitHeight: 56
-                    radius: 16
+                    // M3 Expressive FAB: a rounded square that rounds fully while pressed.
+                    radius: pressed ? 28 : 16
+                    Behavior on radius { SpringAnimation { spring: 5; damping: 0.38 } }
                     text: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "edit_square" : "+"
                     font.family: Qt.fontFamilies().indexOf("Material Symbols Rounded") >= 0 ? "Material Symbols Rounded" : Theme.font
                     font.pixelSize: 24

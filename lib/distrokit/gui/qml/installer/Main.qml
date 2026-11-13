@@ -11,7 +11,8 @@ ApplicationWindow {
     minimumHeight: 560
     visible: true
     title: qsTr("Install %1").arg(brandInfo.prettyName)
-    color: Theme.bg
+    color: Theme.surfaceContainer
+    font.family: Theme.font
 
     property int page: 0
     property int furthestPage: 0
@@ -76,10 +77,9 @@ ApplicationWindow {
         // Sidebar ---------------------------------------------------------
         Rectangle {
             visible: win.wide
-            Layout.preferredWidth: 272
+            Layout.preferredWidth: 280
             Layout.fillHeight: true
-            color: Theme.surface
-            border.color: Theme.border
+            color: "transparent"
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 20
@@ -89,8 +89,8 @@ ApplicationWindow {
                     Image { source: brandInfo.logo; sourceSize: Qt.size(40, 40); Layout.preferredWidth: 40; Layout.preferredHeight: 40 }
                     ColumnLayout {
                         spacing: 0
-                        Text { text: brandInfo.prettyName; color: Theme.fg; font.pixelSize: Theme.textLarge; font.weight: Font.Bold }
-                        Text { text: qsTr("Installer"); color: Theme.muted; font.pixelSize: Theme.textSmall }
+                        Text { text: brandInfo.prettyName; color: Theme.surfaceContent; font.family: Theme.font; font.pixelSize: Theme.titleLarge; font.weight: Theme.emphasized }
+                        Text { text: qsTr("Installer"); color: Theme.surfaceVariantContent; font.family: Theme.font; font.pixelSize: Theme.labelLarge }
                     }
                 }
                 ScrollView {
@@ -108,10 +108,19 @@ ApplicationWindow {
             }
         }
 
-        // Main area -------------------------------------------------------
-        ColumnLayout {
+        // Main area: a rounded surface (M3 Expressive's large-screen layout) ---------------------------------------
+        Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.topMargin: 12
+            Layout.rightMargin: 12
+            Layout.bottomMargin: 12
+            Layout.leftMargin: win.wide ? 0 : 12
+            radius: Theme.shapeExtraLarge
+            color: Theme.background
+            clip: true
+        ColumnLayout {
+            anchors.fill: parent
             spacing: 0
 
             // Compact progress header for narrow windows.
@@ -119,24 +128,34 @@ ApplicationWindow {
                 visible: !win.wide
                 Layout.fillWidth: true
                 implicitHeight: 64
-                color: Theme.surface
+                color: "transparent"
                 RowLayout {
                     anchors.fill: parent
                     anchors.margins: 14
                     Image { source: brandInfo.logo; sourceSize: Qt.size(28, 28) }
                     Text {
                         text: qsTr("Step %1 of %2 — %3").arg(win.page + 1).arg(win.pageIds.length).arg(win.titles[win.pageId])
-                        color: Theme.fg; font.pixelSize: Theme.text; font.weight: Font.DemiBold
+                        color: Theme.surfaceContent; font.family: Theme.font; font.pixelSize: Theme.titleMedium; font.weight: Font.DemiBold
                         Layout.fillWidth: true; elide: Text.ElideRight
                     }
                     ThemeSwitch {}
                 }
-                Rectangle {
+                // M3 Expressive progress: a thick rounded track with a gap before the remaining part.
+                Item {
                     anchors.bottom: parent.bottom
-                    height: 3
-                    width: parent.width * (win.page + 1) / win.pageIds.length
-                    color: Theme.accent
-                    Behavior on width { NumberAnimation { duration: Theme.animation } }
+                    anchors.left: parent.left; anchors.right: parent.right
+                    anchors.leftMargin: 16; anchors.rightMargin: 16
+                    height: 6
+                    readonly property real done: width * (win.page + 1) / win.pageIds.length
+                    Rectangle {
+                        width: parent.done; height: parent.height; radius: 3
+                        color: Theme.primary
+                        Behavior on width { SpringAnimation { spring: Theme.springSpatial; damping: 0.5 } }
+                    }
+                    Rectangle {
+                        x: parent.done + 4; width: Math.max(0, parent.width - parent.done - 4); height: parent.height; radius: 3
+                        color: Theme.secondaryContainer
+                    }
                 }
             }
 
@@ -183,34 +202,41 @@ ApplicationWindow {
                 text: win.toast
             }
 
-            // Navigation bar
+            // Navigation: an M3 Expressive floating toolbar.
             Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: 76
-                color: Theme.surface
-                border.color: Theme.border
+                Layout.alignment: Qt.AlignHCenter
+                Layout.bottomMargin: 20
+                Layout.topMargin: 8
+                implicitHeight: 72
+                implicitWidth: Math.min(win.width - 80, 720)
+                radius: height / 2
+                color: Theme.surfaceContainerHigh
                 visible: !win.locked
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 24; anchors.rightMargin: 24
+                    anchors.leftMargin: 12; anchors.rightMargin: 12
                     spacing: 12
                     AppButton {
+                        kind: "tonal"
+                        size: "medium"
                         text: qsTr("Back")
                         iconName: "arrow-left"
                         enabled: win.page > 0
                         onClicked: win.back()
                     }
                     Item { Layout.fillWidth: true }
-                    Badge { visible: installer.isDemo; text: qsTr("DEMO — disks are never changed"); color: Theme.warning }
+                    Badge { visible: installer.isDemo; text: qsTr("DEMO — disks are never changed"); color: Theme.warningContainer }
                     AppButton {
                         visible: win.pageId !== "summary"
                         kind: "primary"
+                        size: "medium"
                         text: qsTr("Next")
                         iconName: "arrow-right"
                         onClicked: win.next()
                     }
                 }
             }
+        }
         }
     }
 }

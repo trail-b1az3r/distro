@@ -11,7 +11,8 @@ ApplicationWindow {
     minimumHeight: 520
     visible: true
     title: qsTr("Welcome to %1").arg(brandInfo.prettyName)
-    color: Theme.bg
+    color: Theme.surfaceContainer
+    font.family: Theme.font
 
     property string section: "home"
     property string themeMode: "system"
@@ -23,7 +24,7 @@ ApplicationWindow {
         { id: "updates", title: qsTr("Updates & drivers"), icon: "refresh" },
         { id: "ai", title: qsTr("AI"), icon: "sparkles" },
         { id: "appearance", title: qsTr("Appearance"), icon: "palette" },
-        { id: "desktops", title: qsTr("Desktop environments"), icon: "monitor" },
+        { id: "desktops", title: qsTr("Desktop environments"), icon: "display" },
         { id: "apps", title: qsTr("Applications"), icon: "package" },
         { id: "privacy", title: qsTr("Privacy"), icon: "shield" },
         { id: "backup", title: qsTr("Backups"), icon: "backup" },
@@ -38,53 +39,45 @@ ApplicationWindow {
     RowLayout {
         anchors.fill: parent
         spacing: 0
-        Rectangle {
-            Layout.preferredWidth: win.wide ? 250 : 72
+        NavRail {
             Layout.fillHeight: true
-            color: Theme.surface
-            border.color: Theme.border
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 14
-                spacing: 6
-                RowLayout {
-                    spacing: 10
-                    Layout.bottomMargin: 12
-                    Image { source: brandInfo.logo; sourceSize: Qt.size(36, 36) }
-                    Text { visible: win.wide; text: brandInfo.name; color: Theme.fg; font.pixelSize: Theme.textLarge; font.weight: Font.Bold }
+            expanded: win.wide
+            items: win.sections
+            current: win.section
+            onSelected: (id) => win.section = id
+            RowLayout {
+                spacing: 12
+                Layout.leftMargin: win.wide ? 8 : 0
+                Layout.alignment: win.wide ? Qt.AlignLeft : Qt.AlignHCenter
+                Image { source: brandInfo.logo; sourceSize: Qt.size(40, 40) }
+                Text {
+                    visible: win.wide
+                    text: brandInfo.name
+                    color: Theme.surfaceContent
+                    font.family: Theme.font
+                    font.pixelSize: Theme.titleLarge
+                    font.weight: Theme.emphasized
                 }
-                Repeater {
-                    model: win.sections
-                    Rectangle {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        implicitHeight: 42
-                        radius: 10
-                        color: win.section === modelData.id ? Theme.accentSoft : (navMouse.containsMouse ? Theme.surface2 : "transparent")
-                        activeFocusOnTab: true
-                        Accessible.role: Accessible.PageTab
-                        Accessible.name: modelData.title
-                        Keys.onReturnPressed: win.section = modelData.id
-                        border.width: activeFocus ? 2 : 0
-                        border.color: Theme.focus
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 12
-                            spacing: 12
-                            Icon { name: modelData.icon; size: 20; color: win.section === modelData.id ? Theme.accent : Theme.muted }
-                            Text { visible: win.wide; text: modelData.title; color: Theme.fg; font.pixelSize: Theme.text; Layout.fillWidth: true }
-                        }
-                        MouseArea { id: navMouse; anchors.fill: parent; hoverEnabled: true; onClicked: win.section = modelData.id }
-                    }
-                }
-                Item { Layout.fillHeight: true }
-                ThemeSwitch { visible: win.wide }
             }
+            Fab {
+                Layout.alignment: win.wide ? Qt.AlignLeft : Qt.AlignHCenter
+                iconName: "refresh"
+                text: win.wide ? qsTr("Update") : ""
+                Accessible.name: qsTr("Update the system")
+                onClicked: win.section = "updates"
+            }
+            footer: [
+                ThemeSwitch { visible: win.wide; Layout.alignment: Qt.AlignHCenter }
+            ]
         }
 
+        // The page: a rounded surface beside the rail (M3 Expressive's large-screen layout).
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.topMargin: 12
+            Layout.rightMargin: 12
+            Layout.bottomMargin: 12
             spacing: 0
             ScrollView {
                 id: scroller
@@ -92,6 +85,7 @@ ApplicationWindow {
                 Layout.fillHeight: true
                 clip: true
                 contentWidth: availableWidth
+                background: Rectangle { color: Theme.background; radius: Theme.shapeExtraLarge }
                 Item {
                     width: scroller.availableWidth
                     implicitHeight: content.implicitHeight + 64
@@ -408,7 +402,11 @@ ApplicationWindow {
                                     AppButton { visible: modelData.status === "pending" || modelData.status === "failed"; kind: "ghost"; text: qsTr("Skip"); onClicked: welcome.skipTask(modelData.id) }
                                 }
                             }
-                            AppButton { kind: "primary"; text: welcome.busy ? qsTr("Working…") : qsTr("Run setup tasks"); enabled: !welcome.busy; onClicked: welcome.runTasks() }
+                            RowLayout {
+                                spacing: 12
+                                AppButton { kind: "primary"; text: welcome.busy ? qsTr("Working…") : qsTr("Run setup tasks"); enabled: !welcome.busy; onClicked: welcome.runTasks() }
+                                LoadingIndicator { running: welcome.busy; size: 36 }
+                            }
                         }
                         LogView { id: logView; Layout.fillWidth: true; Layout.preferredHeight: 160 }
                     }

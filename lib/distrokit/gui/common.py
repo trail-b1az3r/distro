@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from PySide6.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, QUrl, Signal, Slot
-from PySide6.QtGui import QGuiApplication, QIcon, QImage, QPainter
+from PySide6.QtGui import QFont, QGuiApplication, QIcon, QImage, QPainter
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickImageProvider
 from PySide6.QtSvg import QSvgRenderer
@@ -82,6 +82,11 @@ def make_app(app_id: str, title: str) -> QGuiApplication:
     b = load_branding()
     app.setApplicationName(title)
     app.setApplicationDisplayName(title)
+    # Material 3 Expressive type: Google Sans Flex (nexora-fonts-google-sans-flex) for every Text that does not pick
+    # a family itself; Qt falls back to the system's sans-serif where it is missing.
+    font = QFont("Google Sans Flex")
+    font.setStyleHint(QFont.StyleHint.SansSerif)
+    app.setFont(font)
     app.setOrganizationName(b.name)
     app.setDesktopFileName(f"{b.id}-{app_id}")
     logo = paths.data("branding", "generated", "logo", "logo-mark.svg")

@@ -1,15 +1,18 @@
 import QtQuick
 import QtQuick.Layouts
 
+// A page's title (M3 Expressive's emphasized headline) and subtitle.
 ColumnLayout {
     property string title
     property string subtitle
-    spacing: 6
+    spacing: 8
     Text {
         text: parent.title
-        color: Theme.fg
-        font.pixelSize: Theme.title
-        font.weight: Font.Bold
+        color: Theme.surfaceContent
+        font.family: Theme.font
+        font.pixelSize: Theme.headlineLarge
+        font.weight: Theme.emphasized
+        font.letterSpacing: -0.25
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
         Accessible.role: Accessible.Heading
@@ -18,8 +21,9 @@ ColumnLayout {
     Text {
         visible: parent.subtitle !== ""
         text: parent.subtitle
-        color: Theme.muted
-        font.pixelSize: Theme.textLarge
+        color: Theme.surfaceVariantContent
+        font.family: Theme.font
+        font.pixelSize: Theme.bodyLarge
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
     }

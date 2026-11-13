@@ -1,10 +1,13 @@
 import QtQuick
 
-// Cycles system -> dark -> light.
-AppButton {
-    kind: "ghost"
-    iconName: Theme.dark ? "moon" : "sun"
-    text: Theme.mode === "system" ? qsTr("Auto") : Theme.mode === "dark" ? qsTr("Dark") : qsTr("Light")
-    Accessible.name: qsTr("Colour scheme: ") + text
-    onClicked: Theme.mode = Theme.mode === "system" ? "dark" : Theme.mode === "dark" ? "light" : "system"
+// The colour scheme as a connected button group: Auto, Dark, Light.
+ConnectedButtons {
+    options: [
+        { id: "system", label: qsTr("Auto"), icon: "" },
+        { id: "dark", label: "", icon: "moon" },
+        { id: "light", label: "", icon: "sun" }
+    ]
+    current: Theme.mode
+    Accessible.name: qsTr("Colour scheme")
+    onChosen: (id) => Theme.mode = id
 }

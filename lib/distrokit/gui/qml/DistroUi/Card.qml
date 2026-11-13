@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
 
-// A rounded panel. Content goes into `default` children via the column.
+// M3 cards: tonal containers with extra-large corners. Content goes into the column.
+//   variant: "filled" (surface container), "elevated" (higher container), "outlined"
 Rectangle {
     id: card
     default property alias content: column.data
@@ -9,14 +10,19 @@ Rectangle {
     property alias spacing: column.spacing
     property bool highlighted: false
     property color tint: "transparent"
+    property string variant: "filled"
 
-    color: tint !== "transparent" ? tint : Theme.surface
-    radius: Theme.radius
-    border.width: highlighted ? 2 : 1
-    border.color: highlighted ? Theme.accent : Theme.border
+    color: tint.a > 0 ? tint
+         : highlighted ? Theme.secondaryContainer
+         : variant === "outlined" ? Theme.surface
+         : variant === "elevated" ? Theme.surfaceContainerHigh
+         : Theme.surfaceContainer
+    radius: Theme.shapeExtraLarge
+    border.width: variant === "outlined" ? 1 : 0
+    border.color: Theme.outlineVariant
     implicitHeight: column.implicitHeight + padding * 2
     implicitWidth: column.implicitWidth + padding * 2
-    Behavior on border.color { ColorAnimation { duration: Theme.animation } }
+    Behavior on color { ColorAnimation { duration: Theme.durationShort } }
 
     ColumnLayout {
         id: column

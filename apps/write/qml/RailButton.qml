@@ -17,9 +17,11 @@ AbstractButton {
         spacing: 4
         Rectangle {
             Layout.alignment: Qt.AlignHCenter
-            implicitWidth: 56
+            // M3 Expressive: the indicator springs open from the icon when the destination is selected.
+            implicitWidth: control.selected ? 56 : 32
             implicitHeight: 32
             radius: 16
+            Behavior on implicitWidth { SpringAnimation { spring: 3.4; damping: 0.26 } }
             color: control.selected ? Theme.c.secondaryContainer : "transparent"
             Behavior on color { ColorAnimation { duration: 150 } }
             Rectangle {
@@ -42,7 +44,7 @@ AbstractButton {
             text: control.text
             font.family: Theme.font
             font.pixelSize: 12
-            font.weight: control.selected ? Font.DemiBold : Font.Normal
+            font.weight: control.selected ? Font.Bold : Font.Medium
             color: control.selected ? Theme.c.onSurface : Theme.c.onSurfaceVariant
         }
     }

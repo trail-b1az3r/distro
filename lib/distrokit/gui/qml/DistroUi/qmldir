@@ -16,3 +16,7 @@ Notice 1.0 Notice.qml
 StepList 1.0 StepList.qml
 ThemeSwitch 1.0 ThemeSwitch.qml
 AppCombo 1.0 AppCombo.qml
+ConnectedButtons 1.0 ConnectedButtons.qml
+NavRail 1.0 NavRail.qml
+Fab 1.0 Fab.qml
+LoadingIndicator 1.0 LoadingIndicator.qml

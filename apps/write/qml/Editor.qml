@@ -277,7 +277,7 @@ Item {
                 SplitView.preferredWidth: parent.width / 2
                 visible: root.viewMode !== 2 && root.viewMode !== 3
                 color: Qt.rgba(Qt.color(Theme.c.surfaceContainerLow).r, Qt.color(Theme.c.surfaceContainerLow).g, Qt.color(Theme.c.surfaceContainerLow).b, 0.80)
-                radius: 22
+                radius: 28
                 ScrollView {
                     anchors.fill: parent
                     anchors.margins: 4
@@ -311,7 +311,7 @@ Item {
                 SplitView.fillWidth: true
                 visible: root.viewMode !== 0
                 color: Qt.rgba(Qt.color(root.documentMode ? Theme.c.surfaceContainer : Theme.c.surface).r, Qt.color(root.documentMode ? Theme.c.surfaceContainer : Theme.c.surface).g, Qt.color(root.documentMode ? Theme.c.surfaceContainer : Theme.c.surface).b, 0.78)
-                radius: 22
+                radius: 28
                 clip: true
                 WebEngineView {
                     id: preview

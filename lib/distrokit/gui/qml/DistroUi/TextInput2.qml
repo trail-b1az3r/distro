@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
-// A labelled text field with an error message.
+// A labelled M3 text field (filled, with an active indicator underline) and an error or hint.
 ColumnLayout {
     id: root
     property string label
@@ -15,32 +15,51 @@ ColumnLayout {
     signal edited(string value)
     spacing: 6
 
-    Text { text: root.label; color: Theme.fg; font.pixelSize: Theme.text; font.weight: Font.DemiBold; visible: root.label !== "" }
+    Text {
+        text: root.label
+        color: root.error !== "" ? Theme.error : field.activeFocus ? Theme.primary : Theme.surfaceVariantContent
+        font.family: Theme.font
+        font.pixelSize: Theme.labelLarge
+        font.weight: Font.Medium
+        visible: root.label !== ""
+    }
     TextField {
         id: field
         Layout.fillWidth: true
         placeholderText: root.placeholder
         echoMode: root.password ? TextInput.Password : TextInput.Normal
-        color: Theme.fg
-        placeholderTextColor: Theme.muted
-        font.pixelSize: Theme.text
+        color: Theme.surfaceContent
+        placeholderTextColor: Theme.surfaceVariantContent
+        selectionColor: Theme.primaryContainer
+        selectedTextColor: Theme.primaryContainerContent
+        font.family: Theme.font
+        font.pixelSize: Theme.bodyLarge
         selectByMouse: true
         Accessible.name: root.label
-        leftPadding: 12; rightPadding: 12; topPadding: 10; bottomPadding: 10
+        leftPadding: 16; rightPadding: 16; topPadding: 14; bottomPadding: 14
         onTextEdited: root.edited(text)
         background: Rectangle {
-            radius: Theme.radiusSmall
-            color: Theme.surface2
-            border.width: field.activeFocus || root.error !== "" ? 2 : 1
-            border.color: root.error !== "" ? Theme.danger : (field.activeFocus ? Theme.focus : Theme.border)
+            implicitHeight: 56
+            radius: Theme.shapeLarge
+            color: Theme.surfaceContainerHighest
+            Rectangle {
+                anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
+                anchors.leftMargin: Theme.shapeLarge / 2; anchors.rightMargin: Theme.shapeLarge / 2
+                height: field.activeFocus || root.error !== "" ? 3 : 1
+                radius: height / 2
+                color: root.error !== "" ? Theme.error : field.activeFocus ? Theme.primary : Theme.surfaceVariantContent
+                Behavior on height { NumberAnimation { duration: Theme.durationShort } }
+            }
         }
     }
     Text {
         visible: root.error !== "" || root.hint !== ""
         text: root.error !== "" ? root.error : root.hint
-        color: root.error !== "" ? Theme.danger : Theme.muted
-        font.pixelSize: Theme.textSmall
+        color: root.error !== "" ? Theme.error : Theme.surfaceVariantContent
+        font.family: Theme.font
+        font.pixelSize: Theme.bodySmall
         wrapMode: Text.WordWrap
         Layout.fillWidth: true
+        Layout.leftMargin: 16
     }
 }

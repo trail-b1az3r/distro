@@ -29,13 +29,13 @@ Item {
         property string glyph: "▤"
         signal clicked()
         implicitHeight: 116
-        radius: 22
+        // M3 Expressive: extra-large corners, rounder still when selected (with a spring).
+        radius: selected ? 32 : 28
+        Behavior on radius { SpringAnimation { spring: 3.4; damping: 0.26 } }
         color: selected ? Theme.c.secondaryContainer
             : Qt.rgba(Qt.color(Theme.c.surfaceContainerLow).r,
                       Qt.color(Theme.c.surfaceContainerLow).g,
                       Qt.color(Theme.c.surfaceContainerLow).b, 0.82)
-        border.width: selected ? 1 : 0
-        border.color: Theme.c.primary
         Behavior on color { ColorAnimation { duration: 160 } }
         Rectangle {
             anchors.fill: parent
@@ -55,7 +55,7 @@ Item {
             Label {
                 Layout.fillWidth: true
                 text: tile.heading
-                font.pixelSize: 15
+                font.pixelSize: 16
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
                 color: tile.selected ? Theme.c.onSecondaryContainer : Theme.c.onSurface

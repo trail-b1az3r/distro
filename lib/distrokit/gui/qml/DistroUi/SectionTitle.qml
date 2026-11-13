@@ -1,10 +1,11 @@
 import QtQuick
 
+// A section's label, in the primary colour (M3's title small, emphasized).
 Text {
-    color: Theme.muted
-    font.pixelSize: Theme.textSmall
+    color: Theme.primary
+    font.family: Theme.font
+    font.pixelSize: Theme.titleSmall
     font.weight: Font.Bold
-    font.letterSpacing: 1.2
-    font.capitalization: Font.AllUppercase
+    font.letterSpacing: 0.1
     Accessible.role: Accessible.Heading
 }

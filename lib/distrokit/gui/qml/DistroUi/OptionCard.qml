@@ -1,15 +1,15 @@
 import QtQuick
 import QtQuick.Layouts
 
-// A selectable card: icon, title, description, optional badge.
-// Keyboard: Tab to focus, Space/Enter to select.
+// A selectable card: icon, title, description, optional badge. Selected, it fills with the secondary container and
+// its corners and icon tile morph (M3 Expressive). Keyboard: Tab to focus, Space/Enter to select.
 Rectangle {
     id: root
     property string title
     property string description
     property string iconName: ""
     property string badge: ""
-    property color badgeColor: Theme.accent2
+    property color badgeColor: Theme.tertiaryContainer
     property bool selected: false
     property bool radio: true
     // "select": radio/check mark; "navigate": an arrow (the card opens something)
@@ -24,27 +24,38 @@ Rectangle {
     Keys.onSpacePressed: if (enabled) clicked()
     Keys.onReturnPressed: if (enabled) clicked()
 
-    implicitHeight: row.implicitHeight + 32
+    implicitHeight: row.implicitHeight + 40
     implicitWidth: 320
-    radius: Theme.radius
-    color: selected ? Theme.accentSoft : (mouse.containsMouse ? Theme.surface2 : Theme.surface)
-    border.width: selected || activeFocus ? 2 : 1
-    border.color: activeFocus ? Theme.focus : (selected ? Theme.accent : Theme.border)
+    radius: selected ? Theme.shapeExtraLargeIncreased : Theme.shapeLargeIncreased
+    Behavior on radius { SpringAnimation { spring: Theme.springSpatial; damping: Theme.dampingSpatial } }
+    color: selected ? Theme.secondaryContainer : Theme.surfaceContainer
+    border.width: activeFocus ? 2 : 0
+    border.color: Theme.secondary
     opacity: enabled ? 1 : 0.5
-    Behavior on color { ColorAnimation { duration: Theme.animation } }
+    Behavior on color { ColorAnimation { duration: Theme.durationShort } }
+
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: root.selected ? Theme.secondaryContainerContent : Theme.surfaceContent
+        opacity: mouse.pressed ? 0.10 : mouse.containsMouse ? 0.08 : 0
+        Behavior on opacity { NumberAnimation { duration: Theme.durationShort } }
+    }
 
     RowLayout {
         id: row
         anchors.fill: parent
-        anchors.margins: 16
-        spacing: 14
+        anchors.margins: 20
+        spacing: 16
         Rectangle {
             visible: root.iconName !== ""
-            Layout.preferredWidth: 44; Layout.preferredHeight: 44
+            Layout.preferredWidth: 48; Layout.preferredHeight: 48
             Layout.alignment: Qt.AlignTop
-            radius: 12
-            color: root.selected ? Theme.accent : Theme.surface2
-            Icon { anchors.centerIn: parent; name: root.iconName; size: 24; color: root.selected ? Theme.textOnAccent : Theme.fg }
+            // A circle selected, a rounded square otherwise.
+            radius: root.selected ? 24 : Theme.shapeLarge
+            Behavior on radius { SpringAnimation { spring: Theme.springSpatial; damping: Theme.dampingSpatial } }
+            color: root.selected ? Theme.primary : Theme.surfaceContainerHighest
+            Icon { anchors.centerIn: parent; name: root.iconName; size: 24; color: root.selected ? Theme.primaryContent : Theme.surfaceVariantContent }
         }
         ColumnLayout {
             Layout.fillWidth: true
@@ -53,8 +64,9 @@ Rectangle {
                 spacing: 8
                 Text {
                     text: root.title
-                    color: Theme.fg
-                    font.pixelSize: Theme.textLarge
+                    color: root.selected ? Theme.secondaryContainerContent : Theme.surfaceContent
+                    font.family: Theme.font
+                    font.pixelSize: Theme.titleMedium
                     font.weight: Font.DemiBold
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
@@ -64,8 +76,9 @@ Rectangle {
             Text {
                 visible: root.description !== ""
                 text: root.description
-                color: Theme.muted
-                font.pixelSize: Theme.text
+                color: root.selected ? Theme.secondaryContainerContent : Theme.surfaceVariantContent
+                font.family: Theme.font
+                font.pixelSize: Theme.bodyMedium
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
@@ -75,17 +88,17 @@ Rectangle {
             Layout.alignment: Qt.AlignVCenter
             name: "arrow-right"
             size: 20
-            color: Theme.muted
+            color: Theme.surfaceVariantContent
         }
         Rectangle {
             visible: root.indicator === "select"
             Layout.alignment: Qt.AlignTop
-            width: 22; height: 22
-            radius: root.radio ? 11 : 6
-            color: root.selected ? Theme.accent : "transparent"
+            width: 24; height: 24
+            radius: root.radio ? 12 : 6
+            color: root.selected ? Theme.primary : "transparent"
             border.width: 2
-            border.color: root.selected ? Theme.accent : Theme.muted
-            Icon { anchors.centerIn: parent; visible: root.selected; name: "check"; size: 14; color: Theme.textOnAccent }
+            border.color: root.selected ? Theme.primary : Theme.surfaceVariantContent
+            Icon { anchors.centerIn: parent; visible: root.selected; name: "check"; size: 16; color: Theme.primaryContent }
         }
     }
     MouseArea {
