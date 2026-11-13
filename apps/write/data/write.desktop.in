@@ -7,6 +7,6 @@ Exec=@APP_ID@ %F
 Icon=@APP_ID@
 Terminal=false
 Categories=Office;WordProcessor;TextEditor;Viewer;Qt;
-MimeType=text/x-mdxl;text/markdown;text/plain;application/epub+zip;
+MimeType=text/x-mdxl;text/markdown;text/plain;application/epub+zip;application/x-epub-mxl;
 Keywords=markdown;mdxl;notes;book;epub;writer;
 StartupWMClass=@APP_ID@

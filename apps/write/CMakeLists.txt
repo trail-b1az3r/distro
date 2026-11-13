@@ -70,3 +70,5 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${APP_ID}.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES data/write.svg
         DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps RENAME ${APP_ID}.svg)
+# EPUB-MXL books (*.epub-mxl): EPUBs with their MDXL sources; they open in Write.
+install(FILES data/epub-mxl.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages RENAME ${APP_ID}-epub-mxl.xml)

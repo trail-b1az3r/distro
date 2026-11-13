@@ -105,7 +105,10 @@ jobs:
           sed -i "s/^pkgrel=.*/pkgrel=${GITHUB_RUN_NUMBER}/" build/pkgbuild/*/PKGBUILD
           chown -R builder build
           for dir in build/pkgbuild/*/; do
-            case "$dir" in */python315-pip/|*/write/|*/touchd-dkms/) continue ;; esac
+            case "$dir" in */python315-pip/|*/touchd-dkms/) continue ;; esac
+            # Write depends on mdxl, built just before it in this loop (not in any repository): install that first,
+            # or --syncdeps cannot resolve it and Write never reaches the experiments repository.
+            case "$dir" in */write/) pacman -U --noconfirm build/pkgbuild/mdxl/*.pkg.tar.zst ;; esac
             (cd "$dir" && runuser -u builder -- makepkg --syncdeps --noconfirm --cleanbuild)
           done
           # Keep them for the experiments sources now: scripts/build-packages.sh (the steps below) re-renders

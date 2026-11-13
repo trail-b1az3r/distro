@@ -47,6 +47,14 @@ public:
     Q_INVOKABLE int words(const QString &text) const;
     Q_INVOKABLE bool betterbirdInstalled() const;
 
+    // EPUB-MXL: an EPUB whose chapters are MDXL rendered as rich text, carrying the MDXL sources and images.
+    // Exports a book folder to `out`; returns an error message, or "" when it worked.
+    Q_INVOKABLE QString exportEpubMxl(const QString &bookDir, const QString &out, const QString &author = {}) const;
+    // Whether a file is an EPUB-MXL book (its MDXL sources are inside).
+    Q_INVOKABLE bool isEpubMxl(const QString &path) const;
+    // Unpacks an EPUB-MXL book into a new folder in the books folder, ready to edit; returns that folder or "".
+    Q_INVOKABLE QString importEpubMxl(const QString &path) const;
+
 signals:
     void recentBooksChanged();
 

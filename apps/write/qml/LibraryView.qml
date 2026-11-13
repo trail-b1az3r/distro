@@ -11,6 +11,7 @@ Item {
     property string mode: "notes"
     signal openRequested(string path)
     signal openEpubRequested()
+    signal exportRequested(string bookDir)
     property var bookDirs: Files.books()
     property string selectedBook: ""
     property var chapterList: selectedBook ? Files.chapters(selectedBook) : []
@@ -204,6 +205,13 @@ Item {
                         text: qsTr("Read book")
                         highlighted: true
                         onClicked: root.openRequested(root.selectedBook)
+                    }
+                    Button {
+                        Layout.fillWidth: true
+                        text: qsTr("Export EPUB-MXL…")
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("An EPUB any reader opens, with the MDXL chapters inside so Write can edit it again")
+                        onClicked: root.exportRequested(root.selectedBook)
                     }
                     Button {
                         Layout.fillWidth: true

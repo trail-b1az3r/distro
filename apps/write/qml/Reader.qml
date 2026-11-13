@@ -19,10 +19,13 @@ Item {
     property string mdxlBookDir: ""
     property string mdxlTitle: ""
     property var mdxlChapters: []
+    // An EPUB-MXL book carries its MDXL sources: it can be opened for editing.
+    readonly property bool editable: !isMdxlBook && epub.count > 0 && Files.isEpubMxl(epub.path)
+    signal editRequested(string bookDir)
     property int mdxlCurrent: 0
 
     function open(path) {
-        if (path.toLowerCase().endsWith(".epub")) {
+        if (path.toLowerCase().endsWith(".epub") || path.toLowerCase().endsWith(".epub-mxl")) {
             mdxlBookDir = ""
             mdxlChapters = []
             epub.path = path
@@ -202,6 +205,18 @@ Item {
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
                         color: Theme.c.onSurface
+                    }
+                    Button {
+                        visible: root.editable
+                        text: qsTr("Edit")
+                        flat: true
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Unpack this EPUB-MXL book into your books, to edit its MDXL chapters")
+                        onClicked: {
+                            const dir = Files.importEpubMxl(epub.path)
+                            if (dir.length)
+                                root.editRequested(dir)
+                        }
                     }
                     ToolButton { text: "A−"; onClicked: root.textScale = Math.max(0.75, root.textScale - 0.1) }
                     Label { text: Math.round(root.textScale * 100) + "%"; color: Theme.c.onSurfaceVariant }

@@ -27,7 +27,7 @@ ApplicationWindow {
     property int page: 1
 
     function openFile(path) {
-        if (path.toLowerCase().endsWith(".epub")) {
+        if (path.toLowerCase().endsWith(".epub") || path.toLowerCase().endsWith(".epub-mxl")) {
             reader.open(path)
             page = 3
         } else if (path.toLowerCase().endsWith(".docx")) {
@@ -80,7 +80,7 @@ ApplicationWindow {
     FileDialog {
         id: openDialog
         title: qsTr("Open")
-        nameFilters: [qsTr("Documents and books (*.mdxl *.md *.txt *.docx *.epub)"), qsTr("All files (*)")]
+        nameFilters: [qsTr("Documents and books (*.mdxl *.md *.txt *.docx *.epub *.epub-mxl)"), qsTr("All files (*)")]
         onAccepted: win.openFile(Files.toPath(selectedFile))
     }
     FileDialog {
@@ -98,6 +98,31 @@ ApplicationWindow {
         defaultSuffix: "docx"
         nameFilters: [qsTr("Word document (*.docx)")]
         onAccepted: editor.exportWord(Files.toPath(selectedFile))
+    }
+    // A book folder to an EPUB-MXL book (an EPUB with its MDXL sources inside).
+    property string exportBook: ""
+    function exportEpubMxl(bookDir) {
+        exportBook = bookDir
+        epubMxlDialog.selectedFile = Files.toUrl(Files.dirOf(bookDir) + "/" + Files.baseName(bookDir) + ".epub-mxl")
+        epubMxlDialog.open()
+    }
+    FileDialog {
+        id: epubMxlDialog
+        title: qsTr("Export EPUB-MXL")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "epub-mxl"
+        nameFilters: [qsTr("EPUB-MXL book (*.epub-mxl)"), qsTr("EPUB book (*.epub)")]
+        onAccepted: {
+            const error = Files.exportEpubMxl(win.exportBook, Files.toPath(selectedFile))
+            exportNote.text = error.length ? error : qsTr("Exported %1").arg(Files.baseName(Files.toPath(selectedFile)))
+            exportNote.open()
+        }
+    }
+    ToolTip {
+        id: exportNote
+        timeout: 4000
+        x: (win.width - width) / 2
+        y: win.height - height - 32
     }
     FileDialog {
         id: saveAsDialog
@@ -181,8 +206,8 @@ ApplicationWindow {
             currentIndex: win.page
             Editor { id: editor; onSaveAsRequested: saveAsDialog.open(); onExportRequested: docxExportDialog.open(); onPdfRequested: pdfExportDialog.open() }
             LibraryView { mode: "notes"; onOpenRequested: path => win.openFile(path) }
-            LibraryView { mode: "books"; onOpenRequested: path => win.openFile(path); onOpenEpubRequested: openDialog.open() }
-            Reader { id: reader }
+            LibraryView { id: books; mode: "books"; onOpenRequested: path => win.openFile(path); onOpenEpubRequested: openDialog.open(); onExportRequested: dir => win.exportEpubMxl(dir) }
+            Reader { id: reader; onEditRequested: dir => { books.refresh(); books.selectedBook = dir; win.page = 2 } }
         }
     }
 }

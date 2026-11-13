@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-epub-mxl">
+    <comment>EPUB-MXL book</comment>
+    <comment xml:lang="en">EPUB-MXL book (EPUB with MDXL sources)</comment>
+    <sub-class-of type="application/epub+zip"/>
+    <glob pattern="*.epub-mxl"/>
+  </mime-type>
+</mime-info>
