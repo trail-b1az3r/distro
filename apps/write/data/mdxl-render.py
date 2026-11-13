@@ -28,6 +28,9 @@ def add_after_body_start(document, fragment):
     return fragment + document
 
 
+HEADERLINK = re.compile(r'<a\b[^>]*\bclass="headerlink"[^>]*>.*?</a>', re.IGNORECASE | re.DOTALL)
+
+
 for line in sys.stdin:
     try:
         req = json.loads(line)
@@ -55,6 +58,8 @@ for line in sys.stdin:
                 continue
             kept.append(source_line)
         document = render_mdxl("\n".join(kept))
+        # MDXL puts a permalink (a "¶" link) in every heading; in Write a heading is just a heading.
+        document = HEADERLINK.sub("", document)
         style = '<style>.write-header,.write-footer{font-size:.82em;color:#666;border-bottom:1px solid #aaa;padding:0 0 8px;margin:0 0 22px}.write-footer{border:0;border-top:1px solid #aaa;padding:8px 0 0;margin:22px 0 0}.write-comments{margin:28px 0;padding:12px 16px;border-left:3px solid #888;background:#8881}.write-comment{margin:5px 0}ins{background:#b9e8c4;text-decoration:underline}del{background:#f3c2c2;text-decoration:line-through}mark{background:#ffe79a}</style>'
         if header:
             document = add_after_body_start(document, style + '<div class="write-header">' + html.escape(header) + '</div>')
