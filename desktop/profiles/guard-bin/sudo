@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# sudo, as an extra desktop's upstream installer sees it: `sudo pacman ...` runs the pacman beside this file (which
+# keeps hyprland-plus in place) instead of the real one; everything else goes to the real sudo unchanged.
+set -uo pipefail
+
+self_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+path=""
+IFS=: read -r -a entries <<< "${PATH:-/usr/bin}"
+for entry in "${entries[@]}"; do
+    [[ "$entry" == "$self_dir" ]] || path="${path:+$path:}$entry"
+done
+real="$(PATH="${path:-/usr/bin}" command -v sudo || true)"
+[[ -n "$real" ]] || { echo "sudo not found" >&2; exit 127; }
+
+args=("$@")
+i=0
+while (( i < ${#args[@]} )); do
+    arg="${args[i]}"
+    case "$arg" in
+        --) i=$((i + 1)); break ;;
+        -u|-g|-p|-C|-D|-R|-T|-U|-h|-r|-t) i=$((i + 2)); continue ;;
+        -*) i=$((i + 1)); continue ;;
+        *) break ;;
+    esac
+done
+if (( i < ${#args[@]} )) && [[ "$(basename -- "${args[i]}")" == pacman ]]; then
+    args[i]="$self_dir/pacman"
+fi
+exec "$real" "${args[@]}"

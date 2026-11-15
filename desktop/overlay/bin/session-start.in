@@ -35,6 +35,9 @@ fi
 # services if it did not end cleanly: Halcyon's services use the real ones.
 systemctl --user unset-environment XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_CACHE_HOME 2>/dev/null || true
 systemctl --user set-environment HOME="$HOME" 2>/dev/null || true
+dbus-update-activation-environment --systemd HOME="$HOME" 2>/dev/null || true
+# dconf started in a desktop's home would keep Halcyon's gsettings there: the next use starts it in this home.
+systemctl --user stop dconf.service 2>/dev/null || true
 # Make the session's PATH (with ~/.local/bin) visible to user services.
 systemctl --user import-environment PATH HALCYON_FASTFETCH_LOGO_OVERRIDE WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE 2>/dev/null || true
 

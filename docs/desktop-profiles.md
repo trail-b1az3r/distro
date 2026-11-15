@@ -12,9 +12,25 @@ The ISO installer offers Halcyon, ML4W Dotfiles, SekaiPop and HyDE.
   Projects, and `.ssh`, `.gnupg`, browser and mail profiles, keyrings, `.var` (Flatpak app data), your Git config.
 - Each installed desktop gets a login entry (`/usr/share/wayland-sessions/nexora-<profile>.desktop`, started by
   `/usr/bin/distro-desktop-session`).
-- Packages are installed system-wide, once for every desktop. If an upstream installer changes your login shell it is
-  put back, and the login screen stays Nexora's. Anything an installer still writes into your real home (one that
-  ignores `HOME`) is listed at the end; `nexora reset-desktop` restores Halcyon (your changes are backed up first).
+- **Installing one changes no other desktop.** Every upstream installer is guarded:
+  - Before it runs, Halcyon's desktop configuration in your real home is copied: the Hyprland, bar, launcher,
+    terminal, shell and theme folders in `~/.config`, the dotfiles in your home, `~/.local/bin`, and your themes,
+    icons, fonts and login entries (with reflinks on btrfs, so it costs nothing). Afterwards, anything the installer
+    wrote there anyway (by a full path, `getent passwd` or a helper that resets `HOME`) is moved into the desktop's
+    own home, and Halcyon's files are put back. If the desktop already has its own copy, the installer's is set aside
+    in `~/.local/state/distro-desktop-profiles/set-aside/<profile>/`. What other programs keep in your home (browsers,
+    editors, games) is not touched. `desktop/profiles/guard-home.py` does this.
+  - It cannot replace hyprland-plus with the stock `hyprland` package: its `pacman` and `sudo pacman` leave `hyprland`
+    out (hyprland-plus provides it) and a query for it answers for hyprland-plus (`desktop/profiles/guard-bin/`). If
+    hyprland-plus is replaced all the same, it is installed again.
+  - It runs in a D-Bus session of its own, so the gsettings it sets (GTK theme, icons, cursor, dark mode) go to its
+    own home, and without the running Halcyon session's address, so it cannot reload or restyle Halcyon or start its
+    bars there. Each desktop's session starts the user's services (dconf among them) in its own home, and Halcyon's
+    login starts them in yours.
+  - Login entries it adds are set aside in `/var/lib/nexora/set-aside/` (they would start with Halcyon's home), and
+    any it changes, Halcyon's among them, are put back, as are the login screen's settings (`/etc/sddm.conf`,
+    `/etc/sddm.conf.d/`). Your login shell is put back if it changes it.
+- Packages are installed system-wide, once for every desktop.
 - Desktops installed by the older helper (which installed over Halcyon's home and kept only a copy of `~/.config`)
   are installed again, in their own home, the next time the helper runs; their saved configuration is carried over.
 

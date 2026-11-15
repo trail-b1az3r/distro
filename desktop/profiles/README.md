@@ -25,9 +25,20 @@ Halcyon, ML4W, HyDE or SekaiPop.
 ## Configuration safety
 
 Each additional desktop has a home of its own under
-`~/.local/share/distro-desktop-profiles/homes/<profile>`: its installer and its sessions run there, so it cannot
-overwrite Halcyon's files. Your documents, keys and browser profiles are linked in and shared. If Halcyon was changed
-by an install made before this, `nexora reset-desktop` restores it.
+`~/.local/share/distro-desktop-profiles/homes/<profile>`: its installer and its sessions run there. Your documents,
+keys and browser profiles are linked in and shared.
+
+Installing one changes no other desktop, even when its installer reaches past its home:
+
+- `guard-home.py` copies Halcyon's desktop configuration first and puts it back afterwards; what the installer wrote
+  in the real home is moved into the desktop's own home (or set aside in
+  `~/.local/state/distro-desktop-profiles/set-aside/<profile>/`).
+- `guard-bin/pacman` and `guard-bin/sudo` keep hyprland-plus installed: the stock `hyprland` package is left out.
+- The installer runs in a D-Bus session of its own and without the running Hyprland session's address.
+- Login entries it adds are set aside in `/var/lib/nexora/set-aside/`; Halcyon's entry and the login screen's
+  configuration are put back.
+
+If Halcyon was changed by an install made before this, `nexora reset-desktop` restores it.
 
 Installer logs are stored at `~/.local/state/distro-desktop-profiles/install.log`.
 
@@ -35,4 +46,5 @@ Installer logs are stored at `~/.local/state/distro-desktop-profiles/install.log
 
 The upstream desktop installers are third-party scripts and may install additional packages or modify system-wide
 themes and portal settings. Each desktop's own files stay in its home; system packages are shared by all of them.
-If an installer changes your login shell it is put back, and the login screen stays Nexora's.
+If an installer changes your login shell it is put back, and the login screen stays Nexora's; system-wide changes
+outside those (a bootloader theme, pacman.conf) are the installer's own and are not undone.

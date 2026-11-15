@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# pacman, as an extra desktop's upstream installer sees it (install-selected.sh puts this folder first in its PATH,
+# and the sudo beside it sends `sudo pacman` here too). Halcyon runs on hyprland-plus, which provides hyprland: an
+# installer that asks for the stock hyprland package would replace it and break every other desktop. So while
+# hyprland-plus is installed, hyprland is taken out of what is installed or removed, and a query for it answers for
+# hyprland-plus. Everything else goes to the real pacman unchanged.
+set -uo pipefail
+
+self_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+path=""
+IFS=: read -r -a entries <<< "${PATH:-/usr/bin}"
+for entry in "${entries[@]}"; do
+    [[ "$entry" == "$self_dir" ]] || path="${path:+$path:}$entry"
+done
+real="$(PATH="${path:-/usr/bin}" command -v pacman || true)"
+[[ -n "$real" ]] || { echo "pacman not found" >&2; exit 127; }
+
+# Packages that would take hyprland-plus's place.
+guarded=(hyprland hyprland-git hyprland-meta-git hyprland-nvidia hyprland-nvidia-git)
+is_guarded() {
+    local g
+    for g in "${guarded[@]}"; do [[ "$1" == "$g" || "$1" == */"$g" ]] && return 0; done
+    return 1
+}
+
+if ! "$real" -Q hyprland-plus >/dev/null 2>&1; then
+    exec "$real" "$@"
+fi
+
+# The operation: -S (sync), -U (upgrade from files), -R (remove), -Q (query); others pass through.
+op=""
+for arg in "$@"; do
+    case "$arg" in
+        --sync) op=S ;; --remove) op=R ;; --query) op=Q ;; --upgrade) op=U ;;
+        --*) ;;
+        -*) case "$arg" in *S*) op=S ;; *R*) op=R ;; *Q*) op=Q ;; *U*) op=U ;; esac ;;
+    esac
+    [[ -n "$op" ]] && break
+done
+case "$op" in S|R|Q) ;; *) exec "$real" "$@" ;; esac
+# Looking things up in the sync databases (-Ss, -Si, -Sl, -Sg, -Sp) installs nothing: as asked.
+if [[ "$op" == S ]]; then
+    for arg in "$@"; do
+        case "$arg" in
+            --search|--info|--list|--groups|--print) exec "$real" "$@" ;;
+            --*) ;;
+            -*[silgp]*) exec "$real" "$@" ;;
+        esac
+    done
+fi
+
+# Options that take a value as the next word: that word is not a package.
+takes_value=" --config --dbpath --root -r --cachedir --arch --gpgdir --hookdir --logfile --assume-installed --ignore "
+takes_value+=" --ignoregroup --overwrite --print-format --sysroot -b "
+out=()
+targets=0
+dropped=()
+skip_next=0
+for arg in "$@"; do
+    if (( skip_next )); then out+=("$arg"); skip_next=0; continue; fi
+    if [[ "$arg" == -* ]]; then
+        out+=("$arg")
+        [[ "$arg" != *=* && "$takes_value" == *" $arg "* ]] && skip_next=1
+        continue
+    fi
+    if is_guarded "$arg"; then
+        if [[ "$op" == Q ]]; then out+=(hyprland-plus); targets=$((targets + 1)); else dropped+=("$arg"); fi
+        continue
+    fi
+    out+=("$arg")
+    targets=$((targets + 1))
+done
+
+if (( ${#dropped[@]} )); then
+    echo ":: Nexora: keeping hyprland-plus (it provides hyprland); not touching: ${dropped[*]}" >&2
+    # Nothing else was asked for: done, as pacman --needed would be (a refresh or upgrade still runs).
+    if (( targets == 0 )); then
+        for arg in "${out[@]}"; do
+            case "$arg" in --sysupgrade|--refresh) exec "$real" "${out[@]}" ;; --*) ;; -*[uy]*) exec "$real" "${out[@]}" ;; esac
+        done
+        exit 0
+    fi
+fi
+exec "$real" "${out[@]}"

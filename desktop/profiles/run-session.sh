@@ -43,15 +43,24 @@ fi
 
 # The user's systemd and D-Bus services follow the session's environment while it runs (desktops export it); set
 # the real home back for them when it ends, so the next Halcyon session's services are Halcyon's.
+# dconf (where gsettings are kept: GTK theme, icons, cursor, dark mode) is a user service that reads its file from
+# the home it was started with; it is stopped at each change, so the next gsettings start it in the right home.
 reset_services() {
     systemctl --user unset-environment XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_CACHE_HOME 2>/dev/null || true
     systemctl --user set-environment HOME="$REAL_HOME" 2>/dev/null || true
     dbus-update-activation-environment --systemd HOME="$REAL_HOME" 2>/dev/null || true
+    systemctl --user stop dconf.service 2>/dev/null || true
 }
 trap reset_services EXIT
 
 profile_env "$profile"
 cd "$HOME"
+# The user's services run in this desktop's home from the start (its settings, not Halcyon's).
+systemctl --user set-environment HOME="$HOME" XDG_CONFIG_HOME="$XDG_CONFIG_HOME" XDG_DATA_HOME="$XDG_DATA_HOME" \
+    XDG_STATE_HOME="$XDG_STATE_HOME" XDG_CACHE_HOME="$XDG_CACHE_HOME" 2>/dev/null || true
+dbus-update-activation-environment --systemd HOME XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_CACHE_HOME \
+    2>/dev/null || true
+systemctl --user stop dconf.service 2>/dev/null || true
 # start-hyprland (Hyprland 0.57+) watches Hyprland and is how a login manager should start it.
 if command -v start-hyprland >/dev/null; then
     if (( $# )); then start-hyprland -- "$@"; else start-hyprland; fi

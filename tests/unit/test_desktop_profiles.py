@@ -88,17 +88,21 @@ def test_profile_sessions_can_start_from_sddm(tmp_path):
 
 
 def _fake_tools(tmp_path):
-    """sudo, pacman, chsh, getent and git stand-ins, and an upstream installer that writes all over HOME."""
+    """sudo, pacman, chsh, getent, git and dbus-run-session stand-ins, and an upstream installer that writes all over
+    HOME, into the real home by its full path, into the login entries, and asks pacman for the stock hyprland."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "calls"
     def tool(name, body):
         (bin_dir / name).write_text("#!/bin/bash\n" + body)
         (bin_dir / name).chmod(0o755)
-    tool("sudo", f'echo "sudo $*" >> {calls}\nif [[ "$1" == install ]]; then exit 0; fi\nif [[ "$1" == tee ]]; then cat >/dev/null; exit 0; fi\nexit 0\n')
-    tool("pacman", "exit 0\n")
+    # sudo runs what it is given (the system paths are under DISTRO_SYSROOT, in tmp_path), except chsh.
+    tool("sudo", f'echo "sudo $*" >> {calls}\nif [[ "$1" == chsh ]]; then exit 0; fi\nexec "$@"\n')
+    tool("pacman", f'echo "pacman $*" >> {calls}\nexit 0\n')
     tool("getent", 'echo "me:x:1000:1000::/home/me:/usr/bin/fish"\n')
-    # The upstream repository: HyDE's Scripts/install.sh writes config, shell rc, themes and data under $HOME.
+    tool("dbus-run-session", f'echo "dbus-run-session" >> {calls}\nshift\nexec "$@"\n')
+    # The upstream repository: HyDE's Scripts/install.sh writes config, shell rc, themes and data under $HOME, and
+    # misbehaves the ways real installers do.
     tool("git", r"""if [[ "$1" == clone ]]; then
   dir="${@: -1}"; mkdir -p "$dir/.git" "$dir/Scripts"
   cat > "$dir/Scripts/install.sh" <<'INSTALL'
@@ -108,6 +112,22 @@ echo "hyde" > "$HOME/.config/hypr/hyprland.conf"
 echo "hyde" > "$HOME/.zshrc"
 echo "hyde" > "$HOME/.local/share/hyde/data"
 echo "$XDG_CONFIG_HOME" > "$HOME/.xdg-seen"
+echo "${HYPRLAND_INSTANCE_SIGNATURE:-none}" > "$HOME/.hypr-seen"
+# Past HOME, into the real home by its full path.
+real="$GUARD_TEST_REAL"
+echo "hyde" > "$real/.config/hypr/hyprland.conf"
+echo "hyde-extra" > "$real/.config/hypr/hyde.conf"
+echo "hyde" > "$real/.zshrc"
+mkdir -p "$real/.mydotfiles" && echo x > "$real/.mydotfiles/x"
+rm -f "$real/.bashrc"
+echo "browser" > "$real/.config/chromium/Local State"
+# The system: the stock compositor, a login entry of its own, Halcyon's entry and the login screen changed.
+sudo pacman -S --needed --noconfirm hyprland waybar
+pacman -Qi hyprland > /dev/null
+sessions="$DISTRO_SYSROOT/usr/share/wayland-sessions"
+echo "[Desktop Entry]" | sudo tee "$sessions/hyde-hyprland.desktop" > /dev/null
+echo "broken" | sudo tee "$sessions/hyprland.desktop" > /dev/null
+echo "[Theme]" | sudo tee "$DISTRO_SYSROOT/etc/sddm.conf.d/hyde.conf" > /dev/null
 INSTALL
   chmod +x "$dir/Scripts/install.sh"
 fi
@@ -117,37 +137,67 @@ exit 0
 
 
 def test_extra_desktops_install_in_their_own_home(tmp_path):
-    # The real installer, with stand-ins for the system tools: HyDE's installer writes all over HOME, and none of it
-    # may land in Halcyon's home.
+    # The real installer, with stand-ins for the system tools: HyDE's installer writes all over HOME, past it into the
+    # real home, and into the system; none of it may change Halcyon.
     root = Path(__file__).resolve().parents[2]
     bin_dir, calls = _fake_tools(tmp_path)
     home = tmp_path / "home"
     (home / ".config/hypr").mkdir(parents=True)
     (home / ".config/hypr/hyprland.conf").write_text("halcyon")
+    (home / ".config/chromium").mkdir()
     (home / ".zshrc").write_text("halcyon")
+    (home / ".bashrc").write_text("halcyon")
     (home / ".ssh").mkdir()
+    sysroot = tmp_path / "sys"
+    (sysroot / "usr/share/wayland-sessions").mkdir(parents=True)
+    (sysroot / "usr/share/wayland-sessions/hyprland.desktop").write_text("[Desktop Entry]\nName=Halcyon\n")
+    (sysroot / "etc/sddm.conf.d").mkdir(parents=True)
     data = tmp_path / "share/nexora"
     (data / "packages/lists").mkdir(parents=True)
     for p in ("ml4w", "hyde", "sekaipop"):
         (data / f"packages/lists/desktop-{p}.list").write_text("kitty\n")
     env = {"HOME": str(home), "PATH": f"{bin_dir}:/usr/bin:/bin", "DISTRO_DATA_ROOT": str(data),
-           "XDG_CONFIG_HOME": str(home / ".config"), "XDG_STATE_HOME": str(home / ".local/state")}
+           "XDG_CONFIG_HOME": str(home / ".config"), "XDG_STATE_HOME": str(home / ".local/state"),
+           "DISTRO_SYSROOT": str(sysroot), "GUARD_TEST_REAL": str(home), "HYPRLAND_INSTANCE_SIGNATURE": "halcyon"}
     res = subprocess.run(["bash", str(root / "desktop/profiles/install-selected.sh"), "hyde"], input="y\n",
                          capture_output=True, text=True, env=env, timeout=60)
     assert res.returncode == 0, res.stdout + res.stderr
 
-    # Halcyon's files are as they were; nothing new in its config or data.
+    # Halcyon's files are as they were; nothing new in its config or data, even what was written by full path.
     assert (home / ".config/hypr/hyprland.conf").read_text() == "halcyon"
-    assert (home / ".zshrc").read_text() == "halcyon"
+    assert (home / ".zshrc").read_text() == "halcyon" and (home / ".bashrc").read_text() == "halcyon"
+    assert not (home / ".config/hypr/hyde.conf").exists() and not (home / ".mydotfiles").exists()
     assert not (home / ".local/share/hyde").exists() and not (home / ".themes").exists()
+    # A running program's files (a browser's) are left alone.
+    assert (home / ".config/chromium/Local State").read_text().strip() == "browser"
 
     # HyDE has its own home with all of it, and shares the user's files and keys.
     hyde = home / ".local/share/distro-desktop-profiles/homes/hyde"
     assert (hyde / ".config/hypr/hyprland.conf").read_text().strip() == "hyde"
+    assert (hyde / ".config/hypr/hyde.conf").read_text().strip() == "hyde-extra"
+    assert (hyde / ".mydotfiles/x").exists()
     assert (hyde / ".zshrc").exists() and (hyde / ".local/share/hyde/data").exists() and (hyde / ".themes/Hyde").is_dir()
     assert (hyde / ".xdg-seen").read_text().strip() == str(hyde / ".config")
+    # Not the running Halcyon session's address, and its own D-Bus session.
+    assert (hyde / ".hypr-seen").read_text().strip() == "none"
     assert (hyde / "Documents").resolve() == (home / "Documents").resolve() and (hyde / ".ssh").is_symlink()
     assert (home / ".local/state/distro-desktop-profiles/hyde.done").exists() and (hyde / ".installed-here").exists()
+    assert not list((home / ".local/state/distro-desktop-profiles").glob("guard-*"))
+    log = calls.read_text()
+    assert "dbus-run-session" in log
+
+    # hyprland-plus stays: the stock hyprland was left out of the install and the query answered for hyprland-plus.
+    installs = [line for line in log.splitlines() if line.startswith("pacman -S")]
+    assert "pacman -S --needed --noconfirm waybar" in installs and not any("hyprland" in line for line in installs)
+    assert "pacman -Qi hyprland-plus" in log
+
+    # The system: the installer's login entry and SDDM file set aside, Halcyon's entry put back, ours registered.
+    sessions = sysroot / "usr/share/wayland-sessions"
+    assert (sessions / "hyprland.desktop").read_text() == "[Desktop Entry]\nName=Halcyon\n"
+    assert not (sessions / "hyde-hyprland.desktop").exists() and not (sysroot / "etc/sddm.conf.d/hyde.conf").exists()
+    assert (sysroot / "var/lib/nexora/set-aside/hyde-hyprland.desktop").exists()
+    assert "/usr/bin/distro-desktop-session hyde" in (sessions / "nexora-hyde.desktop").read_text() or \
+        "run-session.sh hyde" in (sessions / "nexora-hyde.desktop").read_text()
 
     # Run again: installed in its own home, so only its login entry is checked.
     calls.write_text("")
@@ -157,6 +207,42 @@ def test_extra_desktops_install_in_their_own_home(tmp_path):
     log = calls.read_text()
     assert "sudo install -D -m 0644" in log and "/usr/share/wayland-sessions/nexora-hyde.desktop" in log
     assert "chsh" not in log  # the shell did not change (the login theme is only re-set where it is installed)
+
+
+def test_the_pacman_guard_keeps_hyprland_plus(tmp_path):
+    root = Path(__file__).resolve().parents[2]
+    guard = root / "desktop/profiles/guard-bin"
+    real = tmp_path / "bin"
+    real.mkdir()
+    log = tmp_path / "log"
+    installed = tmp_path / "plus-installed"
+    (real / "pacman").write_text(f'#!/bin/bash\nif [[ "$*" == "-Q hyprland-plus" ]]; then [[ -e {installed} ]]; exit; fi\n'
+                                 f'echo "$*" >> {log}\n')
+    (real / "pacman").chmod(0o755)
+    (real / "sudo").write_text(f'#!/bin/bash\nwhile [[ "$1" == -* ]]; do shift; done\necho "sudo $1" >> {log}\nexec "$@"\n')
+    (real / "sudo").chmod(0o755)
+    env = {"PATH": f"{guard}:{real}:/usr/bin:/bin"}
+    def run(*args):
+        log.write_text("")
+        r = subprocess.run(list(args), capture_output=True, text=True, env=env, timeout=30)
+        return r.returncode, log.read_text().strip()
+
+    installed.touch()
+    assert run("pacman", "-S", "--needed", "--noconfirm", "hyprland", "waybar") == (0, "-S --needed --noconfirm waybar")
+    assert run("pacman", "-S", "--noconfirm", "hyprland") == (0, "")
+    assert run("pacman", "-Rns", "--noconfirm", "hyprland") == (0, "")
+    assert run("pacman", "-Qi", "hyprland") == (0, "-Qi hyprland-plus")
+    assert run("pacman", "-Ss", "hyprland") == (0, "-Ss hyprland")
+    assert run("pacman", "-S", "--ignore", "hyprland", "kitty") == (0, "-S --ignore hyprland kitty")
+    # Through sudo, as installers call it.
+    code, out = run("sudo", "pacman", "-S", "hyprland", "kitty")
+    assert code == 0 and out.endswith("-S kitty") and str(guard / "pacman") in out
+    # The upgrade asked for alongside it still runs.
+    code, out = run("sudo", "-E", "pacman", "-Syu", "--noconfirm", "hyprland")
+    assert code == 0 and out.endswith("-Syu --noconfirm")
+    # Without hyprland-plus, the stock package goes through.
+    installed.unlink()
+    assert run("pacman", "-S", "hyprland") == (0, "-S hyprland")
 
 
 def test_extra_desktop_session_runs_in_its_home(tmp_path):
