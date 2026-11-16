@@ -4,7 +4,7 @@
 # 174 packages, plus the hardware-dependent ones in hardware.txt
 
 ## feature:code_editor
-code
+nexora-code
 
 ## list:ai
 clinfo

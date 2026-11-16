@@ -1,0 +1,60 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+# @DISTRO_NAME@ Code: the built-in code editor. VSCodium (the telemetry-free, MIT-licensed build of VS Code), from
+# its official release at a pinned version, made @DISTRO_NAME@'s own: its own name, icon and data folders (it does
+# not share settings or extensions with an installed VSCodium), the Open VSX marketplace, @DISTRO_NAME@'s defaults,
+# and a built-in extension with @DISTRO_NAME@'s themes that follows Halcyon's colours as they change.
+pkgname=@DISTRO_ID@-code
+_vscodium=1.143.17232
+pkgver=${_vscodium}
+pkgrel=1
+pkgdesc="@DISTRO_NAME@ Code: the built-in code editor (VSCodium, themed and set up for @DISTRO_NAME@)"
+arch=('x86_64')
+url="https://github.com/VSCodium/vscodium"
+license=('MIT')
+depends=(fontconfig libxtst gtk3 cairo alsa-lib nss gcc-libs libnotify libxss glibc bash libsecret)
+optdepends=('gvfs: move to trash' 'git: source control' 'ttf-jetbrains-mono: the editor font')
+provides=('code-editor')
+options=('!emptydirs' '!strip' '!debug')
+makedepends=('python')
+source=("VSCodium-linux-x64-${_vscodium}.tar.gz::https://github.com/VSCodium/vscodium/releases/download/${_vscodium}/VSCodium-linux-x64-${_vscodium}.tar.gz"
+        "@DISTRO_ID@-code" "@DISTRO_ID@-code.desktop" "@DISTRO_ID@-code-url-handler.desktop" "rebrand.py"
+        "make-themes.py" "extension.js" "extension-package.json")
+noextract=("VSCodium-linux-x64-${_vscodium}.tar.gz")
+sha256sums=('ca1895aa040bd91a09c709d79eac7862d8c1aa0237fdc25b503deeb8bcd87efd'
+            'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+prepare() {
+  rm -rf app
+  mkdir app
+  bsdtar -xf "VSCodium-linux-x64-${_vscodium}.tar.gz" -C app
+  # The name, the data folders, the icon and the URL scheme: @DISTRO_NAME@ Code's own.
+  python rebrand.py app/resources/app/product.json "@DISTRO_NAME@ Code" "@DISTRO_ID@-code"
+  # The built-in extension: themes (from distro.conf's colours), defaults, and the Halcyon colour sync.
+  local ext="app/resources/app/extensions/@DISTRO_ID@-theme"
+  install -d "$ext/themes"
+  install -m644 extension-package.json "$ext/package.json"
+  install -m644 extension.js "$ext/extension.js"
+  python make-themes.py "$ext/themes" "@BRAND_BG@" "@BRAND_SURFACE@" "@BRAND_FG@" "@BRAND_MUTED@" \
+    "@BRAND_ACCENT@" "@BRAND_ACCENT_2@" "@BRAND_WARNING@" "@BRAND_DANGER@"
+}
+
+check() {
+  python -c 'import json, sys; [json.load(open(p)) for p in sys.argv[1:]]' \
+    app/resources/app/product.json app/resources/app/extensions/@DISTRO_ID@-theme/package.json \
+    app/resources/app/extensions/@DISTRO_ID@-theme/themes/*.json
+  grep -q '"nameShort": "@DISTRO_NAME@ Code"' app/resources/app/product.json
+}
+
+package() {
+  install -d "$pkgdir/usr/lib/@DISTRO_ID@-code" "$pkgdir/usr/bin"
+  cp -a app/. "$pkgdir/usr/lib/@DISTRO_ID@-code/"
+  chmod 4755 "$pkgdir/usr/lib/@DISTRO_ID@-code/chrome-sandbox"
+  install -m755 "@DISTRO_ID@-code" "$pkgdir/usr/bin/@DISTRO_ID@-code"
+  install -Dm644 "@DISTRO_ID@-code.desktop" "$pkgdir/usr/share/applications/@DISTRO_ID@-code.desktop"
+  install -Dm644 "@DISTRO_ID@-code-url-handler.desktop" "$pkgdir/usr/share/applications/@DISTRO_ID@-code-url-handler.desktop"
+  install -Dm644 app/resources/app/resources/linux/code.png "$pkgdir/usr/share/pixmaps/@DISTRO_ID@-code.png"
+  install -Dm644 app/resources/app/LICENSE.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE" 2>/dev/null ||
+    install -Dm644 /dev/null "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -d "$pkgdir/usr/share/bash-completion/completions" "$pkgdir/usr/share/zsh/site-functions"
+  ln -s "/usr/lib/@DISTRO_ID@-code/resources/completions/bash/codium" "$pkgdir/usr/share/bash-completion/completions/@DISTRO_ID@-code"
+}

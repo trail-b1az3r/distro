@@ -98,10 +98,14 @@ mkdir -p "$work/upload"
 # shellcheck disable=SC1091
 home="$(. ./distro.conf && echo "$DISTRO_HOME_URL")"
 python3 - "$meta" "$home/blob/$tag/docs" > "$work/notes.md" <<'PY'
-import json, sys
+import json, os, sys
 m, docs = json.load(open(sys.argv[1])), sys.argv[2]
 size = m["size_bytes"] / 2**30
 print(f"## {m['name']} {m['version']}" + (f" “{m['codename']}”" if m.get("codename") else "") + "\n")
+# What is new, written for this release (docs/releases/<version>.md).
+whatsnew = os.path.join("docs", "releases", f"{m['version']}.md")
+if os.path.isfile(whatsnew):
+    print(open(whatsnew).read().strip() + "\n")
 print(f"* ISO: `{m['iso']}` ({size:.2f} GiB), SHA-256 `{m['sha256']}`")
 print(f"* Built from `{m['source_commit'][:12]}`, desktop `{m['desktop'][:12]}`, "
       f"{m.get('live_packages', '?')} live packages, offline repository: {m['offline']}")

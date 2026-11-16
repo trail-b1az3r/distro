@@ -74,7 +74,7 @@ def test_select_packages_contents():
     standard = profiles.select_packages(ps["standard"])
     assert {"oynix-bin", "onlyoffice-bin", "ark", "okular"} <= set(standard.packages)
     dev = profiles.select_packages(ps["developer"])
-    assert {"gcc", "clang", "rust", "cmake", "podman", "code"} <= set(dev.packages)
+    assert {"gcc", "clang", "rust", "cmake", "podman", "nexora-code"} <= set(dev.packages)
     ai = profiles.select_packages(ps["ai"])
     assert "nexora-ai" in ai.packages
     # Feature overrides customise a profile.

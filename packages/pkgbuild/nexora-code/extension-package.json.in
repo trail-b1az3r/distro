@@ -1,0 +1,59 @@
+{
+  "name": "@DISTRO_ID@-theme",
+  "displayName": "@DISTRO_NAME@",
+  "description": "@DISTRO_NAME@'s themes and defaults. \"@DISTRO_NAME@ Material\" follows Halcyon's colours as they change.",
+  "version": "1.0.0",
+  "publisher": "@DISTRO_ID@",
+  "license": "MIT",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Themes"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "themes": [
+      { "label": "@DISTRO_NAME@ Material", "uiTheme": "vs-dark", "path": "./themes/material-dark.json" },
+      { "label": "@DISTRO_NAME@ Dark", "uiTheme": "vs-dark", "path": "./themes/dark.json" },
+      { "label": "@DISTRO_NAME@ Light", "uiTheme": "vs", "path": "./themes/light.json" }
+    ],
+    "configuration": {
+      "title": "@DISTRO_NAME@",
+      "properties": {
+        "@DISTRO_ID@.followHalcyon": {
+          "type": "boolean",
+          "default": true,
+          "description": "Give the \"@DISTRO_NAME@ Material\" theme Halcyon's current colours (the theme, or the wallpaper's), and follow them when they change."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "workbench.colorTheme": "@DISTRO_NAME@ Material",
+      "workbench.preferredDarkColorTheme": "@DISTRO_NAME@ Material",
+      "workbench.preferredLightColorTheme": "@DISTRO_NAME@ Light",
+      "window.titleBarStyle": "custom",
+      "window.menuBarVisibility": "compact",
+      "window.commandCenter": true,
+      "workbench.startupEditor": "welcomePage",
+      "workbench.tips.enabled": true,
+      "editor.fontFamily": "'JetBrains Mono', 'Google Sans Code', monospace",
+      "editor.fontLigatures": true,
+      "editor.fontSize": 14,
+      "editor.lineHeight": 1.6,
+      "editor.cursorBlinking": "smooth",
+      "editor.cursorSmoothCaretAnimation": "on",
+      "editor.smoothScrolling": true,
+      "editor.bracketPairColorization.enabled": true,
+      "editor.guides.bracketPairs": "active",
+      "editor.minimap.renderCharacters": false,
+      "editor.renderWhitespace": "trailing",
+      "editor.stickyScroll.enabled": true,
+      "terminal.integrated.fontFamily": "'JetBrains Mono', monospace",
+      "terminal.integrated.smoothScrolling": true,
+      "terminal.integrated.defaultProfile.linux": "fish",
+      "files.trimTrailingWhitespace": true,
+      "files.insertFinalNewline": true,
+      "telemetry.telemetryLevel": "off",
+      "update.mode": "none",
+      "extensions.autoCheckUpdates": true
+    }
+  }
+}

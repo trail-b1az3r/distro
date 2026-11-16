@@ -1,8 +1,9 @@
 # Release process
 
 Releases are numbered `YY.MM.<release>` with a name, both set in `distro.conf`
-(`ISO_VERSION_FORMAT`, `ISO_RELEASE`, `ISO_CODENAME`). The November 2026
-maintenance release is **26.11.0.1.4 "Hydrogen Neo"**, tagged `v26.11.0.1.4-3` (`-2` is the earlier build of it).
+(`ISO_VERSION_FORMAT`, `ISO_RELEASE`, `ISO_CODENAME`). The current release is **26.11.0.2.0 "Rain Field"**
+(tag `v26.11.0.2.0`); before it, 26.11.0.1.4 "Hydrogen Neo" (`v26.11.0.1.4-3`). What is new in a release goes in
+`docs/releases/<version>.md`, which the release notes include.
 Actions > Tag puts a tag on a commit without releasing it. Bump `ISO_RELEASE`
 (and give it a new `ISO_CODENAME`) for each release; use a new patch number
 rather than moving a tag that already has a published release.

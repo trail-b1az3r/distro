@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=@DISTRO_NAME@ Code - URL Handler
+Comment=Opens @DISTRO_ID@-code:// links in @DISTRO_NAME@ Code.
+Exec=@DISTRO_ID@-code --open-url %U
+Icon=@DISTRO_ID@-code
+Type=Application
+NoDisplay=true
+StartupNotify=true
+Categories=Utility;TextEditor;Development;IDE;
+MimeType=x-scheme-handler/@DISTRO_ID@-code;

@@ -149,7 +149,7 @@ jobs:
             -exec cp -n -t build/ci-packages -- {} +
           count="$(find build/ci-packages -maxdepth 1 -type f -name '*.pkg.tar.zst' | wc -l)"
           id="$(. ./distro.conf && echo "$DISTRO_ID")"
-          for own in "$id-core" nmx hyprland-plus; do
+          for own in "$id-core" "$id-code" nmx hyprland-plus; do
             if ! compgen -G "build/ci-packages/$own-[0-9]*.pkg.tar.zst" >/dev/null; then
               echo "::error::The distribution's own package $own was not collected for the experiments sources."
               ls build/ci-packages

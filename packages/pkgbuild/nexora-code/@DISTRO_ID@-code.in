@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# @DISTRO_NAME@ Code (VSCodium, made @DISTRO_NAME@'s own). Wayland-native where the session is Wayland.
+flags=()
+if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+    flags=(--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations)
+fi
+# Flags of the user's own, one per line, as VS Code's code-flags.conf.
+conf="${XDG_CONFIG_HOME:-$HOME/.config}/@DISTRO_ID@-code-flags.conf"
+if [[ -f "$conf" ]]; then
+    while IFS= read -r line; do
+        [[ -z "$line" || "$line" == \#* ]] || flags+=("$line")
+    done < "$conf"
+fi
+ELECTRON_RUN_AS_NODE= exec /usr/lib/@DISTRO_ID@-code/bin/codium "${flags[@]}" "$@"

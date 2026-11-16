@@ -1,0 +1,18 @@
+[Desktop Entry]
+Name=@DISTRO_NAME@ Code
+GenericName=Code Editor
+Comment=Write, run and debug code. Built on VSCodium.
+Exec=@DISTRO_ID@-code %F
+Icon=@DISTRO_ID@-code
+Type=Application
+StartupNotify=true
+StartupWMClass=@DISTRO_NAME@ Code
+Categories=Utility;TextEditor;Development;IDE;
+MimeType=text/plain;inode/directory;application/x-@DISTRO_ID@-code-workspace;
+Actions=new-empty-window;
+Keywords=vscode;vscodium;codium;code;editor;ide;
+
+[Desktop Action new-empty-window]
+Name=New Empty Window
+Exec=@DISTRO_ID@-code --new-window %F
+Icon=@DISTRO_ID@-code

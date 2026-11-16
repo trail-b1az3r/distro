@@ -161,4 +161,4 @@ def test_ci_keeps_the_distributions_own_packages():
     ci = (ROOT / ".github/workflows/ci.yml").read_text()
     save = ci.index("cp -t build/ci-packages -- build/pkgbuild/*/*.pkg.tar.zst")
     assert save < ci.index("scripts/build-packages.sh --plan") < ci.index("scripts/build-packages.sh --only")
-    assert 'for own in "$id-core" nmx hyprland-plus' in ci
+    assert 'for own in "$id-core" "$id-code" nmx hyprland-plus' in ci
