@@ -1,5 +1,8 @@
 # Microsoft Surface support through the linux-surface project
-# (https://github.com/linux-surface/linux-surface).
+# (https://github.com/linux-surface/linux-surface), with the extras from the
+# distribution's fork of it (https://github.com/trail-b1az3r/linux-surface,
+# contrib/: the surface-contrib package). The fork carries the same kernel
+# patches, so the kernel comes from linux-surface's signed repository.
 #
 # Nothing here is installed unless the user enables the Surface kernel in the
 # installer (it is pre-selected when Surface hardware is detected) or runs
@@ -18,7 +21,10 @@ key_file = "linux-surface.asc"
 kernel = ["linux-surface", "linux-surface-headers"]
 # iptsd: touchscreen and pen (Intel Precise Touch). libwacom-surface: pen and
 # touch device descriptions (replaces libwacom).
-support = ["iptsd", "libwacom-surface", "touchd-dkms"]
+support = ["iptsd", "libwacom-surface", "touchd-dkms", "surface-contrib"]
+# The IPU3 cameras (front, rear, IR) through the fork's surface-camd: published
+# as webcams on v4l2loopback devices. Only on the models listed under [cameras].
+cameras = ["v4l2loopback-dkms", "v4l-utils"]
 # Enroll linux-surface's Secure Boot MOK key (used with shim). Only offered
 # when Secure Boot is on.
 secureboot = ["linux-surface-secureboot-mok"]
@@ -32,6 +38,16 @@ marvell = ["linux-firmware-marvell"]
 "Surface_Pro_1796" = "Surface Pro (5th Gen)"
 "Surface_Pro_1807" = "Surface Pro (5th Gen) LTE"
 "Surface_Laptop" = "Surface Laptop"
+
+# Product names (regular expressions) of models whose cameras are on an Intel
+# IPU3 (OV5693 front, OV8865 rear, OV7251 IR), which surface-camd drives.
+[cameras]
+models = [
+  "^Surface Pro [46]$",
+  "^Surface Pro$",
+  "^Surface Book$",
+  "^Surface Book 2$",
+]
 
 # Product names (regular expressions) of models with Marvell Wi-Fi. Their Wi-Fi
 # firmware (linux-firmware-marvell) is also installed with the regular kernel:

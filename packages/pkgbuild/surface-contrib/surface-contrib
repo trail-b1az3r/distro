@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# surface-contrib: the Surface extras from the linux-surface fork, set up for this machine.
+#
+#   surface-contrib model                 what this Surface has: ipu3 (cameras for surface-camd), pro5, pro7plus
+#   surface-contrib cameras status        the IPU3 cameras: configuration, services, devices
+#   surface-contrib cameras on [--no-start]   load order, v4l2loopback devices and surface-camd (root)
+#   surface-contrib cameras off           undo that (root)
+#   surface-contrib cameras doctor        every camera layer checked (the fork's surface-camera-setup.sh)
+#   surface-contrib cameras report        all camera logs in one file, for a bug report
+#   surface-contrib speaker-eq [...]      the speaker EQ for the Surface Pro 5 / 7+ (as your user)
+#   surface-contrib suspend [...]         modern suspend for the Surface Pro 5 (--install, --test, --uninstall)
+#
+# The cameras show up as /dev/video50 (front), /dev/video51 (rear) and /dev/video52 (IR), named "Surface Front
+# Camera" and so on, in browsers, video calls, OBS and Howdy.
+set -euo pipefail
+
+SHARE="${SURFACE_CONTRIB_SHARE:-/usr/share/surface-contrib}"
+ROOT="${SURFACE_CONTRIB_ROOT:-}"
+DMI="${SURFACE_CONTRIB_DMI:-/sys/class/dmi/id}"
+CAMERAS=(front rear ir)
+
+dmi() { cat "$DMI/$1" 2>/dev/null || true; }
+
+# The model's kinds, one per line.
+model() {
+    local name sku
+    name="$(dmi product_name)"
+    sku="$(dmi product_sku)"
+    # The IPU3 cameras: Surface Pro 4, 5 (2017, plain "Surface Pro"), 6, and Surface Book 1 and 2.
+    if [[ "$name" =~ ^Surface\ (Pro(\ [46])?|Book(\ 2)?)$ ]]; then echo ipu3; fi
+    if [[ "$name" == "Surface Pro" || "$sku" == Surface_Pro_1796 || "$sku" == Surface_Pro_1807 ]]; then echo pro5; fi
+    if [[ "$name" == "Surface Pro 7+" ]]; then echo pro7plus; fi
+    return 0
+}
+
+has() { model | grep -qx "$1"; }
+
+need_root() {
+    if [[ -z "$ROOT" && "$(id -u)" != 0 ]]; then
+        echo "Run as root: sudo surface-contrib $*" >&2
+        exit 1
+    fi
+}
+
+in_chroot() {
+    [[ -n "$ROOT" ]] && return 0
+    command -v systemd-detect-virt >/dev/null && systemd-detect-virt --chroot >/dev/null 2>&1
+}
+
+systemctl_root() {
+    if [[ -n "$ROOT" ]]; then systemctl --root="$ROOT" "$@"; else systemctl "$@"; fi
+}
+
+cameras_on() {
+    local start=1
+    [[ "${1:-}" == --no-start ]] && start=0
+    need_root cameras on
+    if ! has ipu3; then
+        echo "This is not a Surface with IPU3 cameras ($(dmi product_name)); nothing to do."
+        return 0
+    fi
+    local others
+    others="$(grep -ls '^options v4l2loopback' "$ROOT"/etc/modprobe.d/*.conf 2>/dev/null \
+              | grep -v '/v4l2loopback-surface.conf$' || true)"
+    if [[ -n "$others" ]]; then
+        echo "Note: v4l2loopback already has options in: $others"
+        echo "      There can be only one options line: merge it with $ROOT/etc/modprobe.d/v4l2loopback-surface.conf."
+    fi
+    install -Dm644 "$SHARE/cameras/surface-ipu3-cameras.conf" "$ROOT/etc/modprobe.d/surface-ipu3-cameras.conf"
+    install -Dm644 "$SHARE/cameras/v4l2loopback-surface.conf" "$ROOT/etc/modprobe.d/v4l2loopback-surface.conf"
+    install -Dm644 "$SHARE/cameras/v4l2loopback-load.conf" "$ROOT/etc/modules-load.d/v4l2loopback-surface.conf"
+    printf '%s\n' ipu3_cio2 > "$ROOT/etc/modules-load.d/surface-ipu3-cameras.conf"
+    # The raw ipu3-cio2 nodes show only black or green: hidden from apps, and the cameras named.
+    install -Dm644 "$SHARE/cameras/wireplumber/51-surface-ipu3-cameras.conf" \
+        "$ROOT/etc/wireplumber/wireplumber.conf.d/51-surface-ipu3-cameras.conf"
+    local cam
+    for cam in "${CAMERAS[@]}"; do systemctl_root enable "surface-camd@$cam.service" >/dev/null 2>&1 || true; done
+    echo "Surface cameras turned on: /dev/video50 (front), /dev/video51 (rear), /dev/video52 (IR)."
+    if (( start )) && ! in_chroot; then
+        local m
+        for m in intel_skl_int3472_discrete ov5693 ov8865 ov7251 ipu_bridge ipu3_cio2; do modprobe "$m" 2>/dev/null || true; done
+        modprobe -r v4l2loopback 2>/dev/null || true
+        modprobe v4l2loopback 2>/dev/null || echo "v4l2loopback did not load yet: reboot (or check: dkms status)."
+        systemctl daemon-reload
+        for cam in "${CAMERAS[@]}"; do systemctl restart "surface-camd@$cam.service" || true; done
+        echo "Restart WirePlumber in your session for the names: systemctl --user restart wireplumber"
+    else
+        echo "They start with the next boot."
+    fi
+}
+
+cameras_off() {
+    need_root cameras off
+    local cam
+    for cam in "${CAMERAS[@]}"; do
+        systemctl_root disable "surface-camd@$cam.service" >/dev/null 2>&1 || true
+        in_chroot || systemctl stop "surface-camd@$cam.service" 2>/dev/null || true
+    done
+    rm -f "$ROOT/etc/modprobe.d/surface-ipu3-cameras.conf" "$ROOT/etc/modprobe.d/v4l2loopback-surface.conf" \
+          "$ROOT/etc/modules-load.d/v4l2loopback-surface.conf" "$ROOT/etc/modules-load.d/surface-ipu3-cameras.conf" \
+          "$ROOT/etc/wireplumber/wireplumber.conf.d/51-surface-ipu3-cameras.conf"
+    echo "Surface cameras turned off (surface-camd stopped, its configuration removed)."
+}
+
+cameras_status() {
+    echo "Model: $(dmi product_name) ($(model | paste -sd, - || true))"
+    if [[ -f "$ROOT/etc/modprobe.d/v4l2loopback-surface.conf" ]]; then echo "Configuration: on"; else echo "Configuration: off"; fi
+    local cam dev=50 state
+    for cam in "${CAMERAS[@]}"; do
+        state="$(systemctl is-active "surface-camd@$cam.service" 2>/dev/null || true)"
+        printf '  %-5s surface-camd@%s: %s, /dev/video%s %s\n' "$cam" "$cam" "${state:-unknown}" "$dev" \
+            "$([[ -e /dev/video$dev ]] && echo present || echo missing)"
+        dev=$((dev + 1))
+    done
+}
+
+case "${1:-}" in
+    model) model ;;
+    cameras)
+        case "${2:-status}" in
+            status) cameras_status ;;
+            on) cameras_on "${3:-}" ;;
+            off) cameras_off ;;
+            doctor) exec bash "$SHARE/cameras/surface-camera-setup.sh" ;;
+            report) exec bash "$SHARE/cameras/surface-camera-setup.sh" --report ;;
+            *) echo "surface-contrib cameras status|on|off|doctor|report" >&2; exit 2 ;;
+        esac
+        ;;
+    speaker-eq)
+        shift
+        if [[ "$(id -u)" == 0 ]]; then echo "Run the speaker EQ as your user (it is set up in your PipeWire)." >&2; exit 1; fi
+        exec bash "$SHARE/speaker-eq/install-speaker-eq.sh" "$@"
+        ;;
+    suspend)
+        shift
+        exec bash "$SHARE/surface-pro-5-suspend/surface-pro-5-suspend.sh" "$@"
+        ;;
+    -h|--help|help|"") sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *) echo "Unknown command: $1 (surface-contrib --help)" >&2; exit 2 ;;
+esac

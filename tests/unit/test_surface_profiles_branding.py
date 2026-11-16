@@ -163,3 +163,19 @@ def test_fastfetch_logo_uses_at_most_nine_colours(tmp_path):
     assert len(ansi.splitlines()) == 12
     assert "\x1b[38;2;" in ansi
     assert " " in ansi  # transparent parts of the mark stay transparent
+
+
+def test_surface_extras_from_the_fork(machine):
+    # Every Surface gets the fork's extras (surface-contrib); the IPU3 cameras' packages only where they are.
+    _, r = machine("surface_pro5")
+    info = surface.detect(r)
+    assert info.has_ipu3_cameras
+    sp = surface.plan(info, enabled=True)
+    assert {"surface-contrib", "v4l2loopback-dkms", "v4l-utils"} <= set(sp.packages)
+    assert any("surface-camd" in n for n in sp.notes)
+    _, r = machine("surface_pro7")
+    info = surface.detect(r)
+    assert not info.has_ipu3_cameras
+    sp = surface.plan(info, enabled=True)
+    assert "surface-contrib" in sp.packages and "v4l2loopback-dkms" not in sp.packages
+    assert "trail-b1az3r/linux-surface" in (surface.paths.data("hardware", "surface", "surface.toml")).read_text()

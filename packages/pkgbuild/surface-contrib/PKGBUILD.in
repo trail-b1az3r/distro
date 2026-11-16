@@ -1,0 +1,64 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+# The Surface extras from @DISTRO_NAME@'s linux-surface fork (trail-b1az3r/linux-surface, contrib/): surface-camd, the
+# userspace camera driver for the IPU3 front, rear and IR cameras (Surface Pro 4/5/6, Surface Book 1/2), the speaker
+# EQ for the Surface Pro 5 and 7+, and modern suspend for the Surface Pro 5. Pinned by commit; bump _commit and pkgver
+# together. The kernel itself still comes from linux-surface's signed repository (its patches are the same).
+pkgname=surface-contrib
+pkgver=2026.11.16
+pkgrel=1
+_commit=883fa4d7c71be6645a5632bf240ea0c13cb1eeb7
+pkgdesc="Surface extras from the linux-surface fork: IPU3 camera driver (front, rear, IR), speaker EQ, Pro 5 suspend"
+arch=('x86_64')
+url="https://github.com/trail-b1az3r/linux-surface"
+license=('GPL-2.0-or-later')
+depends=('glibc' 'systemd' 'bash')
+optdepends=(
+  'v4l2loopback-dkms: publishes the IPU3 cameras as ordinary webcams (installed on IPU3 Surfaces)'
+  'v4l-utils: camera diagnostics (surface-contrib cameras status)'
+  'pipewire-pulse: the speaker EQ finds the speaker output with pactl'
+  'thermald: the example thermal configurations in /usr/share/surface-contrib/thermald'
+)
+makedepends=('git' 'gcc' 'make')
+install=surface-contrib.install
+source=("linux-surface::git+https://github.com/trail-b1az3r/linux-surface.git#commit=${_commit}"
+        "surface-contrib")
+sha256sums=('SKIP' 'SKIP')
+
+build() {
+  make -C "$srcdir/linux-surface/contrib/surface-ipu3-cameras/surface-camd" surface-camd
+}
+
+check() {
+  make -C "$srcdir/linux-surface/contrib/surface-ipu3-cameras/surface-camd" test
+}
+
+package() {
+  local contrib="$srcdir/linux-surface/contrib" share="$pkgdir/usr/share/surface-contrib"
+  local cams="$contrib/surface-ipu3-cameras"
+
+  install -Dm755 "$cams/surface-camd/surface-camd" "$pkgdir/usr/bin/surface-camd"
+  install -Dm644 "$cams/surface-camd/surface-camd@.service" "$pkgdir/usr/lib/systemd/system/surface-camd@.service"
+  sed -i 's|[@]BINDIR[@]|/usr/bin|' "$pkgdir/usr/lib/systemd/system/surface-camd@.service"
+  # Turned on per machine (surface-contrib cameras on): v4l2loopback devices would be empty cameras anywhere else.
+  install -Dm644 -t "$share/cameras" "$cams/surface-camd/v4l2loopback-surface.conf" \
+    "$cams/surface-camd/v4l2loopback-load.conf" "$cams/modprobe.d/surface-ipu3-cameras.conf" \
+    "$cams/README.md"
+  install -Dm644 "$cams/surface-camd/README.md" "$share/cameras/surface-camd.md"
+  install -Dm644 -t "$share/cameras/wireplumber" "$cams/wireplumber/"*.conf
+  install -Dm755 "$cams/surface-camera-setup.sh" "$share/cameras/surface-camera-setup.sh"
+
+  install -Dm755 "$contrib/speaker-eq/install-speaker-eq.sh" "$share/speaker-eq/install-speaker-eq.sh"
+  install -Dm644 -t "$share/speaker-eq" "$contrib/speaker-eq/"*.conf "$contrib/speaker-eq/README.md"
+
+  local s="$contrib/surface-pro-5-suspend"
+  install -Dm755 "$s/surface-pro-5-suspend.sh" "$share/surface-pro-5-suspend/surface-pro-5-suspend.sh"
+  install -Dm644 "$s/README.md" "$share/surface-pro-5-suspend/README.md"
+  install -Dm644 "$s/sleep.conf.d/50-surface-pro-5.conf" "$share/surface-pro-5-suspend/sleep.conf.d/50-surface-pro-5.conf"
+  install -Dm644 "$s/logind.conf.d/50-surface-pro-5.conf" "$share/surface-pro-5-suspend/logind.conf.d/50-surface-pro-5.conf"
+  install -Dm755 "$s/system-sleep/surface-pro-5-sleep" "$share/surface-pro-5-suspend/system-sleep/surface-pro-5-sleep"
+
+  cp -r --no-preserve=ownership "$contrib/thermald" "$share/thermald"
+  find "$share/thermald" -type f -exec chmod 644 {} +
+
+  install -Dm755 "$srcdir/surface-contrib" "$pkgdir/usr/bin/surface-contrib"
+}

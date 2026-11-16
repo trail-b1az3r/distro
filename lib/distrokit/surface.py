@@ -35,6 +35,8 @@ class SurfaceInfo:
     recommended: bool
     needs_marvell_firmware: bool
     secure_boot: bool | None
+    # Front, rear and IR cameras on an Intel IPU3, driven by surface-camd (surface-contrib).
+    has_ipu3_cameras: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -50,16 +52,17 @@ class SurfaceInfo:
 
 def detect(report: HardwareReport) -> SurfaceInfo:
     model = report.chassis.surface_model
-    marvell = False
+    marvell = cameras = False
     if report.chassis.surface:
-        for pattern in config()["marvell"]["models"]:
-            if re.search(pattern, report.chassis.product_name or model):
-                marvell = True
+        name = report.chassis.product_name or model
+        marvell = any(re.search(p, name) for p in config()["marvell"]["models"])
+        cameras = any(re.search(p, name) for p in config().get("cameras", {}).get("models", []))
     return SurfaceInfo(
         detected=report.chassis.surface,
         model=model,
         recommended=report.chassis.surface,
         needs_marvell_firmware=marvell,
+        has_ipu3_cameras=cameras,
         secure_boot=report.firmware.secure_boot,
     )
 
@@ -89,6 +92,9 @@ def plan(info: SurfaceInfo, enabled: bool, secure_boot_mok: bool = False) -> Sur
     notes = []
     if info.needs_marvell_firmware:
         packages += cfg["marvell"]
+    if info.has_ipu3_cameras:
+        packages += cfg.get("cameras", [])
+        notes.append("Cameras: front, rear and IR through surface-camd (/dev/video50-52); surface-contrib cameras status.")
     if secure_boot_mok:
         packages += cfg["secureboot"]
         notes.append("Secure Boot: enroll the linux-surface MOK key when prompted after reboot (password: surface).")

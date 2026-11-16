@@ -24,6 +24,33 @@ sudo nexora surface enable --secure-boot   # also the MOK key package (for shim 
 sudo nexora surface disable        # back to the regular kernel (the repository is kept)
 ```
 
+## Extras from the linux-surface fork
+
+Nexora's Surface support uses its own fork of linux-surface,
+[trail-b1az3r/linux-surface](https://github.com/trail-b1az3r/linux-surface). The fork carries the same kernel
+patches, so the kernel still comes from linux-surface's signed repository. What the fork adds (`contrib/`) is
+packaged as `surface-contrib`, built from the fork at a pinned commit and installed with the rest of Surface
+support:
+
+* **Cameras on the Surface Pro 4, 5 and 6 and the Surface Book 1 and 2** (Intel IPU3): `surface-camd`, a userspace
+  driver for the front, rear and **IR** cameras. It shows them to every app as ordinary webcams: "Surface Front
+  Camera" on `/dev/video50`, "Surface Rear Camera" on `/dev/video51` and "Surface IR Camera" on `/dev/video52`
+  (usable with Howdy for face unlock). On those models it is turned on when the package is installed, along with
+  `v4l2loopback-dkms`. On other models nothing changes.
+* **Speaker EQ for the Surface Pro 5 and 7+**: a PipeWire filter that corrects the small speakers. Run it as your
+  user.
+* **Modern suspend for the Surface Pro 5**: deep sleep where the firmware has it, then s2idle and
+  suspend-then-hibernate, plus a Wi-Fi hook. You turn it on yourself because it changes how the lid behaves.
+* Example thermald configurations, in `/usr/share/surface-contrib/thermald/`.
+
+```bash
+surface-contrib cameras status            # configuration, services, devices
+sudo surface-contrib cameras on|off       # turn the cameras on or off
+surface-contrib cameras doctor            # check every camera layer (report: logs for a bug report)
+surface-contrib speaker-eq                # speaker EQ (Pro 5 / 7+), as your user
+sudo surface-contrib suspend --install    # Pro 5 suspend (--test checks deep idle, --uninstall)
+```
+
 ## touchD controls
 
 When Surface support is enabled, Nexora installs `touchd-dkms` alongside

@@ -7,7 +7,8 @@
 3. **The distribution repository** (`[nexora]`) — this distribution's own
    packages (`nexora-core`, `-desktop`, `-branding`, `-welcome`, `-installer`,
    `-ai`, the Google Sans Flex font, and `touchd-dkms` for Surface
-   touchscreen and pen support) and prebuilt AUR packages the desktop and
+   touchscreen and pen support, `surface-contrib` for the extras from the
+   linux-surface fork: IPU3 cameras, speaker EQ, Pro 5 suspend) and prebuilt AUR packages the desktop and
    drivers need (the illogical-impulse meta packages, Quickshell, fonts,
    themes, the NVIDIA 580 legacy driver, llama.cpp). Built reproducibly from
    this repository (see [iso-building.md](iso-building.md)).

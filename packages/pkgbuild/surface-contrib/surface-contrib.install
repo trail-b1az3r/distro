@@ -1,0 +1,28 @@
+# surface-contrib: a Surface with IPU3 cameras gets them turned on, once (an administrator's choice is kept).
+
+post_install() {
+  if surface-contrib model 2>/dev/null | grep -qx ipu3; then
+    if [[ -e /etc/modprobe.d/v4l2loopback-surface.conf ]]; then
+      return 0
+    fi
+    surface-contrib cameras on --no-start ||
+      echo "surface-contrib: could not turn on the cameras; try: sudo surface-contrib cameras on"
+  fi
+  if surface-contrib model 2>/dev/null | grep -qx pro5; then
+    echo "surface-contrib: modern suspend for the Surface Pro 5: sudo surface-contrib suspend --install"
+  fi
+  if surface-contrib model 2>/dev/null | grep -qxE 'pro5|pro7plus'; then
+    echo "surface-contrib: speaker EQ for these speakers, as your user: surface-contrib speaker-eq"
+  fi
+}
+
+post_upgrade() {
+  systemctl daemon-reload >/dev/null 2>&1 || true
+}
+
+pre_remove() {
+  local cam
+  for cam in front rear ir; do
+    systemctl disable --now "surface-camd@$cam.service" >/dev/null 2>&1 || true
+  done
+}
