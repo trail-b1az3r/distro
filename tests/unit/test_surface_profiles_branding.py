@@ -10,7 +10,7 @@ def test_surface_detected_and_recommended(machine):
     sp = surface.plan(info, enabled=True)
     assert {"linux-surface", "linux-surface-headers", "iptsd", "libwacom-surface", "touchd-dkms"} <= set(sp.packages)
     assert sp.default_kernel == "linux-surface"
-    assert "[linux-surface]" in sp.repo_block
+    assert "[nexora-surface]" in sp.repo_block and "surfacelinux" not in sp.repo_block
 
 
 def test_surface_not_forced_but_manual_choice_respected(machine):
@@ -23,10 +23,20 @@ def test_surface_not_forced_but_manual_choice_respected(machine):
     assert any("manually" in n for n in manual.notes)
 
 
-def test_surface_key_fingerprint():
-    if not util.which("gpg"):
-        pytest.skip("gpg not available")
-    assert surface.verify_key() == "87DEFA4AB94A99A4C8C3112556C464BAAC421453"
+def test_surface_repository_is_the_forks(tmp_path):
+    # [nexora-surface], built from the fork, replaces linux-surface's own repository in pacman.conf.
+    cfg = surface.config()
+    assert cfg["repository"]["name"] == "nexora-surface" and "surfacelinux" not in cfg["repository"]["server"]
+    assert cfg["fork"]["url"] == "https://github.com/trail-b1az3r/linux-surface" and len(cfg["fork"]["commit"]) == 40
+    conf = tmp_path / "etc/pacman.conf"
+    conf.parent.mkdir(parents=True)
+    conf.write_text("[options]\nArchitecture = auto\n\n[linux-surface]\nServer = https://pkg.surfacelinux.com/arch/\n\n"
+                    "[extra]\nInclude = /etc/pacman.d/mirrorlist\n")
+    assert surface.ensure_repo(tmp_path, util.Runner())
+    text = conf.read_text()
+    assert "[linux-surface]" not in text and "surfacelinux" not in text and "[extra]" in text
+    assert "[nexora-surface]\nSigLevel = Optional TrustAll\nServer = https://github.com/trail-b1az3r/distro/releases/download/nexora-surface" in text
+    assert not surface.ensure_repo(tmp_path, util.Runner())  # already there: nothing to change
 
 
 def test_surface_repo_added_once(tmp_path):
@@ -38,13 +48,12 @@ def test_surface_repo_added_once(tmp_path):
     surface.ensure_repo(tmp_path, runner)
     runner.dry_run = False
     text = (tmp_path / "etc/pacman.conf").read_text()
-    assert text.count("[linux-surface]") == 0  # dry run leaves the file alone
+    assert text.count("[nexora-surface]") == 0  # dry run leaves the file alone
     runner2 = util.Runner(dry_run=False)
     runner2.run = lambda cmd, **kw: util.Result(list(cmd), 0)  # type: ignore[method-assign]
-    if util.which("gpg"):
-        surface.ensure_repo(tmp_path, runner2)
-        surface.ensure_repo(tmp_path, runner2)
-        assert (tmp_path / "etc/pacman.conf").read_text().count("[linux-surface]") == 1
+    surface.ensure_repo(tmp_path, runner2)
+    surface.ensure_repo(tmp_path, runner2)
+    assert (tmp_path / "etc/pacman.conf").read_text().count("[nexora-surface]") == 1
 
 
 def test_profiles_inherit():
@@ -61,9 +70,9 @@ def test_select_packages_contents():
     ps = profiles.load_profiles()
     minimal = profiles.select_packages(ps["minimal"])
     assert {"git", "fish", "yay", "konsole", "dolphin", "networkmanager", "pipewire"} <= set(minimal.packages)
-    assert "firefox" not in minimal.packages and "onlyoffice-bin" not in minimal.packages
+    assert "oynix-bin" not in minimal.packages and "onlyoffice-bin" not in minimal.packages
     standard = profiles.select_packages(ps["standard"])
-    assert {"firefox", "onlyoffice-bin", "ark", "okular"} <= set(standard.packages)
+    assert {"oynix-bin", "onlyoffice-bin", "ark", "okular"} <= set(standard.packages)
     dev = profiles.select_packages(ps["developer"])
     assert {"gcc", "clang", "rust", "cmake", "podman", "code"} <= set(dev.packages)
     ai = profiles.select_packages(ps["ai"])

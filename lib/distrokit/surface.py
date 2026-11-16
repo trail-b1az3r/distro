@@ -1,5 +1,9 @@
 """Microsoft Surface support (linux-surface kernel and touch/pen stack).
 
+Everything comes from the [nexora-surface] repository, built from the distribution's linux-surface fork
+(hardware/surface/surface.toml, .github/workflows/surface.yml); linux-surface's own package server is not used, and
+its repository is taken out of pacman.conf when Surface support is enabled.
+
 Detection only *recommends* the Surface kernel. It is installed when the user
 enables it (installer toggle, or ``<cli> surface enable``), and a user may
 enable it on hardware we did not recognise: their choice is respected.
@@ -8,7 +12,6 @@ enable it on hardware we did not recognise: their choice is respected.
 from __future__ import annotations
 
 import re
-import subprocess
 import tomllib
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -22,10 +25,6 @@ from .hardware.report import HardwareReport
 def config() -> dict[str, Any]:
     with (paths.data("hardware", "surface", "surface.toml")).open("rb") as fh:
         return tomllib.load(fh)
-
-
-def key_path() -> Path:
-    return paths.data("hardware", "surface", config()["repository"]["key_file"])
 
 
 @dataclass
@@ -81,7 +80,21 @@ class SurfacePlan:
 
 def repo_block() -> str:
     repo = config()["repository"]
-    return f"\n[{repo['name']}]\nServer = {repo['server']}\n"
+    siglevel = f"SigLevel = {repo['siglevel']}\n" if repo.get("siglevel") else ""
+    return f"\n[{repo['name']}]\n{siglevel}Server = {repo['server']}\n"
+
+
+def without_sections(text: str, names: list[str]) -> str:
+    """pacman.conf text without the given repository sections (header to the next header)."""
+    out: list[str] = []
+    skipping = False
+    for line in text.splitlines(keepends=True):
+        header = re.match(r"\s*\[([^\]]+)\]\s*$", line)
+        if header:
+            skipping = header.group(1) in names
+        if not skipping:
+            out.append(line)
+    return "".join(out)
 
 
 def plan(info: SurfaceInfo, enabled: bool, secure_boot_mok: bool = False) -> SurfacePlan:
@@ -97,50 +110,30 @@ def plan(info: SurfaceInfo, enabled: bool, secure_boot_mok: bool = False) -> Sur
         notes.append("Cameras: front, rear and IR through surface-camd (/dev/video50-52); surface-contrib cameras status.")
     if secure_boot_mok:
         packages += cfg["secureboot"]
-        notes.append("Secure Boot: enroll the linux-surface MOK key when prompted after reboot (password: surface).")
+        notes.append("Secure Boot: the Surface kernel is signed on this machine with sbctl (the installer's Secure Boot "
+                     "option), not with linux-surface's MOK key.")
     if not info.detected:
         notes.append("The Surface kernel was enabled manually on hardware that was not identified as a Surface.")
     notes.append("The standard kernel stays installed and remains available in the boot menu.")
     return SurfacePlan(enabled=True, packages=packages, repo_block=repo_block(), default_kernel="linux-surface", notes=notes)
 
 
-def verify_key(path: Path | None = None) -> str:
-    """Check the vendored key's fingerprint; returns it or raises."""
-    path = path or key_path()
-    expected = config()["repository"]["key_fingerprint"].upper()
-    if not util.which("gpg"):
-        # pacman-key imports through gpg too, so this only happens in odd
-        # environments (the check still runs on every real system).
-        raise RuntimeError("gpg is required to verify the linux-surface key")
-    out = subprocess.run(
-        ["gpg", "--show-keys", "--with-colons", str(path)], capture_output=True, text=True, check=True
-    ).stdout
-    fprs = [line.split(":")[9] for line in out.splitlines() if line.startswith("fpr:")]
-    if not fprs or fprs[0].upper() != expected:
-        raise RuntimeError(f"linux-surface key fingerprint mismatch: expected {expected}, found {fprs[:1]}")
-    return expected
-
-
 def ensure_repo(root: Path, runner: util.Runner) -> bool:
-    """Add the linux-surface repository to pacman.conf and trust its key."""
+    """Add the [nexora-surface] repository to pacman.conf, and take out linux-surface's own."""
     conf = root / "etc" / "pacman.conf"
     repo = config()["repository"]
     text = conf.read_text() if conf.is_file() else ""
-    changed = False
-    if f"[{repo['name']}]" not in text:
+    new = text
+    old = [name for name in repo.get("replaces", []) if f"[{name}]" in new]
+    if old:
+        runner._emit(f"remove [{'], ['.join(old)}] from /etc/pacman.conf (replaced by [{repo['name']}])")
+        new = without_sections(new, old)
+    if f"[{repo['name']}]" not in new:
         runner._emit(f"add [{repo['name']}] to /etc/pacman.conf")
-        if not runner.dry_run:
-            util.atomic_write(conf, text.rstrip("\n") + "\n" + repo_block())
-        changed = True
-    fpr = verify_key() if not runner.dry_run else repo["key_fingerprint"]
-    key_dest = root / "usr" / "share" / "pacman" / "keyrings-extra" / "linux-surface.asc"
-    if not runner.dry_run:
-        key_dest.parent.mkdir(parents=True, exist_ok=True)
-        key_dest.write_bytes(key_path().read_bytes())
-    in_root_key = "/" + str(key_dest.relative_to(root))
-    boot.in_root(runner, root, ["pacman-key", "--add", in_root_key])
-    boot.in_root(runner, root, ["pacman-key", "--lsign-key", fpr])
-    return changed
+        new = new.rstrip("\n") + "\n" + repo_block()
+    if new != text and not runner.dry_run:
+        util.atomic_write(conf, new)
+    return new != text
 
 
 def apply(sp: SurfacePlan, *, root: Path | str = "/", runner: util.Runner | None = None,

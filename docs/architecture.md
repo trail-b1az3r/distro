@@ -13,7 +13,7 @@
         │
         ├── hardware/      sysfs/procfs/udev → HardwareReport (CPU, GPUs, topology, displays, disks, input…)
         ├── gpu/           plan (stack per GPU, hybrid, env, modules) → apply (files + packages) → status
-        ├── surface.py     Surface detection, linux-surface repository and kernel
+        ├── surface.py     Surface detection, [nexora-surface] repository (built from the linux-surface fork) and kernel
         ├── boot.py        kernel command line fragments, systemd-boot entries, GRUB, boot.conf
         ├── installer/     config (+schema) → disks (partition plans) → steps (Installation) → engine
         ├── ai/            backends (GPU → PyTorch/llama.cpp), tools (uv/npm per user), models, runtime, launcher

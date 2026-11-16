@@ -55,7 +55,7 @@ kind = "bool"
 group = "Applications"
 order = 20
 label = "Web browser"
-description = "Firefox, configured as the default browser."
+description = "OyNIx, configured as the default browser."
 lists = ["browser"]
 
 [office]

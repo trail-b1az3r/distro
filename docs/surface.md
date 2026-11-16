@@ -1,8 +1,9 @@
 # Microsoft Surface
 
 Surface devices (Pro, Laptop, Book, Go, Studio) are detected from the
-firmware's product name and Surface ACPI devices. The
-[linux-surface](https://github.com/linux-surface/linux-surface) project's
+firmware's product name and Surface ACPI devices. Nexora's Surface support is
+built entirely from its own fork of linux-surface,
+[trail-b1az3r/linux-surface](https://github.com/trail-b1az3r/linux-surface). The Surface
 kernel adds touchscreen and pen support (through `iptsd`), cameras on some
 models, better battery life and fixes for the Type Cover.
 
@@ -11,26 +12,32 @@ models, better battery life and fixes for the Type Cover.
   is off and can be switched on (for example if detection missed a model).
 * It is installed **in addition** to the regular kernel, which stays in the
   boot menu as a fallback. The Surface kernel is the default entry.
-* The package repository is linux-surface's own; its signing key ships with
-  the distribution ([`hardware/surface/linux-surface.asc`](../hardware/surface/linux-surface.asc))
-  and is checked against the fingerprint in `surface.toml` before it is
-  trusted.
+* The packages come from Nexora's **`[nexora-surface]`** repository, not linux-surface's server. The
+  [Surface packages workflow](../.github/workflows/surface.yml) builds them (`scripts/build-surface.sh`):
+  * `linux-surface` and `linux-surface-headers`, from the fork's `pkg/arch/kernel` at the commit pinned in
+    [`surface.toml`](../hardware/surface/surface.toml) (`[fork] commit`);
+  * `surface-contrib`, from the fork's `contrib/`, at the same commit;
+  * `iptsd`, from [linux-surface/iptsd](https://github.com/linux-surface/iptsd) at a pinned tag;
+  * `libwacom-surface`, from the AUR.
+
+  It runs when the pins change, every week, and by hand. Like the distribution's own repository, it is served over
+  HTTPS from GitHub releases, unsigned. Enabling Surface support takes linux-surface's `[linux-surface]` repository
+  out of `pacman.conf`, and these packages replace its packages (a Nexora build always has the higher pkgrel).
+* **Secure Boot:** the kernel is not signed with linux-surface's MOK key. Use the installer's Secure Boot option
+  (sbctl, with systemd-boot), which signs every installed kernel on the machine.
+* To take a newer fork, set `[fork] commit` in `surface.toml`. The push to main rebuilds the repository.
 * Installing it needs the internet (it is not on the ISO).
 
 ```bash
 nexora surface status              # detected model, kernel state
 sudo nexora surface enable         # repository, key, kernel, iptsd, libwacom-surface
-sudo nexora surface enable --secure-boot   # also the MOK key package (for shim setups)
 sudo nexora surface disable        # back to the regular kernel (the repository is kept)
 ```
 
 ## Extras from the linux-surface fork
 
-Nexora's Surface support uses its own fork of linux-surface,
-[trail-b1az3r/linux-surface](https://github.com/trail-b1az3r/linux-surface). The fork carries the same kernel
-patches, so the kernel still comes from linux-surface's signed repository. What the fork adds (`contrib/`) is
-packaged as `surface-contrib`, built from the fork at a pinned commit and installed with the rest of Surface
-support:
+What the fork adds to linux-surface (`contrib/`) is packaged as `surface-contrib` and installed with the rest of
+Surface support:
 
 * **Cameras on the Surface Pro 4, 5 and 6 and the Surface Book 1 and 2** (Intel IPU3): `surface-camd`, a userspace
   driver for the front, rear and **IR** cameras. It shows them to every app as ordinary webcams: "Surface Front

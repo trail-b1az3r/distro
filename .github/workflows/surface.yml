@@ -1,0 +1,82 @@
+# Builds Nexora's Surface packages from the distribution's own sources (scripts/build-surface.sh): the kernel from
+# the linux-surface fork, surface-contrib, iptsd and libwacom-surface. Publishes them as the [nexora-surface] pacman
+# repository (release "nexora-surface"), which Nexora's Surface support uses in place of linux-surface's server.
+#
+# Runs when the pins change (hardware/surface/surface.toml), weekly (Arch's toolchain moves on), and by hand.
+name: Surface packages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - hardware/surface/surface.toml
+      - packages/pkgbuild/surface-contrib/**
+      - scripts/build-surface.sh
+      - .github/workflows/surface.yml
+  schedule:
+    - cron: "41 3 * * 0"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Build only these packages (space-separated; empty = all, kernel included)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nexora-surface
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and publish [nexora-surface]
+    runs-on: ubuntu-24.04
+    # A full Arch kernel build takes a few hours on a hosted runner.
+    timeout-minutes: 350
+    container:
+      image: archlinux:base-devel
+    env:
+      REPO: nexora-surface
+    steps:
+      - name: Tools
+        run: pacman -Syu --noconfirm --needed git github-cli pacman-contrib python zstd
+      - uses: actions/checkout@v4
+      - name: Build
+        env:
+          SURFACE_BUILD: ${{ github.run_number }}
+          SURFACE_ONLY: ${{ inputs.only }}
+        run: |
+          if [ -z "$SURFACE_ONLY" ]; then unset SURFACE_ONLY; fi
+          scripts/build-surface.sh build/surface
+      - name: Keep the packages already published that were not rebuilt
+        if: ${{ inputs.only != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          mkdir -p build/previous
+          gh release download "$REPO" --pattern '*.pkg.tar.zst' --dir build/previous || true
+          for f in build/previous/*.pkg.tar.zst; do
+            [ -e "$f" ] || continue
+            name="$(pacman -Qp --info "$f" 2>/dev/null | sed -n 's/^Name *: //p' | head -1)"
+            if ! ls build/surface/packages/"$name"-[0-9]*.pkg.tar.zst >/dev/null 2>&1; then cp "$f" build/surface/packages/; fi
+          done
+      - name: Repository files
+        run: bash scripts/publish-repo.sh build/surface/packages build/surface-assets "$REPO"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          notes="Nexora's Surface support: the linux-surface kernel built from the distribution's fork (trail-b1az3r/linux-surface), surface-contrib, iptsd and libwacom-surface. Turn it on with: sudo nexora surface enable"
+          if ! gh release view "$REPO" >/dev/null 2>&1; then
+            gh release create "$REPO" --title "Nexora Surface packages" --notes "$notes" --prerelease --latest=false
+          fi
+          gh release upload "$REPO" build/surface-assets/* --clobber
+          # Older packages the database no longer lists.
+          keep="$(cd build/surface-assets && ls)"
+          gh release view "$REPO" --json assets --jq '.assets[].name' | while read -r asset; do
+            if ! printf '%s\n' "$keep" | grep -qxF -- "$asset"; then gh release delete-asset "$REPO" "$asset" --yes; fi
+          done

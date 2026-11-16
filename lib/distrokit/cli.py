@@ -182,7 +182,7 @@ def cmd_surface(a) -> int:
     if a.action == "enable":
         sp = surface.plan(info, True, secure_boot_mok=bool(a.secure_boot))
         _confirm_or_exit(S.header("Enable Surface support:") + "\n" + "\n".join(
-            [f"  • add the linux-surface repository (key {surface.config()['repository']['key_fingerprint']})",
+            [f"  • add the {surface.config()['repository']['name']} repository (built from the linux-surface fork)",
              f"  • install {', '.join(sp.packages)}", "  • make linux-surface the default boot entry"] +
             [f"  note: {n}" for n in sp.notes]), a.yes)
         _need_root("install the Surface kernel")

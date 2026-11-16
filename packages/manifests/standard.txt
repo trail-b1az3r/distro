@@ -86,7 +86,7 @@ zip
 zram-generator
 
 ## list:browser
-firefox
+oynix-bin
 
 ## list:desktop
 alacritty

@@ -3,11 +3,11 @@
 [Default Applications]
 inode/directory=org.kde.dolphin.desktop
 x-scheme-handler/terminal=org.kde.konsole.desktop
-text/html=firefox.desktop
-x-scheme-handler/http=firefox.desktop
-x-scheme-handler/https=firefox.desktop
-x-scheme-handler/about=firefox.desktop
-x-scheme-handler/unknown=firefox.desktop
+text/html=oynix.desktop
+x-scheme-handler/http=oynix.desktop
+x-scheme-handler/https=oynix.desktop
+x-scheme-handler/about=oynix.desktop
+x-scheme-handler/unknown=oynix.desktop
 application/pdf=org.kde.okular.desktop
 application/epub+zip=nexora-write.desktop;org.kde.okular.desktop
 text/x-mdxl=nexora-write.desktop;org.kde.kate.desktop

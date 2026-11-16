@@ -96,7 +96,7 @@ zip
 zram-generator
 
 ## list:browser
-firefox
+oynix-bin
 
 ## list:containers-podman
 aardvark-dns

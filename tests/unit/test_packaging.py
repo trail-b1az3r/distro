@@ -135,7 +135,7 @@ def test_wanted_packages_nano_limits_build_to_minimal_profile_and_live_desktops(
     assert {"lxqt-session", "mate-session-manager", "sddm", "network-manager-applet",
             f"{b.id}-installer", f"{b.id}-core", f"{b.id}-branding",
             f"{b.id}-desktop"} <= set(wanted)
-    assert "firefox" not in wanted
+    assert "oynix-bin" not in wanted
     assert "onlyoffice-bin" not in wanted
     assert "greetd" not in wanted and "cage" not in wanted
     assert "nvidia-580xx-dkms" not in wanted

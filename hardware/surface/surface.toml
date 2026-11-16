@@ -1,21 +1,32 @@
-# Microsoft Surface support through the linux-surface project
-# (https://github.com/linux-surface/linux-surface), with the extras from the
-# distribution's fork of it (https://github.com/trail-b1az3r/linux-surface,
-# contrib/: the surface-contrib package). The fork carries the same kernel
-# patches, so the kernel comes from linux-surface's signed repository.
+# Microsoft Surface support, built entirely from the distribution's fork of
+# linux-surface (https://github.com/trail-b1az3r/linux-surface): the kernel from
+# its pkg/arch/kernel, surface-contrib from its contrib/, and iptsd and
+# libwacom-surface, all built by .github/workflows/surface.yml
+# (scripts/build-surface.sh) into the [nexora-surface] repository. Nothing
+# comes from linux-surface's own package server.
 #
 # Nothing here is installed unless the user enables the Surface kernel in the
 # installer (it is pre-selected when Surface hardware is detected) or runs
 # `<cli> surface enable`.
 
 [repository]
-name = "linux-surface"
-server = "https://pkg.surfacelinux.com/arch/"
-# Full fingerprint of the linux-surface package signing key. The key itself is
-# vendored as linux-surface.asc and checked against this fingerprint before it
-# is trusted.
-key_fingerprint = "87DEFA4AB94A99A4C8C3112556C464BAAC421453"
-key_file = "linux-surface.asc"
+name = "nexora-surface"
+server = "https://github.com/trail-b1az3r/distro/releases/download/nexora-surface"
+# Like the distribution's own repository, served over HTTPS from its GitHub
+# releases, unsigned (docs/packaging.md).
+siglevel = "Optional TrustAll"
+# The repository the distribution used before; removed from pacman.conf when
+# Surface support is enabled, so its packages are replaced by these.
+replaces = ["linux-surface"]
+
+# What [nexora-surface] is built from. Bump commit to take a newer fork.
+[fork]
+url = "https://github.com/trail-b1az3r/linux-surface"
+commit = "883fa4d7c71be6645a5632bf240ea0c13cb1eeb7"
+
+[build]
+# iptsd is in neither Arch nor the AUR: built from its repository at this tag.
+iptsd_tag = "v3.1.1"
 
 [packages]
 kernel = ["linux-surface", "linux-surface-headers"]
@@ -25,9 +36,9 @@ support = ["iptsd", "libwacom-surface", "touchd-dkms", "surface-contrib"]
 # The IPU3 cameras (front, rear, IR) through the fork's surface-camd: published
 # as webcams on v4l2loopback devices. Only on the models listed under [cameras].
 cameras = ["v4l2loopback-dkms", "v4l-utils"]
-# Enroll linux-surface's Secure Boot MOK key (used with shim). Only offered
-# when Secure Boot is on.
-secureboot = ["linux-surface-secureboot-mok"]
+# The kernel is not signed with linux-surface's MOK key: with Secure Boot on,
+# it is signed on the machine with sbctl (the installer's Secure Boot option).
+secureboot = []
 # Marvell Wi-Fi firmware for older models.
 marvell = ["linux-firmware-marvell"]
 

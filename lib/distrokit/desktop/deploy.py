@@ -444,7 +444,7 @@ def default_apps(installed: set[str], editor_command: str = "") -> dict[str, str
             ("nautilus", "nautilus"), ("nemo", "nemo"), ("thunar", "thunar"),
         ),
         "browser": (
-            ("firefox", "firefox"), ("zen-browser-bin", "zen-browser"),
+            ("oynix-bin", "oynix"), ("oynix", "oynix"), ("firefox", "firefox"), ("zen-browser-bin", "zen-browser"),
             ("librewolf", "librewolf"), ("brave-bin", "brave"),
             ("chromium", "chromium"), ("microsoft-edge-stable-bin", "microsoft-edge-stable"),
         ),

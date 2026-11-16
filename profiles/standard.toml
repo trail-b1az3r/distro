@@ -5,7 +5,7 @@ order = 20
 inherits = "minimal"
 summary = "Everyday desktop with browser, office suite and developer utilities."
 description = """
-Everything in Minimal plus Firefox, OnlyOffice, archive/image/PDF/media
+Everything in Minimal plus OyNIx, OnlyOffice, archive/image/PDF/media
 applications, Flatpak and a set of developer command-line utilities."""
 approx_size_gb = 10
 default = true
