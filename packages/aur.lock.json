@@ -91,6 +91,10 @@
       ],
       "version": "9.4.0-1"
     },
+    "oynix-bin": {
+      "commit": "3712167db69363e1ac613ddd775cdd5545e8f662",
+      "version": "5.2.4-1"
+    },
     "python315": {
       "commit": "d59e945fa0044b90f768559b8add87beba8b0e69",
       "version": "3.15.2-1"
