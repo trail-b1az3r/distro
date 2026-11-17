@@ -108,14 +108,15 @@ def _fake_tools(tmp_path):
   cat > "$dir/Scripts/install.sh" <<'INSTALL'
 #!/bin/bash
 mkdir -p "$HOME/.config/hypr" "$HOME/.local/share/hyde" "$HOME/.themes/Hyde"
-echo "hyde" > "$HOME/.config/hypr/hyprland.conf"
+if [[ -n "${HYDE_CONF_ONLY:-}" ]]; then echo "hyde" > "$HOME/.config/hypr/hyprland.conf"; exit 0; fi
+echo "hyde" > "$HOME/.config/hypr/hyprland.lua"
 echo "hyde" > "$HOME/.zshrc"
 echo "hyde" > "$HOME/.local/share/hyde/data"
 echo "$XDG_CONFIG_HOME" > "$HOME/.xdg-seen"
 echo "${HYPRLAND_INSTANCE_SIGNATURE:-none}" > "$HOME/.hypr-seen"
 # Past HOME, into the real home by its full path.
 real="$GUARD_TEST_REAL"
-echo "hyde" > "$real/.config/hypr/hyprland.conf"
+echo "hyde" > "$real/.config/hypr/hyprland.lua"
 echo "hyde-extra" > "$real/.config/hypr/hyde.conf"
 echo "hyde" > "$real/.zshrc"
 mkdir -p "$real/.mydotfiles" && echo x > "$real/.mydotfiles/x"
@@ -143,7 +144,7 @@ def test_extra_desktops_install_in_their_own_home(tmp_path):
     bin_dir, calls = _fake_tools(tmp_path)
     home = tmp_path / "home"
     (home / ".config/hypr").mkdir(parents=True)
-    (home / ".config/hypr/hyprland.conf").write_text("halcyon")
+    (home / ".config/hypr/hyprland.lua").write_text("halcyon")
     (home / ".config/chromium").mkdir()
     (home / ".zshrc").write_text("halcyon")
     (home / ".bashrc").write_text("halcyon")
@@ -164,7 +165,7 @@ def test_extra_desktops_install_in_their_own_home(tmp_path):
     assert res.returncode == 0, res.stdout + res.stderr
 
     # Halcyon's files are as they were; nothing new in its config or data, even what was written by full path.
-    assert (home / ".config/hypr/hyprland.conf").read_text() == "halcyon"
+    assert (home / ".config/hypr/hyprland.lua").read_text() == "halcyon"
     assert (home / ".zshrc").read_text() == "halcyon" and (home / ".bashrc").read_text() == "halcyon"
     assert not (home / ".config/hypr/hyde.conf").exists() and not (home / ".mydotfiles").exists()
     assert not (home / ".local/share/hyde").exists() and not (home / ".themes").exists()
@@ -173,7 +174,7 @@ def test_extra_desktops_install_in_their_own_home(tmp_path):
 
     # HyDE has its own home with all of it, and shares the user's files and keys.
     hyde = home / ".local/share/distro-desktop-profiles/homes/hyde"
-    assert (hyde / ".config/hypr/hyprland.conf").read_text().strip() == "hyde"
+    assert (hyde / ".config/hypr/hyprland.lua").read_text().strip() == "hyde"
     assert (hyde / ".config/hypr/hyde.conf").read_text().strip() == "hyde-extra"
     assert (hyde / ".mydotfiles/x").exists()
     assert (hyde / ".zshrc").exists() and (hyde / ".local/share/hyde/data").exists() and (hyde / ".themes/Hyde").is_dir()
@@ -207,6 +208,80 @@ def test_extra_desktops_install_in_their_own_home(tmp_path):
     log = calls.read_text()
     assert "sudo install -D -m 0644" in log and "/usr/share/wayland-sessions/nexora-hyde.desktop" in log
     assert "chsh" not in log  # the shell did not change (the login theme is only re-set where it is installed)
+
+
+def _install_env(tmp_path, bin_dir):
+    home = tmp_path / "home"
+    (home / ".config").mkdir(parents=True, exist_ok=True)
+    data = tmp_path / "share/nexora"
+    (data / "packages/lists").mkdir(parents=True, exist_ok=True)
+    for p in ("ml4w", "hyde", "sekaipop"):
+        (data / f"packages/lists/desktop-{p}.list").write_text("kitty\n")
+    sysroot = tmp_path / "sys"
+    (sysroot / "usr/share/wayland-sessions").mkdir(parents=True, exist_ok=True)
+    (sysroot / "etc/sddm.conf.d").mkdir(parents=True, exist_ok=True)
+    return home, {"HOME": str(home), "PATH": f"{bin_dir}:/usr/bin:/bin", "DISTRO_DATA_ROOT": str(data),
+                  "XDG_CONFIG_HOME": str(home / ".config"), "XDG_STATE_HOME": str(home / ".local/state"),
+                  "DISTRO_SYSROOT": str(sysroot), "GUARD_TEST_REAL": str(home)}
+
+
+def test_a_desktop_without_its_own_lua_config_is_not_registered(tmp_path):
+    # Hyprland 0.57 reads only hyprland.lua: dotfiles that leave only hyprland.conf would open as plain Hyprland.
+    root = Path(__file__).resolve().parents[2]
+    bin_dir, calls = _fake_tools(tmp_path)
+    home, env = _install_env(tmp_path, bin_dir)
+    res = subprocess.run(["bash", str(root / "desktop/profiles/install-selected.sh"), "hyde"], input="y\n",
+                         capture_output=True, text=True, env={**env, "HYDE_CONF_ONLY": "1"}, timeout=60)
+    assert res.returncode == 1 and "only hyprland.conf" in res.stdout and "not registered" in res.stdout
+    assert not (tmp_path / "sys/usr/share/wayland-sessions/nexora-hyde.desktop").exists()
+    assert not (home / ".local/state/distro-desktop-profiles/hyde.done").exists()
+
+
+def test_a_desktop_with_hyprlands_generated_example_is_installed_again(tmp_path):
+    # Marked installed, but its session already ran into Hyprland's generated example: the next run installs it again.
+    root = Path(__file__).resolve().parents[2]
+    bin_dir, calls = _fake_tools(tmp_path)
+    home, env = _install_env(tmp_path, bin_dir)
+    hyde = home / ".local/share/distro-desktop-profiles/homes/hyde"
+    (hyde / ".config/hypr").mkdir(parents=True)
+    (hyde / ".config/hypr/hyprland.lua").write_text("hl.config({ autogenerated = true })\n")
+    (hyde / ".installed-here").write_text("")
+    state = home / ".local/state/distro-desktop-profiles"
+    state.mkdir(parents=True)
+    (state / "hyde.done").write_text("")
+    res = subprocess.run(["bash", str(root / "desktop/profiles/install-selected.sh"), "hyde"], input="y\n",
+                         capture_output=True, text=True, env=env, timeout=60)
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "generated example" in res.stdout and "installing it again" in res.stdout
+    assert (hyde / ".config/hypr/hyprland.lua").read_text().strip() == "hyde"
+    assert list((hyde / ".config/hypr").glob("hyprland.lua.not-installed-*"))
+
+
+def test_a_session_without_its_config_opens_the_repair_session(tmp_path):
+    root = Path(__file__).resolve().parents[2]
+    home = tmp_path / "home"
+    ml4w = home / ".local/share/distro-desktop-profiles/homes/ml4w"
+    (ml4w / ".config/hypr").mkdir(parents=True)
+    (ml4w / ".config/hypr/hyprland.lua").write_text("hl.config({ autogenerated = true })\n")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    seen = tmp_path / "seen"
+    (bin_dir / "start-hyprland").write_text(f'#!/bin/bash\necho "$HOME|$*" > {seen}\n')
+    (bin_dir / "start-hyprland").chmod(0o755)
+    (bin_dir / "alacritty").write_text("#!/bin/sh\n")
+    (bin_dir / "alacritty").chmod(0o755)
+    runtime = tmp_path / "run"
+    runtime.mkdir()
+    env = {"HOME": str(home), "PATH": f"{bin_dir}:/usr/bin:/bin", "XDG_RUNTIME_DIR": str(runtime)}
+    res = subprocess.run(["bash", str(root / "desktop/profiles/run-session.sh"), "ml4w"], capture_output=True,
+                         text=True, env=env, timeout=30)
+    assert res.returncode == 0, res.stderr
+    h, args = seen.read_text().strip().split("|")
+    # Not the desktop's home: the repair session, with the real home, reinstalls it.
+    assert h == str(home) and args == f"-- --config {runtime}/distro-desktop-repair-ml4w/hyprland.lua"
+    lua = (runtime / "distro-desktop-repair-ml4w/hyprland.lua").read_text()
+    assert "alacritty -e" in lua and "autogenerated = false" in lua
+    assert "distro-install-desktop-profiles ml4w" in (runtime / "distro-desktop-repair-ml4w/repair.sh").read_text()
 
 
 def test_the_pacman_guard_keeps_hyprland_plus(tmp_path):
@@ -249,7 +324,8 @@ def test_extra_desktop_session_runs_in_its_home(tmp_path):
     root = Path(__file__).resolve().parents[2]
     home = tmp_path / "home"
     hyde = home / ".local/share/distro-desktop-profiles/homes/hyde"
-    hyde.mkdir(parents=True)
+    (hyde / ".config/hypr").mkdir(parents=True)
+    (hyde / ".config/hypr/hyprland.lua").write_text("-- HyDE\n")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     seen = tmp_path / "seen"

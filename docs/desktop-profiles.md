@@ -30,6 +30,11 @@ The ISO installer offers Halcyon, ML4W Dotfiles, SekaiPop and HyDE.
   - Login entries it adds are set aside in `/var/lib/nexora/set-aside/` (they would start with Halcyon's home), and
     any it changes, Halcyon's among them, are put back, as are the login screen's settings (`/etc/sddm.conf`,
     `/etc/sddm.conf.d/`). Your login shell is put back if it changes it.
+- **A desktop counts as installed only with a Hyprland configuration of its own.** Hyprland 0.57 reads only
+  `~/.config/hypr/hyprland.lua`; a desktop whose installer left none (or only the old `hyprland.conf`, or a link to
+  nothing) is not registered, and one marked installed whose session opened Hyprland's generated example is installed
+  again on the next run. Choosing such a desktop at the login screen opens a small repair session instead of plain
+  Hyprland: a terminal that says what is wrong and installs the desktop again, in its own home.
 - Packages are installed system-wide, once for every desktop.
 - Desktops installed by the older helper (which installed over Halcyon's home and kept only a copy of `~/.config`)
   are installed again, in their own home, the next time the helper runs; their saved configuration is carried over.

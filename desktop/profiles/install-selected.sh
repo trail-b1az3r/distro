@@ -252,11 +252,16 @@ for id in "${selected[@]}"; do
     # Installed in its own home before: just make sure its login entry exists and points at the session wrapper. One
     # installed by the older helper (which put it over Halcyon's home and kept only a copy of ~/.config) is installed
     # again, in its own home this time.
-    if [[ -f "$STATE/$id.done" && -f "$(profile_home "$id")/.installed-here" ]]; then
+    if [[ -f "$STATE/$id.done" && -f "$(profile_home "$id")/.installed-here" ]] && profile_config_ok "$id"; then
         echo "=== $name is already installed; ensuring its login session exists ==="
         register_session "$id" "$name" || failed=1
         continue
     fi
+    if [[ -f "$STATE/$id.done" ]]; then
+        echo "$name was installed, but $(profile_config_problem "$id"): installing it again."
+        rm -f "$STATE/$id.done" "$(profile_home "$id")/.installed-here"
+    fi
+    profile_config_clear "$id"
 
     echo "=== Installing $name in $(profile_home "$id") ==="
     if ! install_packages "$id"; then
@@ -272,7 +277,19 @@ for id in "${selected[@]}"; do
         continue
     fi
     sys_snapshot "$snap/system"
-    if run_installer "$id" "$url"; then
+    status=0
+    run_installer "$id" "$url" || status=$?
+    problem="$(profile_config_problem "$id")"
+    if [[ -n "$problem" ]]; then
+        # Not registered: its session would open as plain Hyprland.
+        if (( status == 0 )); then
+            echo "$name's installer finished, but $problem. It was not registered; the installer's output is in $LOG."
+        else
+            echo "Installation failed for $name (the installer exited with $status), and $problem; see $LOG"
+        fi
+        failed=1
+    else
+        (( status == 0 )) || echo "$name's installer exited with $status, but its configuration is in place: registering it."
         if register_session "$id" "$name"; then
             touch "$STATE/$id.done" "$(profile_home "$id")/.installed-here"
             echo "$name installed in its own home and registered as a login session."
@@ -280,9 +297,6 @@ for id in "${selected[@]}"; do
             echo "Could not register the $name login session."
             failed=1
         fi
-    else
-        echo "Installation failed for $name; see $LOG"
-        failed=1
     fi
     guard_home restore "$REAL_HOME" "$snap/home" "$(profile_home "$id")" "$STATE/set-aside/$id" \
         || echo "Could not check Halcyon's home after the installer; \`$DISTRO_ID reset-desktop\` restores it."
