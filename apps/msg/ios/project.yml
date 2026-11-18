@@ -1,0 +1,45 @@
+# XcodeGen project for the Nexora Messages companion app (`xcodegen generate`, then build in Xcode or with
+# scripts/build-ipa.sh). It is sideloaded (SideStore, AltStore, Sideloadly or a free developer account): the
+# unsigned IPA from CI is signed by whichever tool installs it.
+name: NexoraMessages
+options:
+  bundleIdPrefix: org.nexora
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+targets:
+  NexoraMessages:
+    type: application
+    platform: iOS
+    sources:
+      - path: NexoraMessages
+    info:
+      path: NexoraMessages/Info.plist
+      properties:
+        CFBundleDisplayName: Nexora Messages
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        # Silent audio keeps the app (and its connection to the computer) running in the background.
+        UIBackgroundModes: [audio]
+        NSContactsUsageDescription: Your computer shows your contacts' names and photos in Nexora Messages.
+        NSLocalNetworkUsageDescription: Your computer connects to this app over Wi-Fi to sync contacts and send pictures.
+        NSBonjourServices: [_nexoramsg._tcp]
+        NSPhotoLibraryUsageDescription: Pictures from your computer are attached to messages you send.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.nexora.messages
+        INFOPLIST_FILE: NexoraMessages/Info.plist
+        GENERATE_INFOPLIST_FILE: "NO"

@@ -1,0 +1,61 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+#
+# @DISTRO_ID@-msg (apps/msg): your iPhone's messages on @DISTRO_NAME@. Texts, pictures, contacts and search, over
+# Bluetooth (MAP and PBAP, through BlueZ) or the cable (libimobiledevice backups). The window is QML (Qt 6), the app
+# Python, the message store and its search Rust. The iPhone companion app (sending pictures, contacts with photos)
+# is built separately and sideloaded: see apps/msg/README.md.
+# Generated from packages/pkgbuild/msg/PKGBUILD.in.
+
+pkgname=@DISTRO_ID@-msg
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc="@DISTRO_NAME@ Messages: an iPhone messages client over Bluetooth or the cable"
+arch=(x86_64)
+url="@DISTRO_HOME_URL@"
+license=(GPL-3.0-or-later)
+depends=(python pyside6 qt6-declarative python-cryptography python-dbus-next glibc gcc-libs)
+makedepends=(rust cargo)
+checkdepends=(python-pytest)
+optdepends=('bluez: Bluetooth (messages and contacts)'
+            'bluez-obex: Bluetooth messages and contacts (obexd; bluez-utils on older systems)'
+            'libimobiledevice: the whole history and pictures over the cable'
+            'usbmuxd: the cable, and the companion app over it'
+            'avahi: finding the companion app on Wi-Fi'
+            'qt6-imageformats: HEIC pictures from the iPhone'
+            'libnotify: notifications for new messages')
+source=("@DISTRO_ID@-$pkgver.tar.gz")
+sha256sums=('@SOURCE_SHA256@')
+
+prepare() {
+  cd "@DISTRO_ID@-$pkgver/apps/msg/core"
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "@DISTRO_ID@-$pkgver/apps/msg/core"
+  CARGO_TARGET_DIR=target cargo build --frozen --release
+}
+
+check() {
+  cd "@DISTRO_ID@-$pkgver/apps/msg"
+  (cd core && cargo test --frozen)
+  NEXORA_MSG_CORE="$PWD/core/target/release/nexora-msg-core" python -m pytest -q tests
+}
+
+package() {
+  cd "@DISTRO_ID@-$pkgver/apps/msg"
+  local site
+  site="$(python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')"
+  install -Dm755 core/target/release/nexora-msg-core "$pkgdir/usr/bin/nexora-msg-core"
+  install -d "$pkgdir$site/nexora_msg/qml/icons"
+  install -m644 nexora_msg/*.py "$pkgdir$site/nexora_msg/"
+  install -m644 nexora_msg/qml/*.qml "$pkgdir$site/nexora_msg/qml/"
+  install -m644 nexora_msg/qml/icons/*.svg "$pkgdir$site/nexora_msg/qml/icons/"
+  python -m compileall -q -d "$site/nexora_msg" "$pkgdir$site/nexora_msg"
+  install -Dm755 bin/nexora-msg "$pkgdir/usr/bin/@DISTRO_ID@-msg"
+  install -Dm644 data/nexora-msg.desktop "$pkgdir/usr/share/applications/@DISTRO_ID@-msg.desktop"
+  sed -i "s/^Exec=nexora-msg/Exec=@DISTRO_ID@-msg/; s/^Icon=nexora-msg/Icon=@DISTRO_ID@-msg/" \
+    "$pkgdir/usr/share/applications/@DISTRO_ID@-msg.desktop"
+  install -Dm644 data/nexora-msg.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/@DISTRO_ID@-msg.svg"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/@DISTRO_ID@-msg/README.md"
+}

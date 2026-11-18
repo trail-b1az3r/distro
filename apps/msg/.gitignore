@@ -1,0 +1,4 @@
+core/target/
+ios/build/
+ios/*.xcodeproj/
+__pycache__/
