@@ -14,7 +14,7 @@ url="@DISTRO_HOME_URL@"
 license=(GPL-3.0-or-later)
 # iw: tells a Wi-Fi card's client interface from its access-point and Wi-Fi Direct ones, and turns off the Surface
 # card's power saving.
-depends=(python wpa_supplicant systemd iproute2 util-linux iw)
+depends=(python wpa_supplicant systemd iproute2 util-linux iw openssl)
 optdepends=('networkmanager: for apps that use its API, and to hand devices back to it')
 install=nmx.install
 source=("@DISTRO_ID@-$pkgver.tar.gz")

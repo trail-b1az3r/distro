@@ -164,6 +164,16 @@ class Profile:
             wep_key=self.get("wifi-security", "wep-key0"), eap=eap, hidden=self.hidden,
             bssid=self.get("wifi", "bssid"), ft=scanned.ft if scanned else True)
 
+    def has_secrets(self) -> bool:
+        """Whether the profile holds what its security asks for (a password, or an identity and password)."""
+        try:
+            self.network_block()
+        except security.MissingSecrets:
+            return False
+        except ValueError:
+            return True
+        return True
+
     def ipv4(self) -> dict:
         return dict(self.data["ipv4"]) if self.data.has_section("ipv4") else {"method": "auto"}
 

@@ -76,6 +76,25 @@ until you are through (then `full`). Halcyon shows a "Sign in to this network" n
     nmxcli portal check                # check again now
     nmxtui                             # "Sign in to this network" is the first item
 
+An open network never asks for a password: its sign-in is the portal page. Many places broadcast one name both open
+(for guests) and secured (for staff); nmx joins the open one unless you give a password, and a saved open profile is
+never joined through its secured twin. (A "Secrets were required, but not provided" for an open network was exactly
+that mix-up; Halcyon also forgets a stale profile of the same name, once, and joins the network as it is now.)
+
+## DNS-blocker bypass (off by default)
+
+School, office and hotel networks often block sites through their DNS server. `nmxcli dns-bypass on` (or Halcyon's
+Settings → Services → Networking) looks names up through public resolvers (Cloudflare, Quad9) over DNS-over-TLS on
+Wi-Fi links instead: encrypted and checked against the resolver's certificate, so the network can neither read nor
+rewrite the answers.
+
+- Only once the network is fully online. While a captive portal wants a sign-in (and on every new connection until
+  the check says `full`) the network's own DNS is used, since the sign-in page lives there.
+- If the network blocks DNS-over-TLS (port 853), plain DNS to the same resolvers is tried; if that is blocked too, the
+  network's DNS is put back and that link is left alone until it reconnects. It never leaves you without DNS.
+- Runtime state in systemd-resolved only (`resolvectl`), nothing written to disk. `nmxcli dns-bypass` shows what
+  each link uses; `nmxcli dns-bypass off` puts the network's DNS back at once.
+
 ## Security detection
 
 From the scan flags nmx tells apart open, Enhanced Open (OWE), WEP, WPA/WPA2 Personal, WPA2/WPA3 transition, WPA3
@@ -94,6 +113,21 @@ and a password (or a certificate for EAP-TLS).
 - When the login is refused, nmx tries PEAP/MSCHAPv2, TTLS/PAP, TTLS/MSCHAPv2 and PEAP/GTC in turn, and keeps the
   one that works. `eap`, `phase2`, `ca-cert` (auto, system, none or a file), `domain`, `cert`, `key` and
   `key-password` on `device wifi connect` set them yourself.
+
+### Finding the CA on its own
+
+A pinned certificate breaks the day the server's certificate is renewed. So nmx keeps the certificates each enterprise
+network's server shows during a login attempt (whether it worked or not), and once any Wi-Fi is fully online (every
+10 minutes at most, or now with `nmxcli certificates find`) it finds the CA that signed them:
+
+1. A chain that ends in a CA the system trusts: the profile uses the system's CAs.
+2. Otherwise the issuer is downloaded from the address in the certificate itself (Authority Information Access,
+   "CA Issuers"; DER, PEM or PKCS#7), hop by hop up to a self-signed root, saved in `/var/lib/nmx/ca/`.
+
+The profile then checks the server against that CA and its name (`802-1x.domain-suffix-match`, from the server's
+certificate), and the pin is dropped. The other saved enterprise profiles of the same organisation that have no CA
+yet (the same server domain, or the realm of the username: eduroam and the campus network, say) get the same CA. A
+CA you set yourself is never replaced, and a server whose certificate is self-signed stays pinned.
 
 ## NetworkManager smart assist (optional)
 

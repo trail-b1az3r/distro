@@ -2,7 +2,7 @@
 
     nmxcli [OPTIONS] OBJECT { COMMAND | help }
 
-    OBJECT  g[eneral]  n[etworking]  r[adio]  c[onnection]  d[evice]  m[onitor]  p[ortal]
+    OBJECT  g[eneral]  n[etworking]  r[adio]  c[onnection]  d[evice]  m[onitor]  p[ortal]  dns-bypass  certificates
 
     OPTIONS -t, --terse                 terse output (fields split by ':', ':' and '\\' escaped)
             -f, --fields FIELD,...|all  which fields to print
@@ -25,6 +25,11 @@ Captive portals (hotel, airport and café Wi-Fi that wants you to sign in first)
 `portal`, and `nmxcli portal` prints the sign-in page (`portal open` opens it in your browser, `portal check` checks
 again now). nmx finds the page from the network's RFC 8910/8908 announcement when it makes one, and otherwise from
 where the portal redirects a plain-HTTP probe.
+
+`dns-bypass on|off` (off by default): once a Wi-Fi network is fully online, look names up through public resolvers
+over DNS-over-TLS instead of the network's DNS, which gets past DNS blocklists; never while a portal wants a sign-in.
+`certificates find`: enterprise networks' CAs are found on their own once online (the server's certificate is kept
+from each login attempt, its issuer fetched); this looks now.
 """
 
 from __future__ import annotations
@@ -550,9 +555,41 @@ def describe_event(e: dict) -> str:
         return f"{e['device']}: '{e['connection']}' needs {' and '.join(e.get('need', ['password']))}"
     if kind == "certificate-trusted":
         return f"{e['device']}: trusted the certificate of '{e['connection']}' ({e.get('subject', '')}, SHA-256 {e.get('sha256', '')})"
+    if kind == "dns-bypass":
+        return f"{e['device']}: DNS bypass {e['mode']}"
+    if kind == "certificate-found":
+        return f"'{e['connection']}': found its CA ({e.get('root') or 'system'}); server name {e.get('domain') or '?'}"
     if kind == "resumed":
         return "Woke up: reconnecting"
     return ""
+
+
+def cmd_dns_bypass(args: list[str], opts: Options) -> int:
+    """`dns-bypass [on|off]`: the Wi-Fi DNS-blocker bypass (off unless turned on)."""
+    if args:
+        state = pick(args.pop(0), ["on", "off"])
+        call({"op": "dns-bypass-set", "enabled": state == "on"})
+    data = call({"op": "dns-bypass"})["data"]
+    print("on" if data["enabled"] else "off")
+    if not opts.terse:
+        words = {"dot": "public resolvers over DNS-over-TLS", "plain": "public resolvers (DNS-over-TLS blocked)",
+                 "blocked": "the network's own DNS (it blocks public DNS)"}
+        for iface, mode in sorted(data["links"].items()):
+            print(f"        {iface}: {words.get(mode, mode)}")
+        if data["enabled"] and not data["links"]:
+            print("        (applies once a Wi-Fi network is fully online; a sign-in page uses the network's DNS)")
+    return 0
+
+
+def cmd_certificates(args: list[str], opts: Options) -> int:
+    """`certificates find`: look for the saved enterprise networks' CAs now (needs internet)."""
+    if args:
+        pick(args.pop(0), ["find"])
+    updated = call({"op": "certificates-learn"})["data"]
+    if not opts.terse:
+        print("\n".join(f"'{name}': found its CA" for name in updated) or
+              "Nothing new: no enterprise network with a server certificate seen and no CA yet.")
+    return 0
 
 
 def overview(opts: Options) -> int:
@@ -576,7 +613,8 @@ def overview(opts: Options) -> int:
 
 
 OBJECTS = {"general": cmd_general, "networking": cmd_networking, "radio": cmd_radio, "connection": cmd_connection,
-           "device": cmd_device, "monitor": cmd_monitor, "portal": cmd_portal}
+           "device": cmd_device, "monitor": cmd_monitor, "portal": cmd_portal,
+           "dns-bypass": cmd_dns_bypass, "certificates": cmd_certificates}
 
 
 def parse_options(argv: list[str], opts: Options) -> list[str]:

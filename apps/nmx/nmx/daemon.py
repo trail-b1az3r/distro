@@ -34,7 +34,7 @@ import time
 import traceback
 from pathlib import Path
 
-from . import __version__, net, portal, profiles, security, wpa
+from . import __version__, certs, dnsbypass, net, portal, profiles, security, wpa
 
 RUN = wpa.RUN
 SOCKET = RUN / "nmx.sock"
@@ -79,6 +79,7 @@ class Device:
         self.deadline = 0.0
         self.waiters: list[dict] = []
         self.peer_cert: dict = {}
+        self.peer_chain: dict[int, bytes] = {}   # depth -> DER, as the RADIUS server showed it
         self.cert_error = False
         self.retried_cert = False
         self.tried_methods: list[str] = []
@@ -103,7 +104,10 @@ class Daemon:
         self.portal_device = ""
         self.checked_at = 0.0
         self.checking = threading.Lock()
-        self.state = {"wifi": True, "networking": True, "unmanaged": []}
+        self.state = {"wifi": True, "networking": True, "unmanaged": [], "dns-bypass": False}
+        self.bypass = dnsbypass.Bypass()
+        self.learned_at = -1e9
+        self.learning = threading.Lock()
         self.load_state()
         self.boot_offset = self.clock_offset()
         self.stopping = False
@@ -268,6 +272,11 @@ class Daemon:
             if dev.state in ("connected", "getting-ip"):
                 self.set_state(dev, "disconnected", f"reason {f.get('reason', '?')}")
                 self.request_scan(dev)
+        elif name == "CTRL-EVENT-EAP-PEER-CERT" and f.get("cert"):
+            try:
+                dev.peer_chain[int(f.get("depth", "0"))] = bytes.fromhex(f["cert"])
+            except ValueError:
+                pass
         elif name == "CTRL-EVENT-EAP-PEER-CERT" and f.get("depth") == "0":
             dev.peer_cert.update(subject=f.get("subject", ""), hash=f.get("hash", ""))
         elif name == "CTRL-EVENT-EAP-PEER-ALT" and f.get("depth") == "0":
@@ -325,18 +334,29 @@ class Daemon:
                   need=["username", "password"] if prof is not None and prof.kind.startswith("eap") else ["password"])
 
     # ── connecting ──
-    def best_ap(self, dev: Device, ssid: str) -> dict | None:
+    def best_ap(self, dev: Device, ssid: str, kind: str | None = None) -> dict | None:
+        """The strongest access point of a network. Hotels, cafés and campuses often broadcast one name both open
+        (signed in to on a web page) and secured: given the profile's kind, an access point of the same family wins,
+        so an open profile is never joined through a WPA2 twin (which would ask for a password nobody has)."""
         aps = [ap for ap in dev.scan if ap["ssid"] == ssid]
+        if kind is not None:
+            family = security.family(kind)
+            same = [ap for ap in aps if security.family(ap["security"].kind) == family]
+            aps = same or aps
         return max(aps, key=lambda ap: ap["level"]) if aps else None
 
     def start_wifi(self, dev: Device, prof: profiles.Profile, keep_waiters: bool = False) -> None:
         if dev.supplicant is None:
             raise Failure("unavailable", f"{dev.iface} is not ready (radio off or the card is missing)")
-        ap = self.best_ap(dev, prof.ssid)
-        fields = prof.network_block(ap["security"] if ap else None)
+        ap = self.best_ap(dev, prof.ssid, prof.kind)
+        sec = ap["security"] if ap else None
+        if sec is not None and security.family(sec.kind) != security.family(prof.kind):
+            sec = None                                # a different network of the same name: join as saved
+        fields = prof.network_block(sec)
         fields["bgscan"] = '"simple:30:-70:3600"'
         dev.profile = prof
         dev.peer_cert = {} if not keep_waiters else dev.peer_cert
+        dev.peer_chain = {} if not keep_waiters else dev.peer_chain
         dev.cert_error = False
         if not keep_waiters:
             dev.retried_cert = False
@@ -393,7 +413,17 @@ class Daemon:
         count, _ = self.failures.get(prof.uuid, (0, 0.0))
         self.failures[prof.uuid] = (count + 1, time.monotonic() + BACKOFF[min(count, len(BACKOFF) - 1)])
 
+    def keep_chain(self, dev: Device) -> None:
+        """What an enterprise network's server showed, for finding its CA once online (certs.py)."""
+        if dev.profile is not None and dev.profile.kind.startswith("eap") and dev.peer_chain:
+            try:
+                certs.save_chain(dev.profile.ssid, dev.peer_chain)
+            except OSError as error:
+                log(f"{dev.iface}: could not keep the server's certificates: {error}")
+
     def succeed(self, dev: Device) -> None:
+        self.keep_chain(dev)
+        self.bypass.forget(dev.iface)                # a new connection: the network's own DNS until it is online
         prof = dev.profile
         if prof is not None:
             self.failures.pop(prof.uuid, None)
@@ -417,7 +447,13 @@ class Daemon:
         self.check_connectivity_soon()
 
     def fail(self, dev: Device, code: str, message: str, **extra) -> None:
+        self.keep_chain(dev)
+        self.bypass.forget(dev.iface)
         prof = dev.profile
+        if code == "secrets" and prof is not None and not security.Security(kind=prof.kind).needs_password:
+            # An open network has nothing to ask for; its sign-in, if any, is a web page (the captive portal).
+            code, message = "failed", "The network refused the connection (it has no password; try again)."
+            extra.pop("need", None)
         if prof is not None:
             if code == "secrets" and not dev.pending_new:
                 self.needs_secrets.add(prof.uuid)
@@ -563,7 +599,93 @@ class Daemon:
             self.connectivity, self.portal_url, self.portal_device = result, url, device
         if changed:
             self.emit("connectivity", state=result, url=url, device=device)
+        self.after_check(result)
         return result
+
+    def after_check(self, result: str) -> None:
+        """Online: the DNS bypass (if on) and the enterprise CAs to look for. A portal: the network's own DNS."""
+        wifi = [d.iface for d in self.devices.values() if d.kind == "wifi" and d.state == "connected" and d.managed]
+        if not self.state.get("dns-bypass") or result == "portal":
+            for iface in self.bypass.revert_all():
+                log(f"{iface}: DNS back to the network's own" + (" (sign in first)" if result == "portal" else ""))
+                self.emit("dns-bypass", device=iface, mode="off")
+        elif result == "full":
+            for iface in wifi:
+                if iface in self.bypass.status():
+                    continue
+                mode = self.bypass.apply(iface)
+                log(f"{iface}: DNS bypass: " + {"dot": "public resolvers over DNS-over-TLS",
+                                                  "plain": "public resolvers (DNS-over-TLS is blocked here)",
+                                                  "": "the network blocks public DNS; using its own"}[mode])
+                self.emit("dns-bypass", device=iface, mode=mode or "blocked")
+        elif result == "limited" and self.bypass.applied:
+            # The bypass may be what broke it: back to the network's DNS, and that link is left alone until it
+            # reconnects.
+            for iface in self.bypass.revert_all():
+                self.bypass.refused.add(iface)
+                self.emit("dns-bypass", device=iface, mode="blocked")
+            self.check_connectivity_soon()
+        if result == "full" and time.monotonic() - self.learned_at > 600:
+            self.learned_at = time.monotonic()
+            threading.Thread(target=self.learn_certificates, daemon=True, name="certificates").start()
+
+    def learn_certificates(self, fetcher=None) -> list[str]:
+        """Find the CA of every saved enterprise network whose server certificates were seen, and give it to the
+        other saved enterprise profiles of the same organisation that have none. Returns the profiles updated."""
+        if not self.learning.acquire(blocking=False):
+            return []
+        updated = []
+        try:
+            eap = [p for p in self.store.all() if p.type == "wifi" and p.kind.startswith("eap")]
+            found: dict[str, dict] = {}                       # organisation domain -> resolved
+            for prof in eap:
+                if prof.get("nmx", "ca-learned"):
+                    continue
+                ca = prof.get("802-1x", "ca-cert") or "auto"
+                if ca not in ("auto", "") and not ca.startswith("hash://"):
+                    continue                                  # a CA the user chose: never replaced
+                chain = certs.load_chain(prof.ssid)
+                if not chain:
+                    continue
+                result = certs.resolve(chain, prof.ssid, **({"fetcher": fetcher} if fetcher else {}))
+                if result is None:
+                    continue
+                self.apply_ca(prof, result)
+                updated.append(prof.id)
+                if result["domain"]:
+                    found[certs.org_domain(result["domain"])] = result
+            # The rest of the organisation's networks: same server domain, or a realm in the username.
+            for prof in eap:
+                if prof.get("nmx", "ca-learned") or prof.id in updated:
+                    continue
+                ca = prof.get("802-1x", "ca-cert") or "auto"
+                if ca not in ("auto", "") or prof.get("nmx", "server-cert"):
+                    continue
+                hints = [prof.get("nmx", "server-domain"), prof.get("802-1x", "domain-suffix-match"),
+                         prof.get("802-1x", "identity").rpartition("@")[2] if "@" in prof.get("802-1x", "identity")
+                         else ""]
+                for hint in filter(None, hints):
+                    result = found.get(certs.org_domain(hint))
+                    if result:
+                        self.apply_ca(prof, result)
+                        updated.append(prof.id)
+                        break
+        except Exception:  # noqa: BLE001 - never take the daemon down over this
+            traceback.print_exc()
+        finally:
+            self.learning.release()
+        return updated
+
+    def apply_ca(self, prof: profiles.Profile, result: dict) -> None:
+        prof.set("802-1x.ca-cert", result["ca-cert"])
+        if result["domain"] and not prof.get("802-1x", "domain-suffix-match"):
+            prof.set("802-1x.domain-suffix-match", result["domain"])
+        prof.set("nmx.server-cert", "")
+        prof.set("nmx.ca-learned", result["root"] or "yes")
+        self.store.save(prof)
+        log(f"{prof.id}: found its CA ({result['root'] or 'the system CAs'}); server name {result['domain'] or '?'}")
+        self.emit("certificate-found", connection=prof.id, ca=result["ca-cert"], domain=result["domain"],
+                  root=result["root"])
 
     # ── requests ──
     def device(self, ifname: str = "", kind: str = "") -> Device:
@@ -582,7 +704,7 @@ class Daemon:
         op = req.get("op", "")
         writer = uid == 0 or bool(groups & set(WRITER_GROUPS))
         reads = {"status", "devices", "device-show", "wifi-list", "connections", "connection-show", "monitor",
-                 "connectivity", "portal", "hostname"}
+                 "connectivity", "portal", "hostname", "dns-bypass"}
         if op not in reads and not writer:
             raise Failure("permission", "Not authorized: you need to be in the wheel or network group.")
         if op in ("device-manage", "device-unmanage", "device-remanagenm", "suspend", "resume", "reexec", "exit") \
@@ -679,10 +801,22 @@ class Daemon:
         if not any(ap["ssid"] == ssid for ap in dev.scan) and not req.get("hidden"):
             self.request_scan(dev)
             time.sleep(3)
-        ap = self.best_ap(dev, ssid)
+        saved = self.store.for_ssid(ssid)
+        # One name, open and secured access points: a password (or a saved secured profile) picks the secured ones;
+        # nothing given picks the open one, whose sign-in page (captive portal) comes after.
+        given = bool(req.get("password") or req.get("username"))
+        want = None
+        if any(ap["ssid"] == ssid and not ap["security"].needs_password for ap in dev.scan) and \
+                any(ap["ssid"] == ssid and ap["security"].needs_password for ap in dev.scan):
+            want = "secured" if given or (saved and security.Security(kind=saved[0].kind).needs_password
+                                          and saved[0].has_secrets()) else "open"
+        if want == "secured":
+            secured = [a for a in dev.scan if a["ssid"] == ssid and a["security"].needs_password]
+            ap = max(secured, key=lambda a: a["level"])
+        else:
+            ap = self.best_ap(dev, ssid, want)
         if ap is None and not req.get("hidden"):
             raise Failure("not-found", f"No network with SSID '{ssid}' found.")
-        saved = self.store.for_ssid(ssid)
         prof = saved[0] if saved else profiles.Profile.new(req.get("name") or ssid, "wifi", ssid=ssid)
         new = not saved
         sec = ap["security"] if ap else None
@@ -946,6 +1080,22 @@ class Daemon:
             self.check_connectivity(force=True)
         return {"ok": True, "data": {"connectivity": self.connectivity, "url": self.portal_url,
                                      "device": self.portal_device}}
+
+    def op_dns_bypass(self, req: dict) -> dict:
+        """`nmxcli dns-bypass`: whether it is on, and what each Wi-Fi link uses."""
+        return {"ok": True, "data": {"enabled": bool(self.state.get("dns-bypass")), "links": self.bypass.status()}}
+
+    def op_dns_bypass_set(self, req: dict) -> dict:
+        self.state["dns-bypass"] = bool(req.get("enabled"))
+        self.save_state()
+        if not self.state["dns-bypass"]:
+            self.bypass.refused.clear()
+        self.check_connectivity_soon()
+        return {"ok": True, "data": {"enabled": self.state["dns-bypass"]}}
+
+    def op_certificates_learn(self, req: dict) -> dict:
+        """`nmxcli connection find-ca`: look for the enterprise networks' CAs now (needs internet)."""
+        return {"ok": True, "data": self.learn_certificates()}
 
     def op_hostname(self, req: dict) -> dict:
         if req.get("name"):

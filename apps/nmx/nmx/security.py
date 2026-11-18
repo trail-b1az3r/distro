@@ -134,6 +134,15 @@ def from_flags(flags: str) -> Security:
     return sec
 
 
+def family(kind: str) -> str:
+    """'open' (open and Enhanced Open: no password), 'personal' (WEP, WPA/WPA3 password) or 'enterprise'."""
+    if kind in ("open", "owe"):
+        return "open"
+    if kind in ("eap", "eap-suite-b"):
+        return "enterprise"
+    return "personal"
+
+
 def kind_from_key_mgmt(key_mgmt: str) -> str:
     """A saved profile's wifi-sec.key-mgmt (NetworkManager's names) as a Security kind."""
     return {
