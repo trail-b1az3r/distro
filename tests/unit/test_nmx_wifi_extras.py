@@ -138,7 +138,7 @@ def test_daemon_bypass_is_off_by_default_and_never_on_a_portal(nmxd, monkeypatch
     assert d.bypass.status() == {}
 
 
-def test_cli_dns_bypass(fake_nmxd):
+def test_cli_dns_bypass(fake_nmxd):  # noqa: F811 - the fixture, imported from test_nmx
     REPLIES["dns-bypass"] = {"ok": True, "data": {"enabled": True, "links": {"wlan0": "dot"}}}
     try:
         out = io.StringIO()
