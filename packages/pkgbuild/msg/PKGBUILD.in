@@ -16,6 +16,9 @@ license=(GPL-3.0-or-later)
 depends=(python pyside6 qt6-declarative python-cryptography python-dbus-next glibc gcc-libs)
 makedepends=(rust cargo)
 checkdepends=(python-pytest)
+# SQLite is compiled into the Rust store (rusqlite bundled): makepkg's GCC LTO objects cannot be linked by the
+# Rust toolchain's lld.
+options=(!lto)
 optdepends=('bluez: Bluetooth (messages and contacts)'
             'bluez-obex: Bluetooth messages and contacts (obexd; bluez-utils on older systems)'
             'libimobiledevice: the whole history and pictures over the cable'

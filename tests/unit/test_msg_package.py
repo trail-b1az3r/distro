@@ -37,3 +37,12 @@ def test_ios_app_and_ci():
     for token in ("nexora-msg v1 code", "nexora-msg v1 key"):
         assert token in swift and token in py
     assert "47800" in py and "47800" in (APP / "ios/NexoraMessages/Server.swift").read_text()
+
+
+def test_aur_package():
+    aur = (ROOT / "aur/nexora-msg/PKGBUILD").read_text()
+    srcinfo = (ROOT / "aur/nexora-msg/.SRCINFO").read_text()
+    assert "options=(!lto)" in aur and "options=(!lto)" in (ROOT / "packages/pkgbuild/msg/PKGBUILD.in").read_text()
+    commit = aur.split("_commit=")[1].split("\n")[0]
+    assert len(commit) == 40 and commit in srcinfo, "the .SRCINFO matches the PKGBUILD"
+    assert "AUR_SSH_PRIVATE_KEY" in (ROOT / ".github/workflows/aur.yml").read_text()

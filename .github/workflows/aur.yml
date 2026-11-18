@@ -1,0 +1,64 @@
+# Publishes the AUR packages in aur/ (nexora-msg). Each is built and checked with makepkg in a clean Arch container
+# first; then its PKGBUILD and .SRCINFO are pushed to aur.archlinux.org.
+#
+# Needs the AUR_SSH_PRIVATE_KEY secret: the private half of an SSH key added to your AUR account
+# (https://aur.archlinux.org > My Account > SSH Public Key). Without it, the packages are still built and checked.
+name: AUR
+
+on:
+  push:
+    branches: [main]
+    paths: [aur/**, .github/workflows/aur.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  aur:
+    name: ${{ matrix.package }}
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [nexora-msg]
+    steps:
+      - name: Tools
+        run: pacman -Syu --noconfirm --needed git openssh
+      - uses: actions/checkout@v4
+      - name: Build and check (makepkg)
+        run: |
+          useradd -m builder
+          cp -r "aur/${{ matrix.package }}" /home/builder/pkg
+          chown -R builder /home/builder/pkg
+          deps="$(cd /home/builder/pkg && bash -c 'source PKGBUILD; echo "${depends[@]} ${makedepends[@]} ${checkdepends[@]}"')"
+          pacman -S --noconfirm --needed $deps
+          cd /home/builder/pkg
+          runuser -u builder -- makepkg -f --noconfirm
+          runuser -u builder -- makepkg --printsrcinfo > .SRCINFO
+          namcap PKGBUILD 2>/dev/null || true
+      - name: Publish to the AUR
+        env:
+          AUR_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          PKG: ${{ matrix.package }}
+        if: github.ref == 'refs/heads/main'
+        run: |
+          if [ -z "$AUR_KEY" ]; then
+            echo "::warning::AUR_SSH_PRIVATE_KEY is not set: $PKG was built and checked, not published."
+            exit 0
+          fi
+          install -dm700 ~/.ssh
+          printf '%s\n' "$AUR_KEY" > ~/.ssh/aur && chmod 600 ~/.ssh/aur
+          ssh-keyscan -t ed25519,rsa aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
+          printf 'Host aur.archlinux.org\n  User aur\n  IdentityFile ~/.ssh/aur\n' > ~/.ssh/config
+          git config --global user.name "trail-b1az3r"
+          git config --global user.email "trail-b1az3r@users.noreply.github.com"
+          git clone "ssh://aur@aur.archlinux.org/$PKG.git" aur-repo
+          cp /home/builder/pkg/PKGBUILD /home/builder/pkg/.SRCINFO aur-repo/
+          cd aur-repo
+          git add PKGBUILD .SRCINFO
+          if git diff --cached --quiet; then echo "$PKG is up to date on the AUR"; exit 0; fi
+          ver="$(sed -n 's/^\tpkgver = //p' .SRCINFO)-$(sed -n 's/^\tpkgrel = //p' .SRCINFO)"
+          git commit -m "Update to $ver (from trail-b1az3r/distro ${GITHUB_SHA::7})"
+          git push origin HEAD:master
