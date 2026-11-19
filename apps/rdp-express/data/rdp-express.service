@@ -1,0 +1,13 @@
+[Unit]
+Description=rdp-express: share this desktop (remote desktop server)
+Documentation=file:///usr/share/doc/rdp-express/README.md
+PartOf=graphical-session.target
+After=graphical-session.target tailscaled.service
+
+[Service]
+ExecStart=/usr/bin/rdp-express serve
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

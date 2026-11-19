@@ -46,3 +46,18 @@ def test_aur_package():
     commit = aur.split("_commit=")[1].split("\n")[0]
     assert len(commit) == 40 and commit in srcinfo, "the .SRCINFO matches the PKGBUILD"
     assert "AUR_SSH_PRIVATE_KEY" in (ROOT / ".github/workflows/aur.yml").read_text()
+
+
+def test_remote_desktop_server_is_its_own_package():
+    assert '"rdp-express"' in (ROOT / "packages/repo.toml").read_text()
+    pkg = (ROOT / "packages/pkgbuild/rdp-express/PKGBUILD.in").read_text()
+    assert "pkgname=@DISTRO_ID@-rdp-express" in pkg and "rdp-express.service" in pkg
+    # Installed where a desktop should be shared, not with every desktop.
+    assert "rdp-express" not in (ROOT / "packages/lists/desktop.list").read_text()
+    assert "@DISTRO_ID@-rdp-express" in (ROOT / "packages/pkgbuild/msg/PKGBUILD.in").read_text()
+    # The viewer and the server agree on the port and the key derivation.
+    rust = (ROOT / "apps/rdp-express/src/link.rs").read_text()
+    py = (APP / "nexora_msg/rdp.py").read_text()
+    for token in ("rdp-express v1 key", "rdp-express v1 pair", "C2S", "S2C"):
+        assert token in rust and token in py
+    assert "47801" in (ROOT / "apps/rdp-express/src/main.rs").read_text() and "PORT = 47801" in py

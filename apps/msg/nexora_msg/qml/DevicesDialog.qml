@@ -66,11 +66,11 @@ Dialog {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
                 opacity: 0.75
-                text: "Sending pictures, and contacts with their photos. Open Nexora Messages on the iPhone (sideloaded); it stays connected in the background. Over the cable, or on the same Wi-Fi by its address."
+                text: "Sending pictures, and contacts with their photos. Open Nexora Messages on the iPhone (sideloaded); it stays connected in the background. Over the cable, on the same Wi-Fi, or anywhere over Tailscale (by its Tailscale name or address; with Tailscale on the iPhone it is found by itself)."
             }
             RowLayout {
                 Layout.fillWidth: true
-                TextField { id: host; placeholderText: "iPhone's address (empty: over the cable)"; Layout.fillWidth: true }
+                TextField { id: host; placeholderText: "iPhone's address or Tailscale name (empty: find it)"; Layout.fillWidth: true }
                 Button { text: "Connect"; enabled: !msg.busy; onClicked: msg.connectCompanion(host.text) }
             }
             Label {

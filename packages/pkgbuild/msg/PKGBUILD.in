@@ -25,7 +25,9 @@ optdepends=('bluez: Bluetooth (messages and contacts)'
             'usbmuxd: the cable, and the companion app over it'
             'avahi: finding the companion app on Wi-Fi'
             'qt6-imageformats: HEIC pictures from the iPhone'
-            'libnotify: notifications for new messages')
+            'libnotify: notifications for new messages'
+            'tailscale: the iPhone and remote desktops from anywhere'
+            '@DISTRO_ID@-rdp-express: share this computer'"'"'s desktop with the remote desktop viewer')
 source=("@DISTRO_ID@-$pkgver.tar.gz")
 sha256sums=('@SOURCE_SHA256@')
 

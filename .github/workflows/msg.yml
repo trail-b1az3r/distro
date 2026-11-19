@@ -5,9 +5,9 @@ name: nexora-msg
 on:
   push:
     branches: [main]
-    paths: [apps/msg/**, packages/pkgbuild/nexora-msg/**, .github/workflows/msg.yml]
+    paths: [apps/msg/**, apps/rdp-express/**, packages/pkgbuild/msg/**, packages/pkgbuild/rdp-express/**, .github/workflows/msg.yml]
   pull_request:
-    paths: [apps/msg/**, packages/pkgbuild/nexora-msg/**, .github/workflows/msg.yml]
+    paths: [apps/msg/**, apps/rdp-express/**, packages/pkgbuild/msg/**, packages/pkgbuild/rdp-express/**, .github/workflows/msg.yml]
   workflow_dispatch:
 
 permissions:
@@ -30,13 +30,17 @@ jobs:
       - name: Rust tests
         working-directory: apps/msg/core
         run: cargo test --locked && cargo build --locked --release
+      - name: rdp-express tests
+        working-directory: apps/rdp-express
+        run: cargo test --locked
       - name: Python tests
         working-directory: apps/msg
         env:
           NEXORA_MSG_CORE: ${{ github.workspace }}/apps/msg/core/target/release/nexora-msg-core
         run: |
           python -m pip install --quiet pytest cryptography
-          python -W error::SyntaxWarning -m pytest -q tests
+          python -m pip install --quiet PySide6 || echo "::notice::no PySide6 for Python ${{ matrix.python }} yet: its test is skipped"
+          QT_QPA_PLATFORM=offscreen python -W error::SyntaxWarning -m pytest -q tests
 
   ios:
     name: iPhone companion app (unsigned IPA)

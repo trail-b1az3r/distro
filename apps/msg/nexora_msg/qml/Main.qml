@@ -59,6 +59,8 @@ ApplicationWindow {
                     Label { text: "Messages"; font.pixelSize: 22; font.weight: Font.DemiBold; Layout.fillWidth: true }
                     ToolButton { icon.source: "icons/compose.svg"; onClicked: newDialog.open()
                         ToolTip.visible: hovered; ToolTip.text: "New message (Ctrl+N)" }
+                    ToolButton { icon.source: "icons/remote.svg"; onClicked: remoteDialog.open()
+                        ToolTip.visible: hovered; ToolTip.text: "Remote desktop: another computer's screen" }
                     ToolButton { icon.source: "icons/phone.svg"; onClicked: devices.open()
                         ToolTip.visible: hovered; ToolTip.text: "iPhone: Bluetooth, cable and companion app" }
                 }
@@ -143,6 +145,7 @@ ApplicationWindow {
     }
 
     DevicesDialog { id: devices; anchors.centerIn: parent }
+    RemoteDialog { id: remoteDialog; anchors.centerIn: parent }
     NewMessageDialog { id: newDialog; anchors.centerIn: parent; onChosen: handle => { msg.newChat(handle); win.showList = false } }
 
     // Short messages at the bottom.

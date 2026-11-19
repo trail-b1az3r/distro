@@ -1,0 +1,43 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+#
+# rdp-express (apps/rdp-express): @DISTRO_NAME@'s remote desktop server. It shares the Wayland desktop (Hyprland,
+# sway, wlroots) with nexora-msg's remote desktop viewer, over its own encrypted protocol, on the local network
+# and Tailscale. A separate package from @DISTRO_ID@-msg: install it only where a desktop should be shared.
+# Generated from packages/pkgbuild/rdp-express/PKGBUILD.in.
+
+pkgname=@DISTRO_ID@-rdp-express
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc="@DISTRO_NAME@'s remote desktop server (Wayland: Hyprland, sway, wlroots), for nexora-msg's viewer"
+arch=(x86_64)
+url="@DISTRO_HOME_URL@"
+license=(GPL-3.0-or-later)
+depends=(glibc gcc-libs)
+makedepends=(rust cargo)
+optdepends=('tailscale: reachable from your tailnet (it listens there by default)'
+            'libxkbcommon: the keyboard layout when no keyboard is attached (xkbcli)')
+provides=(rdp-express)
+source=("@DISTRO_ID@-$pkgver.tar.gz")
+sha256sums=('@SOURCE_SHA256@')
+
+prepare() {
+  cd "@DISTRO_ID@-$pkgver/apps/rdp-express"
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "@DISTRO_ID@-$pkgver/apps/rdp-express"
+  CARGO_TARGET_DIR=target cargo build --frozen --release
+}
+
+check() {
+  cd "@DISTRO_ID@-$pkgver/apps/rdp-express"
+  cargo test --frozen
+}
+
+package() {
+  cd "@DISTRO_ID@-$pkgver/apps/rdp-express"
+  install -Dm755 target/release/rdp-express "$pkgdir/usr/bin/rdp-express"
+  install -Dm644 data/rdp-express.service "$pkgdir/usr/lib/systemd/user/rdp-express.service"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/rdp-express/README.md"
+}

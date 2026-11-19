@@ -156,7 +156,15 @@ class Service:
             if host:
                 c.connect_tcp(host, port or PORT)
             else:
-                c.connect_usb()
+                try:
+                    c.connect_usb()
+                except Exception as usb_error:  # noqa: BLE001 - no cable: the same Wi-Fi, or Tailscale
+                    from .companion import discover
+                    found = discover()
+                    if not found:
+                        raise RuntimeError(f"No iPhone on the cable ({usb_error}), on this Wi-Fi or on Tailscale: "
+                                           "open Nexora Messages on the iPhone.") from None
+                    c.connect_tcp(found[0]["host"], found[0]["port"])
             self.companion = c
             self.emit("companion", state="connected" if c.paired else "pairing", code=c.code, phone=c.phone)
             if not c.paired and not c.wait_paired():

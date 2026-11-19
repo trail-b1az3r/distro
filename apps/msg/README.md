@@ -42,6 +42,36 @@ is, nexora-msg uses:
 The same message from two places (Bluetooth now, the backup later) is kept once: the backup's copy, which has
 the exact time and the pictures, replaces the Bluetooth one.
 
+## Over Tailscale
+
+Everything that goes over the network also goes over [Tailscale](https://tailscale.com), so it works away from home:
+
+- **Companion app:** with Tailscale on the iPhone, the computer finds it on the tailnet by itself, when there is no
+  cable and it is not on the same Wi-Fi. You can also type its Tailscale name or address. The app listens on every
+  interface, the Tailscale one included.
+- **Remote desktop:** the computers on your tailnet that share their desktop are listed in the remote desktop
+  dialog, and rdp-express listens on its Tailscale addresses by default.
+
+`nexora-msg remote` lists those computers from the command line.
+
+## Remote desktop
+
+Messages can also show another computer's desktop, and you can use it with your mouse and keyboard: the button
+next to the phone opens it. The other computer runs **rdp-express**, a separate package (`nexora-rdp-express`, in
+`apps/rdp-express`): a small Rust server that shares a Wayland desktop (Hyprland, sway, wlroots) over its own
+protocol.
+
+- **Encrypted:** X25519 keys and ChaCha20-Poly1305. The first time, the code from `rdp-express pair` on that
+  computer pairs the viewer; after that it connects without one.
+- **Express:** only the changed parts of the screen are sent, as JPEG tiles, and only as fast as the viewer takes
+  them. In testing, a keypress in a terminal cost 2 to 9 KB.
+
+The remote desktop opens in its own window, with Ctrl+Alt+Enter for full screen and a quality slider.
+
+    nexora-msg remote                               # computers on your tailnet that share their desktop
+    nexora-msg remote desk --code "1234 5678"       # pair with one (the code from `rdp-express pair` there)
+    nexora-msg remote desk --snapshot desk.png      # a picture of its screen
+
 ## Inside
 
 - `core/` (Rust): the store, one SQLite file in `~/.local/share/nexora-msg/` with full-text search (FTS5, accents
@@ -49,7 +79,8 @@ the exact time and the pictures, replaces the Bluetooth one.
   messages whose text is only in `attributedBody` (a typedstream NSAttributedString), skips reactions (tapbacks),
   copies attachments out of the backup, and matches people by their numbers' last ten digits or their email. The app
   runs it as a service (`nexora-msg-core serve STORE`, JSON lines).
-- `nexora_msg/` (Python 3.14 and 3.15): Bluetooth (`bluetooth.py`: obexd over D-Bus, bMessage and vCard parsing),
+- `nexora_msg/` (Python 3.14 and 3.15): the remote desktop viewer (`rdp.py`, `rdpview.py`), Tailscale
+  (`tailscale.py`), Bluetooth (`bluetooth.py`: obexd over D-Bus, bMessage and vCard parsing),
   the cable (`wired.py`: idevicebackup2), the companion link (`companion.py`, `usbmux.py`), and the window's bridge
   (`app.py`).
 - `nexora_msg/qml/` (Qt 6.12, Qt Quick Controls Material): conversations, bubbles with pictures, search, new

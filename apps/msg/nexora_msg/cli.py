@@ -18,6 +18,47 @@ def when(ms: int) -> str:
     return dt.datetime.fromtimestamp(ms / 1000).strftime("%Y-%m-%d %H:%M") if ms else ""
 
 
+def remote(args) -> int:
+    from . import rdp
+    if not args.host:
+        found = rdp.discover()
+        print("\n".join(f"{p['name']}  {p['dns'] or p['host']}" for p in found) or
+              "No computer on Tailscale shares its desktop (rdp-express serve).")
+        return 0
+    host, _, port = args.host.rpartition(":") if args.host.count(":") == 1 else (args.host, "", "")
+    got = threading.Event()
+    picture = {}
+
+    def on_frame(number, width, height, rects):
+        picture.update(size=(width, height), rects=picture.get("rects", []) + rects)
+        got.set()
+    r = rdp.Remote(on_frame=on_frame)
+    try:
+        r.connect(host, int(port) if port.isdigit() else rdp.PORT, args.code)
+    except rdp.RemoteError as error:
+        print(f"nexora-msg: {error}", file=sys.stderr)
+        return 1
+    info = r.info
+    print(f"{r.server}: {info.get('output')} {info.get('width')}x{info.get('height')}, "
+          f"{'control' if info.get('pointer') and info.get('keyboard') else 'view only'}")
+    if args.snapshot:
+        if not got.wait(10):
+            print("nexora-msg: no picture came", file=sys.stderr)
+            r.close()
+            return 1
+        from PySide6.QtGui import QImage, QPainter
+        w, h = picture["size"]
+        img = QImage(w, h, QImage.Format.Format_RGB32)
+        p = QPainter(img)
+        for x, y, _w, _h, jpeg in picture["rects"]:
+            p.drawImage(x, y, QImage.fromData(jpeg, "JPG"))
+        p.end()
+        img.save(args.snapshot)
+        print(f"saved {args.snapshot}")
+    r.close()
+    return 0
+
+
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(prog="nexora-msg", description="Your iPhone's messages on Nexora.")
     p.add_argument("--version", action="version", version=__version__)
@@ -33,6 +74,10 @@ def main(argv: list[str]) -> int:
     q.add_argument("words", nargs="+")
     sub.add_parser("chats", help="conversations, latest first")
     sub.add_parser("stats", help="how much is in the store")
+    rm = sub.add_parser("remote", help="another computer's desktop (rdp-express): check it, or save a picture of it")
+    rm.add_argument("host", nargs="?", default="", help="its name or address (empty: list the ones on Tailscale)")
+    rm.add_argument("--code", default="", help="the pairing code `rdp-express pair` showed (the first time)")
+    rm.add_argument("--snapshot", default="", help="save its screen to this file (PNG)")
     args = p.parse_args(argv)
     if not args.cmd:
         p.print_help()
@@ -42,6 +87,8 @@ def main(argv: list[str]) -> int:
         print(json.dumps(found, indent=2) if args.json else
               "\n".join(f"{d['name']}  {d['udid']}  ({d['link']})" for d in found) or "No iPhone found.")
         return 0
+    if args.cmd == "remote":
+        return remote(args)
     from pathlib import Path
     svc = Service(Path(args.store) if args.store else None)
     try:

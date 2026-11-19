@@ -231,7 +231,20 @@ class Companion:
 
 
 def discover(timeout: float = 4) -> list[dict]:
-    """Companion apps on the local network (Bonjour, through Avahi)."""
+    """Companion apps on the local network (Bonjour, through Avahi) and on the tailnet (iPhones running Tailscale
+    whose companion app answers), so the phone is reachable away from home too."""
+    found = _bonjour(timeout)
+    try:
+        from . import tailscale
+        for peer in tailscale.listening(PORT, ("ios",)):
+            if not any(f["host"] == peer["host"] for f in found):
+                found.append({"name": peer["name"], "host": peer["host"], "port": PORT, "via": "tailscale"})
+    except Exception:  # noqa: BLE001 - Tailscale is optional
+        pass
+    return found
+
+
+def _bonjour(timeout: float) -> list[dict]:
     try:
         out = subprocess.run(["avahi-browse", "-rpt", SERVICE], capture_output=True, text=True, timeout=timeout + 4,
                              check=False).stdout

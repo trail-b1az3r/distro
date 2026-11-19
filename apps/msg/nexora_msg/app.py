@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Property, QObject, QUrl, Signal, Slot
 from PySide6.QtGui import QGuiApplication, QIcon
-from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
 from PySide6.QtQuickControls2 import QQuickStyle
 
 from . import APP_ID, __version__
@@ -37,6 +37,7 @@ class Bridge(QObject):
     searchChanged = Signal()
     contactsChanged = Signal()
     devicesChanged = Signal()
+    remotesChanged = Signal()
     toast = Signal(str)
     # From the service's threads to the UI's.
     _event = Signal(str, "QVariant")
@@ -49,6 +50,8 @@ class Bridge(QObject):
         self._results: dict = {"messages": [], "contacts": [], "chats": []}
         self._contacts: list = []
         self._devices: list = []
+        self._remotes: list = []
+        self._finding = False
         self._chat = 0
         self._chat_info: dict = {}
         self._busy: dict[str, bool] = {}
@@ -67,6 +70,8 @@ class Bridge(QObject):
     results = Property("QVariantMap", lambda self: self._results, notify=searchChanged)
     contacts = Property("QVariantList", lambda self: self._contacts, notify=contactsChanged)
     devices = Property("QVariantList", lambda self: self._devices, notify=devicesChanged)
+    remotes = Property("QVariantList", lambda self: self._remotes, notify=remotesChanged)
+    findingRemotes = Property(bool, lambda self: self._finding, notify=remotesChanged)
     currentChat = Property(int, lambda self: self._chat, notify=messagesChanged)
     chatInfo = Property("QVariantMap", lambda self: self._chat_info, notify=messagesChanged)
     busy = Property(bool, lambda self: any(self._busy.values()), notify=changed)
@@ -123,6 +128,10 @@ class Bridge(QObject):
             self.devicesChanged.emit()
             if not self._devices:
                 self.toast.emit("No paired iPhone: pair it in Bluetooth settings first")
+        elif kind == "remotes":
+            self._remotes = data["list"]
+            self._finding = False
+            self.remotesChanged.emit()
         elif kind == "companion":
             self._companion = data["state"]
             self._code = data.get("code", self._code)
@@ -212,6 +221,23 @@ class Bridge(QObject):
         self.svc.connect_companion(host, int(port) if port.isdigit() else 0)
 
     @Slot()
+    def findRemotes(self) -> None:
+        """Computers on the tailnet sharing their desktop (rdp-express)."""
+        import threading
+
+        from . import rdp
+        self._finding = True
+        self.remotesChanged.emit()
+
+        def run():
+            try:
+                found = rdp.discover()
+            except Exception:  # noqa: BLE001 - Tailscale is optional
+                found = []
+            self._event.emit("remotes", {"list": found})
+        threading.Thread(target=run, daemon=True, name="find-remotes").start()
+
+    @Slot()
     def syncContacts(self) -> None:
         self.svc.sync_contacts()
 
@@ -224,6 +250,8 @@ def main(argv: list[str] | None = None) -> int:
     app.setDesktopFileName(APP_ID)
     app.setOrganizationName("Nexora")
     app.setWindowIcon(QIcon.fromTheme(APP_ID))
+    from .rdpview import RemoteView
+    qmlRegisterType(RemoteView, "Nexora.Remote", 1, 0, "RemoteView")
     service = Service()
     bridge = Bridge(service)
     engine = QQmlApplicationEngine()
