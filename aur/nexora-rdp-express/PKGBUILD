@@ -1,0 +1,49 @@
+# Maintainer: trail-b1az3r <https://github.com/trail-b1az3r>
+#
+# rdp-express: a remote desktop server for Wayland (Hyprland, sway, wlroots), for nexora-msg's remote desktop
+# viewer. Its own encrypted protocol (X25519, ChaCha20-Poly1305, one-time pairing codes); only changed tiles sent,
+# as JPEG; listens on localhost and Tailscale by default.
+#
+# Published from https://github.com/trail-b1az3r/distro (aur/nexora-rdp-express); edit it there.
+
+pkgname=nexora-rdp-express
+pkgver=1.0.0
+_commit=9310cd84f4711b44beb90dcae78680737aa10669
+pkgrel=1
+pkgdesc="Remote desktop server for Wayland (Hyprland, sway, wlroots), for nexora-msg's viewer"
+arch=(x86_64 aarch64)
+url="https://github.com/trail-b1az3r/distro/tree/main/apps/rdp-express"
+license=(GPL-3.0-or-later)
+depends=(glibc gcc-libs)
+makedepends=(rust cargo)
+optdepends=('tailscale: reachable from your tailnet (it listens there by default)'
+            'libxkbcommon: the keyboard layout when no keyboard is attached (xkbcli)')
+provides=(rdp-express)
+source=("distro-$_commit.tar.gz::https://github.com/trail-b1az3r/distro/archive/$_commit.tar.gz")
+sha256sums=('14e55d4a721c303bc3343c1f62a2c2be4524818ef0506bbbc2f11901a88b3bb3')
+
+_app() { cd "$srcdir/distro-$_commit/apps/rdp-express"; }
+
+prepare() {
+  _app
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  _app
+  export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=target
+  cargo build --frozen --release
+}
+
+check() {
+  _app
+  RUSTUP_TOOLCHAIN=stable cargo test --frozen
+}
+
+package() {
+  _app
+  install -Dm755 target/release/rdp-express "$pkgdir/usr/bin/rdp-express"
+  install -Dm644 data/rdp-express.service "$pkgdir/usr/lib/systemd/user/rdp-express.service"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/rdp-express/README.md"
+}

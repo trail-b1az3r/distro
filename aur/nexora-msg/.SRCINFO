@@ -1,6 +1,6 @@
 pkgbase = nexora-msg
 	pkgdesc = iPhone messages client: texts, pictures, contacts and search over Bluetooth or the cable
-	pkgver = 1.0.0
+	pkgver = 1.1.0
 	pkgrel = 1
 	url = https://github.com/trail-b1az3r/distro/tree/main/apps/msg
 	arch = x86_64
@@ -23,8 +23,10 @@ pkgbase = nexora-msg
 	optdepends = avahi: finding the companion app on Wi-Fi
 	optdepends = qt6-imageformats: HEIC pictures from the iPhone
 	optdepends = libnotify: notifications for new messages
+	optdepends = tailscale: the iPhone and remote desktops from anywhere
+	optdepends = nexora-rdp-express: share this computer's desktop with the remote desktop viewer
 	options = !lto
-	source = distro-88f7f1c718debb4c84bb0fdbd960a47f9e55eca6.tar.gz::https://github.com/trail-b1az3r/distro/archive/88f7f1c718debb4c84bb0fdbd960a47f9e55eca6.tar.gz
-	sha256sums = 4edeb533e0424c2799a61a572798a80c398e47382b4519308ee2a610eb78f3f3
+	source = distro-9310cd84f4711b44beb90dcae78680737aa10669.tar.gz::https://github.com/trail-b1az3r/distro/archive/9310cd84f4711b44beb90dcae78680737aa10669.tar.gz
+	sha256sums = 14e55d4a721c303bc3343c1f62a2c2be4524818ef0506bbbc2f11901a88b3bb3
 
 pkgname = nexora-msg

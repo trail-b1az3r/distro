@@ -1,0 +1,19 @@
+pkgbase = nexora-rdp-express
+	pkgdesc = Remote desktop server for Wayland (Hyprland, sway, wlroots), for nexora-msg's viewer
+	pkgver = 1.0.0
+	pkgrel = 1
+	url = https://github.com/trail-b1az3r/distro/tree/main/apps/rdp-express
+	arch = x86_64
+	arch = aarch64
+	license = GPL-3.0-or-later
+	makedepends = rust
+	makedepends = cargo
+	depends = glibc
+	depends = gcc-libs
+	optdepends = tailscale: reachable from your tailnet (it listens there by default)
+	optdepends = libxkbcommon: the keyboard layout when no keyboard is attached (xkbcli)
+	provides = rdp-express
+	source = distro-9310cd84f4711b44beb90dcae78680737aa10669.tar.gz::https://github.com/trail-b1az3r/distro/archive/9310cd84f4711b44beb90dcae78680737aa10669.tar.gz
+	sha256sums = 14e55d4a721c303bc3343c1f62a2c2be4524818ef0506bbbc2f11901a88b3bb3
+
+pkgname = nexora-rdp-express

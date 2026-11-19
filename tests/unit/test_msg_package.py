@@ -45,7 +45,10 @@ def test_aur_package():
     assert "options=(!lto)" in aur and "options=(!lto)" in (ROOT / "packages/pkgbuild/msg/PKGBUILD.in").read_text()
     commit = aur.split("_commit=")[1].split("\n")[0]
     assert len(commit) == 40 and commit in srcinfo, "the .SRCINFO matches the PKGBUILD"
-    assert "AUR_SSH_PRIVATE_KEY" in (ROOT / ".github/workflows/aur.yml").read_text()
+    workflow = (ROOT / ".github/workflows/aur.yml").read_text()
+    assert "AUR_SSH_PRIVATE_KEY" in workflow and "nexora-rdp-express" in workflow
+    rdp = (ROOT / "aur/nexora-rdp-express/PKGBUILD").read_text()
+    assert rdp.split("_commit=")[1].split("\n")[0] in (ROOT / "aur/nexora-rdp-express/.SRCINFO").read_text()
 
 
 def test_remote_desktop_server_is_its_own_package():

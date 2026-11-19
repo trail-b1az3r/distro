@@ -1,14 +1,15 @@
 # Maintainer: trail-b1az3r <https://github.com/trail-b1az3r>
 #
 # nexora-msg: an iPhone messages client for Linux. Texts, pictures, contacts and search, over Bluetooth (MAP and
-# PBAP, through BlueZ) or the cable (libimobiledevice backups). QML (Qt 6) window, Python app, Rust message store.
+# PBAP, through BlueZ) or the cable (libimobiledevice backups); also over Tailscale. A remote desktop viewer for
+# computers running rdp-express (nexora-rdp-express). QML (Qt 6) window, Python app, Rust message store.
 # The iPhone companion app is sideloaded separately: https://github.com/trail-b1az3r/distro/releases/tag/nexora-msg-ios
 #
 # Published from https://github.com/trail-b1az3r/distro (aur/nexora-msg); edit it there.
 
 pkgname=nexora-msg
-pkgver=1.0.0
-_commit=88f7f1c718debb4c84bb0fdbd960a47f9e55eca6
+pkgver=1.1.0
+_commit=9310cd84f4711b44beb90dcae78680737aa10669
 pkgrel=1
 pkgdesc="iPhone messages client: texts, pictures, contacts and search over Bluetooth or the cable"
 arch=(x86_64 aarch64)
@@ -26,9 +27,11 @@ optdepends=('bluez: Bluetooth (messages and contacts)'
             'usbmuxd: the cable, and the companion app over it'
             'avahi: finding the companion app on Wi-Fi'
             'qt6-imageformats: HEIC pictures from the iPhone'
-            'libnotify: notifications for new messages')
+            'libnotify: notifications for new messages'
+            'tailscale: the iPhone and remote desktops from anywhere'
+            'nexora-rdp-express: share this computer'"'"'s desktop with the remote desktop viewer')
 source=("distro-$_commit.tar.gz::https://github.com/trail-b1az3r/distro/archive/$_commit.tar.gz")
-sha256sums=('4edeb533e0424c2799a61a572798a80c398e47382b4519308ee2a610eb78f3f3')
+sha256sums=('14e55d4a721c303bc3343c1f62a2c2be4524818ef0506bbbc2f11901a88b3bb3')
 
 _app() { cd "$srcdir/distro-$_commit/apps/msg"; }
 
