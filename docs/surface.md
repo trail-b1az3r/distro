@@ -46,6 +46,14 @@ Surface support:
   `v4l2loopback-dkms`. On other models nothing changes. surface-camd creates those three devices itself (through
   `/dev/v4l2loopback`), so v4l2loopback options from other programs (OBS, Iriun, virtual-camera scripts) don't
   interfere; it only uses a camera while an app is watching, so libcamera and other programs can use it otherwise.
+* **Touchscreen gestures and a touch API** (any Surface): `surface-touchd` works on top of `iptsd`'s touchscreen and
+  pen. It recognises taps, double taps and long presses with any number of fingers, swipes, edge swipes, pinch and
+  rotate. It can bind them to key shortcuts or commands in `/etc/surface-touchd.conf` (e.g.
+  `bind swipe:3:left = key SUPER+PAGEDOWN`). It can ignore fingers while the pen is near the screen
+  (`pen_blocks_touch`), turn touch off, and follow the screen rotation. Apps get live touch, pen (pressure, tilt) and
+  gesture events and change every setting through a JSON socket API (`surface-touchctl`, and a Python client in
+  `/usr/lib/surface-touch/python`); join the `input` group to use it. It is turned on when the package is installed
+  on a Surface.
 * **Speaker EQ for the Surface Pro 5 and 7+**: a PipeWire filter that corrects the small speakers. Run it as your
   user.
 * **Modern suspend for the Surface Pro 5**: deep sleep where the firmware has it, then s2idle and
@@ -56,6 +64,10 @@ Surface support:
 surface-contrib cameras status            # configuration, services, devices
 sudo surface-contrib cameras on|off       # turn the cameras on or off
 surface-contrib cameras doctor            # check every camera layer (report: logs for a bug report)
+surface-contrib touch status              # surface-touchd: gestures, bindings, touch/pen API
+sudo surface-contrib touch on|off         # turn surface-touchd on or off
+surface-touchctl monitor gesture pen      # watch gestures and the pen live (input group)
+surface-touchctl set pen_blocks_touch true   # ignore fingers while writing
 surface-contrib speaker-eq                # speaker EQ (Pro 5 / 7+), as your user
 sudo surface-contrib suspend --install    # Pro 5 suspend (--test checks deep idle, --uninstall)
 ```

@@ -7,6 +7,8 @@
 #   surface-contrib cameras off           undo that (root)
 #   surface-contrib cameras doctor        every camera layer checked (the fork's surface-camera-setup.sh)
 #   surface-contrib cameras report        all camera logs in one file, for a bug report
+#   surface-contrib touch status          surface-touchd: gestures, bindings and the touch/pen API
+#   surface-contrib touch on [--no-start] | off   turn surface-touchd on or off (root)
 #   surface-contrib speaker-eq [...]      the speaker EQ for the Surface Pro 5 / 7+ (as your user)
 #   surface-contrib suspend [...]         modern suspend for the Surface Pro 5 (--install, --test, --uninstall)
 #
@@ -123,8 +125,48 @@ cameras_status() {
     done
 }
 
+# surface-touchd: gestures, gesture bindings and a JSON socket API on top of iptsd's touchscreen and pen.
+touch_on() {
+    local start=1
+    [[ "${1:-}" == --no-start ]] && start=0
+    need_root touch on
+    systemctl_root enable surface-touchd.service >/dev/null 2>&1 || true
+    if (( start )) && ! in_chroot; then
+        systemctl restart surface-touchd.service || true
+        echo "surface-touchd is on. Gestures and bindings: /etc/surface-touchd.conf"
+    else
+        echo "surface-touchd is turned on; it starts with the next boot."
+    fi
+    echo "For the API (surface-touchctl, Python client), add yourself to the input group: sudo usermod -aG input \$USER"
+}
+
+touch_off() {
+    need_root touch off
+    systemctl_root disable surface-touchd.service >/dev/null 2>&1 || true
+    in_chroot || systemctl stop surface-touchd.service 2>/dev/null || true
+    echo "surface-touchd turned off (your /etc/surface-touchd.conf is kept)."
+}
+
+touch_status() {
+    local state enabled
+    state="$(systemctl is-active surface-touchd.service 2>/dev/null || true)"
+    enabled="$(systemctl_root is-enabled surface-touchd.service 2>/dev/null || true)"
+    echo "surface-touchd: ${state:-unknown} (${enabled:-not installed})"
+    if [[ "$state" == active ]] && command -v surface-touchctl >/dev/null 2>&1; then
+        surface-touchctl info 2>/dev/null || echo "  (API: join the input group to query it)"
+    fi
+}
+
 case "${1:-}" in
     model) model ;;
+    touch)
+        case "${2:-status}" in
+            status) touch_status ;;
+            on) touch_on "${3:-}" ;;
+            off) touch_off ;;
+            *) echo "surface-contrib touch status|on|off" >&2; exit 2 ;;
+        esac
+        ;;
     cameras)
         case "${2:-status}" in
             status) cameras_status ;;
@@ -146,6 +188,6 @@ case "${1:-}" in
         shift
         exec bash "$SHARE/surface-pro-5-suspend/surface-pro-5-suspend.sh" "$@"
         ;;
-    -h|--help|help|"") sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' ;;
+    -h|--help|help|"") sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//' ;;
     *) echo "Unknown command: $1 (surface-contrib --help)" >&2; exit 2 ;;
 esac

@@ -109,3 +109,62 @@ def test_package_builds_from_the_fork():
     assert "surface-contrib cameras migrate" in install and "try-restart" in install
     # the fork dropped this file: installing it would fail the package build
     assert "v4l2loopback-surface.conf\" \\" not in text and "surface-camd/v4l2loopback-surface.conf" not in text
+
+
+def test_touch_on_off_and_status(tmp_path):
+    res = _run(tmp_path, "Surface Pro", "touch", "on")
+    assert res.returncode == 0, res.stderr
+    assert "enable surface-touchd.service" in (tmp_path / "calls").read_text()
+    assert "next boot" in res.stdout and "input group" in res.stdout  # a root other than / is never started
+    res = _run(tmp_path, "Surface Pro", "touch", "off")
+    assert res.returncode == 0 and "disable surface-touchd.service" in (tmp_path / "calls").read_text()
+    assert "surface-touchd:" in _run(tmp_path, "Surface Pro", "touch", "status").stdout
+    assert _run(tmp_path, "Surface Pro", "touch", "sideways").returncode == 2
+
+
+def _install_hook(tmp_path: Path, product: str, func: str, *args: str) -> str:
+    """Run a function of surface-contrib.install with surface-contrib, systemctl and vercmp stubbed; return the
+    commands it ran."""
+    dmi = tmp_path / "dmi"
+    dmi.mkdir(exist_ok=True)
+    (dmi / "product_name").write_text(product + "\n")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir(exist_ok=True)
+    log = tmp_path / "hook-calls"
+    for name in ("surface-contrib", "systemctl"):
+        (bin_dir / name).write_text(f'#!/bin/sh\necho "{name} $*" >> {log}\n')
+        (bin_dir / name).chmod(0o755)
+    # vercmp prints -1, 0 or 1 like pacman's
+    (bin_dir / "vercmp").write_text('#!/bin/sh\n[ "$1" = "$2" ] && echo 0 || '
+                                    '{ [ "$(printf "%s\\n%s\\n" "$1" "$2" | sort -V | head -1)" = "$1" ] && echo -1 || echo 1; }\n')
+    (bin_dir / "vercmp").chmod(0o755)
+    env = {"PATH": f"{bin_dir}:/usr/bin:/bin", "SURFACE_CONTRIB_DMI": str(dmi)}
+    script = f'. "{PKG / "surface-contrib.install"}"; {func} {" ".join(args)}'
+    subprocess.run(["bash", "-c", script], env=env, check=True, capture_output=True, timeout=30)
+    return log.read_text() if log.exists() else ""
+
+
+def test_upgrade_turns_touch_on_once(tmp_path):
+    # from a version without surface-touchd: turned on (and started where it was enabled) ...
+    calls = _install_hook(tmp_path, "Surface Pro", "post_upgrade", "2026.11.20-1", "2026.11.16-1")
+    assert "surface-contrib touch on --no-start" in calls and "systemctl start surface-touchd.service" in calls
+    assert "surface-contrib cameras migrate" in calls and "try-restart surface-camd@*.service" in calls
+    # ... but a later upgrade keeps whatever the administrator chose
+    (tmp_path / "hook-calls").unlink()
+    calls = _install_hook(tmp_path, "Surface Pro", "post_upgrade", "2026.11.21-1", "2026.11.20-1")
+    assert "touch on" not in calls and "cameras migrate" in calls
+
+
+def test_touch_only_on_surfaces(tmp_path):
+    calls = _install_hook(tmp_path, "ThinkPad X1", "post_upgrade", "2026.11.20-1", "2026.11.16-1")
+    assert "touch on" not in calls and "start surface-touchd" not in calls
+    calls = _install_hook(tmp_path, "Surface Laptop 4", "post_install")
+    assert "surface-contrib touch on --no-start" in calls and "start surface-touchd" not in calls  # next boot
+
+
+def test_package_includes_surface_touch():
+    text = (PKG / "PKGBUILD.in").read_text()
+    assert 'make -C "$srcdir/linux-surface/contrib/surface-touch"' in text  # built ...
+    assert 'make -C "$srcdir/linux-surface/contrib/surface-touch" test' in text  # ... tested in check()
+    assert 'make -C "$contrib/surface-touch" install' in text and "backup=('etc/surface-touchd.conf')" in text
+    assert "disable --now surface-touchd.service" in (PKG / "surface-contrib.install").read_text()
