@@ -22,7 +22,7 @@ replaces = ["linux-surface"]
 # What [nexora-surface] is built from. Bump commit to take a newer fork.
 [fork]
 url = "https://github.com/trail-b1az3r/linux-surface"
-commit = "883fa4d7c71be6645a5632bf240ea0c13cb1eeb7"
+commit = "ad88efeea07620cdb907053ef6bbcfc7a633f725"
 
 [build]
 # iptsd is in neither Arch nor the AUR: built from its repository at this tag.
