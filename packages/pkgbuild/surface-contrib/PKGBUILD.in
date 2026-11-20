@@ -4,16 +4,16 @@
 # EQ for the Surface Pro 5 and 7+, and modern suspend for the Surface Pro 5. Pinned by commit; bump _commit and pkgver
 # together. The kernel itself still comes from linux-surface's signed repository (its patches are the same).
 pkgname=surface-contrib
-pkgver=2026.11.16
+pkgver=2026.11.19
 pkgrel=1
-_commit=883fa4d7c71be6645a5632bf240ea0c13cb1eeb7
+_commit=59d42d89a49c1fc6734913782400547f0c929234
 pkgdesc="Surface extras from the linux-surface fork: IPU3 camera driver (front, rear, IR), speaker EQ, Pro 5 suspend"
 arch=('x86_64')
 url="https://github.com/trail-b1az3r/linux-surface"
 license=('GPL-2.0-or-later')
 depends=('glibc' 'systemd' 'bash')
 optdepends=(
-  'v4l2loopback-dkms: publishes the IPU3 cameras as ordinary webcams (installed on IPU3 Surfaces)'
+  'v4l2loopback-dkms: publishes the IPU3 cameras as ordinary webcams (installed on IPU3 Surfaces; not needed with a kernel that ships v4l2loopback)'
   'v4l-utils: camera diagnostics (surface-contrib cameras status)'
   'pipewire-pulse: the speaker EQ finds the speaker output with pactl'
   'thermald: the example thermal configurations in /usr/share/surface-contrib/thermald'
@@ -39,10 +39,10 @@ package() {
   install -Dm755 "$cams/surface-camd/surface-camd" "$pkgdir/usr/bin/surface-camd"
   install -Dm644 "$cams/surface-camd/surface-camd@.service" "$pkgdir/usr/lib/systemd/system/surface-camd@.service"
   sed -i 's|[@]BINDIR[@]|/usr/bin|' "$pkgdir/usr/lib/systemd/system/surface-camd@.service"
-  # Turned on per machine (surface-contrib cameras on): v4l2loopback devices would be empty cameras anywhere else.
-  install -Dm644 -t "$share/cameras" "$cams/surface-camd/v4l2loopback-surface.conf" \
-    "$cams/surface-camd/v4l2loopback-load.conf" "$cams/modprobe.d/surface-ipu3-cameras.conf" \
-    "$cams/README.md"
+  # Turned on per machine (surface-contrib cameras on). surface-camd creates /dev/video50-52 itself through
+  # /dev/v4l2loopback, so no v4l2loopback options file (it would fight OBS's, Iriun's, ...): only the module load.
+  install -Dm644 -t "$share/cameras" "$cams/surface-camd/v4l2loopback-load.conf" \
+    "$cams/modprobe.d/surface-ipu3-cameras.conf" "$cams/README.md"
   install -Dm644 "$cams/surface-camd/README.md" "$share/cameras/surface-camd.md"
   install -Dm644 -t "$share/cameras/wireplumber" "$cams/wireplumber/"*.conf
   install -Dm755 "$cams/surface-camera-setup.sh" "$share/cameras/surface-camera-setup.sh"

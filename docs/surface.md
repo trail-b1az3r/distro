@@ -43,7 +43,9 @@ Surface support:
   driver for the front, rear and **IR** cameras. It shows them to every app as ordinary webcams: "Surface Front
   Camera" on `/dev/video50`, "Surface Rear Camera" on `/dev/video51` and "Surface IR Camera" on `/dev/video52`
   (usable with Howdy for face unlock). On those models it is turned on when the package is installed, along with
-  `v4l2loopback-dkms`. On other models nothing changes.
+  `v4l2loopback-dkms`. On other models nothing changes. surface-camd creates those three devices itself (through
+  `/dev/v4l2loopback`), so v4l2loopback options from other programs (OBS, Iriun, virtual-camera scripts) don't
+  interfere; it only uses a camera while an app is watching, so libcamera and other programs can use it otherwise.
 * **Speaker EQ for the Surface Pro 5 and 7+**: a PipeWire filter that corrects the small speakers. Run it as your
   user.
 * **Modern suspend for the Surface Pro 5**: deep sleep where the firmware has it, then s2idle and

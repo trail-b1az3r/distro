@@ -3,7 +3,7 @@
 #
 #   surface-contrib model                 what this Surface has: ipu3 (cameras for surface-camd), pro5, pro7plus
 #   surface-contrib cameras status        the IPU3 cameras: configuration, services, devices
-#   surface-contrib cameras on [--no-start]   load order, v4l2loopback devices and surface-camd (root)
+#   surface-contrib cameras on [--no-start]   load order, v4l2loopback module and surface-camd (root)
 #   surface-contrib cameras off           undo that (root)
 #   surface-contrib cameras doctor        every camera layer checked (the fork's surface-camera-setup.sh)
 #   surface-contrib cameras report        all camera logs in one file, for a bug report
@@ -51,6 +51,21 @@ systemctl_root() {
     if [[ -n "$ROOT" ]]; then systemctl --root="$ROOT" "$@"; else systemctl "$@"; fi
 }
 
+# Older surface-contrib wrote this v4l2loopback options file. surface-camd now creates its own devices, and an
+# options line here only fights other programs' (OBS, Iriun, ...), so it goes, unless an administrator changed it.
+OLD_LOOPBACK_OPTIONS='options v4l2loopback devices=3 video_nr=50,51,52 card_label="Surface Front Camera","Surface Rear Camera","Surface IR Camera" exclusive_caps=1,1,1'
+
+remove_old_loopback_options() {
+    local f="$ROOT/etc/modprobe.d/v4l2loopback-surface.conf"
+    [[ -f "$f" ]] || return 0
+    if [[ "$(grep -v '^[[:space:]]*\(#\|$\)' "$f")" == "$OLD_LOOPBACK_OPTIONS" ]]; then
+        rm -f "$f"
+        echo "Removed $f: surface-camd creates /dev/video50-52 itself now."
+    else
+        echo "Note: $f was changed by an administrator and is kept. surface-camd no longer needs it."
+    fi
+}
+
 cameras_on() {
     local start=1
     [[ "${1:-}" == --no-start ]] && start=0
@@ -59,15 +74,10 @@ cameras_on() {
         echo "This is not a Surface with IPU3 cameras ($(dmi product_name)); nothing to do."
         return 0
     fi
-    local others
-    others="$(grep -ls '^options v4l2loopback' "$ROOT"/etc/modprobe.d/*.conf 2>/dev/null \
-              | grep -v '/v4l2loopback-surface.conf$' || true)"
-    if [[ -n "$others" ]]; then
-        echo "Note: v4l2loopback already has options in: $others"
-        echo "      There can be only one options line: merge it with $ROOT/etc/modprobe.d/v4l2loopback-surface.conf."
-    fi
+    remove_old_loopback_options
     install -Dm644 "$SHARE/cameras/surface-ipu3-cameras.conf" "$ROOT/etc/modprobe.d/surface-ipu3-cameras.conf"
-    install -Dm644 "$SHARE/cameras/v4l2loopback-surface.conf" "$ROOT/etc/modprobe.d/v4l2loopback-surface.conf"
+    # Only loads the module; surface-camd creates its devices through /dev/v4l2loopback, whatever options
+    # other programs give v4l2loopback.
     install -Dm644 "$SHARE/cameras/v4l2loopback-load.conf" "$ROOT/etc/modules-load.d/v4l2loopback-surface.conf"
     printf '%s\n' ipu3_cio2 > "$ROOT/etc/modules-load.d/surface-ipu3-cameras.conf"
     # The raw ipu3-cio2 nodes show only black or green: hidden from apps, and the cameras named.
@@ -79,7 +89,6 @@ cameras_on() {
     if (( start )) && ! in_chroot; then
         local m
         for m in intel_skl_int3472_discrete ov5693 ov8865 ov7251 ipu_bridge ipu3_cio2; do modprobe "$m" 2>/dev/null || true; done
-        modprobe -r v4l2loopback 2>/dev/null || true
         modprobe v4l2loopback 2>/dev/null || echo "v4l2loopback did not load yet: reboot (or check: dkms status)."
         systemctl daemon-reload
         for cam in "${CAMERAS[@]}"; do systemctl restart "surface-camd@$cam.service" || true; done
@@ -104,7 +113,7 @@ cameras_off() {
 
 cameras_status() {
     echo "Model: $(dmi product_name) ($(model | paste -sd, - || true))"
-    if [[ -f "$ROOT/etc/modprobe.d/v4l2loopback-surface.conf" ]]; then echo "Configuration: on"; else echo "Configuration: off"; fi
+    if [[ -f "$ROOT/etc/modules-load.d/v4l2loopback-surface.conf" ]]; then echo "Configuration: on"; else echo "Configuration: off"; fi
     local cam dev=50 state
     for cam in "${CAMERAS[@]}"; do
         state="$(systemctl is-active "surface-camd@$cam.service" 2>/dev/null || true)"
@@ -123,7 +132,9 @@ case "${1:-}" in
             off) cameras_off ;;
             doctor) exec bash "$SHARE/cameras/surface-camera-setup.sh" ;;
             report) exec bash "$SHARE/cameras/surface-camera-setup.sh" --report ;;
-            *) echo "surface-contrib cameras status|on|off|doctor|report" >&2; exit 2 ;;
+            # Run by the package on upgrade: brings an existing setup up to date.
+            migrate) need_root cameras migrate; remove_old_loopback_options ;;
+            *) echo "surface-contrib cameras status|on|off|doctor|report|migrate" >&2; exit 2 ;;
         esac
         ;;
     speaker-eq)
