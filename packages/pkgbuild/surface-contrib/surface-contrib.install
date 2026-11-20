@@ -1,13 +1,23 @@
-# surface-contrib: a Surface with IPU3 cameras gets them turned on, once (an administrator's choice is kept).
+# surface-contrib: a Surface with IPU3 cameras gets them turned on, and any Surface gets surface-touchd, once
+# (an administrator's choice is kept).
+
+# Touch gestures and the touch API on any Surface (surface-touchd waits for iptsd's devices). With "start", it
+# also starts now (an upgrade on a running system); a fresh install starts it with the next boot.
+_touch_on() {
+  grep -q '^Surface' "${SURFACE_CONTRIB_DMI:-/sys/class/dmi/id}/product_name" 2>/dev/null || return 0
+  surface-contrib touch on --no-start >/dev/null 2>&1 ||
+    echo "surface-contrib: could not turn on surface-touchd; try: sudo surface-contrib touch on"
+  [[ "${1:-}" == start ]] && systemctl start surface-touchd.service >/dev/null 2>&1
+  echo "surface-contrib: touchscreen gestures and API (surface-touchd) are on; bindings: /etc/surface-touchd.conf"
+}
 
 post_install() {
-  if surface-contrib model 2>/dev/null | grep -qx ipu3; then
-    if [[ -e /etc/modules-load.d/surface-ipu3-cameras.conf ]]; then
-      return 0
-    fi
+  # skipped where the cameras were set up before: an administrator's choice is kept
+  if surface-contrib model 2>/dev/null | grep -qx ipu3 && [[ ! -e /etc/modules-load.d/surface-ipu3-cameras.conf ]]; then
     surface-contrib cameras on --no-start ||
       echo "surface-contrib: could not turn on the cameras; try: sudo surface-contrib cameras on"
   fi
+  _touch_on
   if surface-contrib model 2>/dev/null | grep -qx pro5; then
     echo "surface-contrib: modern suspend for the Surface Pro 5: sudo surface-contrib suspend --install"
   fi
@@ -21,6 +31,12 @@ post_upgrade() {
   # with it (and with other apps' options). Gone from the next boot.
   rm -f /etc/modprobe.d/v4l2loopback-surface.conf
   systemctl daemon-reload >/dev/null 2>&1 || true
+  # surface-touchd arrived in 2026.11.20: turn it on once, like a fresh install (later choices are kept).
+  if (( $(vercmp "$2" 2026.11.20) < 0 )); then
+    _touch_on start
+  fi
+  # Running cameras switch to the new surface-camd now rather than at the next boot.
+  systemctl try-restart 'surface-camd@*.service' >/dev/null 2>&1 || true
 }
 
 pre_remove() {
@@ -28,4 +44,5 @@ pre_remove() {
   for cam in front rear ir; do
     systemctl disable --now "surface-camd@$cam.service" >/dev/null 2>&1 || true
   done
+  systemctl disable --now surface-touchd.service >/dev/null 2>&1 || true
 }
