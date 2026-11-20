@@ -9,6 +9,7 @@
 #   surface-contrib cameras report        all camera logs in one file, for a bug report
 #   surface-contrib speaker-eq [...]      the speaker EQ for the Surface Pro 5 / 7+ (as your user)
 #   surface-contrib suspend [...]         modern suspend for the Surface Pro 5 (--install, --test, --uninstall)
+#   surface-contrib location [--fix|--test]   location through GeoClue: Wi-Fi positioning, GPS on LTE models
 #
 # The cameras show up as /dev/video50 (front), /dev/video51 (rear) and /dev/video52 (IR), named "Surface Front
 # Camera" and so on, in browsers, video calls, OBS and Howdy.
@@ -59,15 +60,10 @@ cameras_on() {
         echo "This is not a Surface with IPU3 cameras ($(dmi product_name)); nothing to do."
         return 0
     fi
-    local others
-    others="$(grep -ls '^options v4l2loopback' "$ROOT"/etc/modprobe.d/*.conf 2>/dev/null \
-              | grep -v '/v4l2loopback-surface.conf$' || true)"
-    if [[ -n "$others" ]]; then
-        echo "Note: v4l2loopback already has options in: $others"
-        echo "      There can be only one options line: merge it with $ROOT/etc/modprobe.d/v4l2loopback-surface.conf."
-    fi
+    # surface-camd makes /dev/video50-52 itself through v4l2loopback's control device, so other programs' v4l2loopback
+    # options (OBS, Iriun) no longer matter. An options file from an older surface-contrib only got in its way.
+    rm -f "$ROOT/etc/modprobe.d/v4l2loopback-surface.conf"
     install -Dm644 "$SHARE/cameras/surface-ipu3-cameras.conf" "$ROOT/etc/modprobe.d/surface-ipu3-cameras.conf"
-    install -Dm644 "$SHARE/cameras/v4l2loopback-surface.conf" "$ROOT/etc/modprobe.d/v4l2loopback-surface.conf"
     install -Dm644 "$SHARE/cameras/v4l2loopback-load.conf" "$ROOT/etc/modules-load.d/v4l2loopback-surface.conf"
     printf '%s\n' ipu3_cio2 > "$ROOT/etc/modules-load.d/surface-ipu3-cameras.conf"
     # The raw ipu3-cio2 nodes show only black or green: hidden from apps, and the cameras named.
@@ -79,7 +75,7 @@ cameras_on() {
     if (( start )) && ! in_chroot; then
         local m
         for m in intel_skl_int3472_discrete ov5693 ov8865 ov7251 ipu_bridge ipu3_cio2; do modprobe "$m" 2>/dev/null || true; done
-        modprobe -r v4l2loopback 2>/dev/null || true
+        # Not unloaded first: that fails while another app uses a loopback camera, and is no longer needed.
         modprobe v4l2loopback 2>/dev/null || echo "v4l2loopback did not load yet: reboot (or check: dkms status)."
         systemctl daemon-reload
         for cam in "${CAMERAS[@]}"; do systemctl restart "surface-camd@$cam.service" || true; done
@@ -104,7 +100,7 @@ cameras_off() {
 
 cameras_status() {
     echo "Model: $(dmi product_name) ($(model | paste -sd, - || true))"
-    if [[ -f "$ROOT/etc/modprobe.d/v4l2loopback-surface.conf" ]]; then echo "Configuration: on"; else echo "Configuration: off"; fi
+    if [[ -f "$ROOT/etc/modules-load.d/surface-ipu3-cameras.conf" ]]; then echo "Configuration: on"; else echo "Configuration: off"; fi
     local cam dev=50 state
     for cam in "${CAMERAS[@]}"; do
         state="$(systemctl is-active "surface-camd@$cam.service" 2>/dev/null || true)"
@@ -134,6 +130,10 @@ case "${1:-}" in
     suspend)
         shift
         exec bash "$SHARE/surface-pro-5-suspend/surface-pro-5-suspend.sh" "$@"
+        ;;
+    location)
+        shift
+        exec bash "$SHARE/location/surface-location-setup.sh" "$@"
         ;;
     -h|--help|help|"") sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' ;;
     *) echo "Unknown command: $1 (surface-contrib --help)" >&2; exit 2 ;;

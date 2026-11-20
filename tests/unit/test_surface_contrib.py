@@ -11,7 +11,7 @@ CLI = PKG / "surface-contrib"
 
 def _share(tmp_path: Path) -> Path:
     share = tmp_path / "share"
-    for rel in ("cameras/surface-ipu3-cameras.conf", "cameras/v4l2loopback-surface.conf",
+    for rel in ("cameras/surface-ipu3-cameras.conf",
                 "cameras/v4l2loopback-load.conf", "cameras/wireplumber/51-surface-ipu3-cameras.conf"):
         (share / rel).parent.mkdir(parents=True, exist_ok=True)
         (share / rel).write_text(rel + "\n")
@@ -43,17 +43,41 @@ def test_cameras_on_and_off(tmp_path):
     root = tmp_path / "root"
     res = _run(tmp_path, "Surface Pro 6", "cameras", "on")
     assert res.returncode == 0, res.stderr
-    for f in ("etc/modprobe.d/surface-ipu3-cameras.conf", "etc/modprobe.d/v4l2loopback-surface.conf",
+    for f in ("etc/modprobe.d/surface-ipu3-cameras.conf",
               "etc/modules-load.d/v4l2loopback-surface.conf", "etc/wireplumber/wireplumber.conf.d/51-surface-ipu3-cameras.conf"):
         assert (root / f).is_file(), f
+    # surface-camd makes its own loopback devices: no v4l2loopback options file.
+    assert not (root / "etc/modprobe.d/v4l2loopback-surface.conf").exists()
     assert (root / "etc/modules-load.d/surface-ipu3-cameras.conf").read_text() == "ipu3_cio2\n"
     calls = (tmp_path / "calls").read_text()
     for cam in ("front", "rear", "ir"):
         assert f"enable surface-camd@{cam}.service" in calls
     assert "start with the next boot" in res.stdout  # a root other than / is never started
     res = _run(tmp_path, "Surface Pro 6", "cameras", "off")
-    assert res.returncode == 0 and not (root / "etc/modprobe.d/v4l2loopback-surface.conf").exists()
+    assert res.returncode == 0 and not (root / "etc/modules-load.d/surface-ipu3-cameras.conf").exists()
     assert "disable surface-camd@ir.service" in (tmp_path / "calls").read_text()
+
+
+def test_an_older_options_file_is_cleared(tmp_path):
+    stale = tmp_path / "root/etc/modprobe.d/v4l2loopback-surface.conf"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("options v4l2loopback video_nr=50,51,52\n")
+    assert _run(tmp_path, "Surface Pro 6", "cameras", "on").returncode == 0
+    assert not stale.exists()
+    install = (PKG / "surface-contrib.install").read_text()
+    assert "rm -f /etc/modprobe.d/v4l2loopback-surface.conf" in install
+    assert "v4l2loopback-surface.conf" not in (PKG / "PKGBUILD.in").read_text()
+
+
+def test_location_runs_the_forks_setup(tmp_path):
+    share = _share(tmp_path)
+    (share / "location").mkdir()
+    (share / "location/surface-location-setup.sh").write_text('echo "location $*"\n')
+    env = {"PATH": "/usr/bin:/bin", "SURFACE_CONTRIB_SHARE": str(share)}
+    res = subprocess.run(["bash", str(CLI), "location", "--test"], capture_output=True, text=True, env=env, timeout=30)
+    assert res.stdout.strip() == "location --test"
+    assert "surface-location/surface-location-setup.sh" in (PKG / "PKGBUILD.in").read_text()
+    assert "location [--fix|--test]" in subprocess.run(["bash", str(CLI), "--help"], capture_output=True, text=True).stdout
 
 
 def test_cameras_only_on_ipu3_models(tmp_path):

@@ -2,7 +2,7 @@
 
 post_install() {
   if surface-contrib model 2>/dev/null | grep -qx ipu3; then
-    if [[ -e /etc/modprobe.d/v4l2loopback-surface.conf ]]; then
+    if [[ -e /etc/modules-load.d/surface-ipu3-cameras.conf ]]; then
       return 0
     fi
     surface-contrib cameras on --no-start ||
@@ -17,6 +17,9 @@ post_install() {
 }
 
 post_upgrade() {
+  # surface-camd now makes its own loopback devices: an older release's v4l2loopback options file would only compete
+  # with it (and with other apps' options). Gone from the next boot.
+  rm -f /etc/modprobe.d/v4l2loopback-surface.conf
   systemctl daemon-reload >/dev/null 2>&1 || true
 }
 

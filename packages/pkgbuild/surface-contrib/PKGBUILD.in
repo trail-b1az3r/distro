@@ -40,9 +40,9 @@ package() {
   install -Dm644 "$cams/surface-camd/surface-camd@.service" "$pkgdir/usr/lib/systemd/system/surface-camd@.service"
   sed -i 's|[@]BINDIR[@]|/usr/bin|' "$pkgdir/usr/lib/systemd/system/surface-camd@.service"
   # Turned on per machine (surface-contrib cameras on): v4l2loopback devices would be empty cameras anywhere else.
-  install -Dm644 -t "$share/cameras" "$cams/surface-camd/v4l2loopback-surface.conf" \
-    "$cams/surface-camd/v4l2loopback-load.conf" "$cams/modprobe.d/surface-ipu3-cameras.conf" \
-    "$cams/README.md"
+  # surface-camd creates its own loopback devices (through /dev/v4l2loopback), so no v4l2loopback options file.
+  install -Dm644 -t "$share/cameras" "$cams/surface-camd/v4l2loopback-load.conf" \
+    "$cams/modprobe.d/surface-ipu3-cameras.conf" "$cams/README.md"
   install -Dm644 "$cams/surface-camd/README.md" "$share/cameras/surface-camd.md"
   install -Dm644 -t "$share/cameras/wireplumber" "$cams/wireplumber/"*.conf
   install -Dm755 "$cams/surface-camera-setup.sh" "$share/cameras/surface-camera-setup.sh"
@@ -56,6 +56,11 @@ package() {
   install -Dm644 "$s/sleep.conf.d/50-surface-pro-5.conf" "$share/surface-pro-5-suspend/sleep.conf.d/50-surface-pro-5.conf"
   install -Dm644 "$s/logind.conf.d/50-surface-pro-5.conf" "$share/surface-pro-5-suspend/logind.conf.d/50-surface-pro-5.conf"
   install -Dm755 "$s/system-sleep/surface-pro-5-sleep" "$share/surface-pro-5-suspend/system-sleep/surface-pro-5-sleep"
+
+  # Location (GeoClue): Wi-Fi positioning on every model, GPS on the LTE Surface Pro 5 (surface-contrib location).
+  install -Dm755 "$contrib/surface-location/surface-location-setup.sh" "$share/location/surface-location-setup.sh"
+  install -Dm644 -t "$share/location" "$contrib/surface-location/90-surface-location.conf" \
+    "$contrib/surface-location/README.md"
 
   cp -r --no-preserve=ownership "$contrib/thermald" "$share/thermald"
   find "$share/thermald" -type f -exec chmod 644 {} +
