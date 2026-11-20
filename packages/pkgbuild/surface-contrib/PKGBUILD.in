@@ -4,9 +4,9 @@
 # EQ for the Surface Pro 5 and 7+, and modern suspend for the Surface Pro 5. Pinned by commit; bump _commit and pkgver
 # together. The kernel itself still comes from linux-surface's signed repository (its patches are the same).
 pkgname=surface-contrib
-pkgver=2026.11.16
+pkgver=2026.11.20
 pkgrel=1
-_commit=883fa4d7c71be6645a5632bf240ea0c13cb1eeb7
+_commit=5138a1b7b698e8f81714e6ab565c68dc9bd14547
 pkgdesc="Surface extras from the linux-surface fork: IPU3 camera driver (front, rear, IR), speaker EQ, Pro 5 suspend"
 arch=('x86_64')
 url="https://github.com/trail-b1az3r/linux-surface"
