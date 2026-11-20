@@ -26,7 +26,14 @@ Halcyon, ML4W, HyDE or SekaiPop.
 
 Each additional desktop has a home of its own under
 `~/.local/share/distro-desktop-profiles/homes/<profile>`: its installer and its sessions run there. Your documents,
-keys and browser profiles are linked in and shared.
+keys and fonts are linked in and shared.
+
+Browsers and the apps you sign in to are carried over both ways, at every login of a desktop: Firefox (both
+`~/.mozilla` and Firefox 147's `~/.config/mozilla`), LibreWolf, Zen, Chrome, Chromium, Brave, Vivaldi, Edge, Opera,
+OyNIx and qutebrowser, with their caches, and Discord, Vesktop, Signal, Element, Telegram, Slack, Spotify, Obsidian,
+Nextcloud, rclone, nexora-msg, KWallet, Docker, kubectl, AWS and gcloud. One used first in an extra desktop moves to
+your real home; when both have one, the desktop's own copy is kept in its
+`.local/state/distro-desktop-profiles/own/` and Halcyon's is used, so every desktop has the same logins.
 
 Installing one changes no other desktop, even when its installer reaches past its home:
 

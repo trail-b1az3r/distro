@@ -79,7 +79,8 @@ selected=("${valid[@]}")
 
 echo "Desktop profiles requested: ${selected[*]}"
 echo "Each one is installed in a home of its own (~/.local/share/distro-desktop-profiles/homes/<name>), so it"
-echo "cannot change Halcyon's files. Your documents, keys and browser profiles are shared with it."
+echo "cannot change Halcyon's files. Your documents, keys, browsers (logins, history, cache) and app sign-ins are"
+echo "shared with it."
 echo "Packages are installed system-wide (once, for every desktop), but hyprland-plus stays: an installer cannot"
 echo "replace it. Anything an installer writes in your real home goes to its own; your login shell, the login screen"
 echo "and Halcyon's login entry stay as they are."
@@ -235,7 +236,7 @@ restore_shared() {
 }
 
 # What every desktop shares with Halcyon (profile-home.sh): the guard leaves those alone.
-GUARD_SHARED="${PROFILE_SHARED_DIRS[*]} ${PROFILE_SHARED_OPTIONAL[*]}"
+GUARD_SHARED="${PROFILE_SHARED_DIRS[*]} ${PROFILE_SHARED_OPTIONAL[*]} ${PROFILE_SHARED_APPS[*]}"
 guard_home() {
     SHARED="$GUARD_SHARED" python3 "$SCRIPT_DIR/guard-home.py" "$@"
 }

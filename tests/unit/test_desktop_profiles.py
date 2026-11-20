@@ -344,3 +344,55 @@ def test_extra_desktop_session_runs_in_its_home(tmp_path):
     res = subprocess.run(["bash", str(root / "desktop/profiles/run-session.sh"), "ml4w"], capture_output=True,
                          text=True, env=env, timeout=30)
     assert res.returncode == 1 and "not installed" in res.stderr
+
+
+def _carry(tmp_path, *names):
+    """Runs profile_home_setup for one desktop with REAL_HOME in tmp_path, and returns (real home, desktop home)."""
+    real = tmp_path / "real"
+    real.mkdir(exist_ok=True)
+    script = Path(__file__).resolve().parents[2] / "desktop/profiles/profile-home.sh"
+    subprocess.run(["bash", "-c", f'REAL_HOME="{real}"; . "{script}"; profile_home_setup hyde'],
+                   check=True, capture_output=True, text=True)
+    return real, real / ".local/share/distro-desktop-profiles/homes/hyde"
+
+
+def test_firefox_carries_over_from_halcyon_in_both_places_it_keeps_profiles(tmp_path):
+    real = tmp_path / "real"
+    (real / ".config/mozilla/firefox").mkdir(parents=True)  # Firefox 147+: profiles under ~/.config/mozilla
+    (real / ".config/mozilla/firefox/profiles.ini").write_text("[Profile0]\n")
+    (real / ".mozilla/firefox").mkdir(parents=True)          # older Firefox: ~/.mozilla
+    (real / ".cache/mozilla").mkdir(parents=True)
+    _, desk = _carry(tmp_path)
+    for name in (".config/mozilla", ".mozilla", ".cache/mozilla"):
+        assert (desk / name).is_symlink() and (desk / name).resolve() == (real / name).resolve(), name
+    assert (desk / ".config/mozilla/firefox/profiles.ini").read_text() == "[Profile0]\n"
+
+
+def test_a_browser_first_used_in_the_other_desktop_moves_to_the_real_home(tmp_path):
+    desk = tmp_path / "real/.local/share/distro-desktop-profiles/homes/hyde"
+    (desk / ".config/google-chrome/Default").mkdir(parents=True)
+    (desk / ".config/google-chrome/Default/Login Data").write_text("signed in\n")
+    real, desk = _carry(tmp_path)
+    assert (real / ".config/google-chrome/Default/Login Data").read_text() == "signed in\n"
+    assert (desk / ".config/google-chrome").is_symlink()
+
+
+def test_the_desktops_own_copy_is_kept_aside_and_halcyons_is_used(tmp_path):
+    real = tmp_path / "real"
+    (real / ".mozilla/firefox").mkdir(parents=True)
+    (real / ".mozilla/firefox/halcyon").write_text("halcyon\n")
+    desk = real / ".local/share/distro-desktop-profiles/homes/hyde"
+    (desk / ".mozilla/firefox").mkdir(parents=True)
+    (desk / ".mozilla/firefox/own").write_text("own\n")
+    _, desk = _carry(tmp_path)
+    assert (desk / ".mozilla").is_symlink() and (desk / ".mozilla/firefox/halcyon").is_file()
+    kept = list((desk / ".local/state/distro-desktop-profiles/own").glob(".mozilla.*"))
+    assert len(kept) == 1 and (kept[0] / "firefox/own").read_text() == "own\n"
+    # The next login changes nothing.
+    _carry(tmp_path)
+    assert len(list((desk / ".local/state/distro-desktop-profiles/own").glob(".mozilla.*"))) == 1
+
+
+def test_the_installer_guard_leaves_shared_browsers_alone():
+    text = (Path(__file__).resolve().parents[2] / "desktop/profiles/install-selected.sh").read_text()
+    assert "${PROFILE_SHARED_APPS[*]}" in text
