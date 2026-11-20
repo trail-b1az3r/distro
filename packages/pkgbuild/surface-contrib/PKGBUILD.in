@@ -22,6 +22,9 @@ optdepends=(
   'python: the surface-touchd Python client (/usr/lib/surface-touch/python)'
 )
 makedepends=('git' 'gcc' 'make')
+# The fork's contrib/ also builds these on their own (its install.sh): same files, so pacman replaces them.
+provides=('surface-camd' 'surface-touch')
+conflicts=('surface-camd' 'surface-touch')
 backup=('etc/surface-touchd.conf')
 install=surface-contrib.install
 source=("linux-surface::git+https://github.com/trail-b1az3r/linux-surface.git#commit=${_commit}"

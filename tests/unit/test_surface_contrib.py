@@ -168,3 +168,5 @@ def test_package_includes_surface_touch():
     assert 'make -C "$srcdir/linux-surface/contrib/surface-touch" test' in text  # ... tested in check()
     assert 'make -C "$contrib/surface-touch" install' in text and "backup=('etc/surface-touchd.conf')" in text
     assert "disable --now surface-touchd.service" in (PKG / "surface-contrib.install").read_text()
+    # the fork's standalone surface-camd / surface-touch packages own the same files
+    assert "conflicts=('surface-camd' 'surface-touch')" in text and "provides=('surface-camd' 'surface-touch')" in text
