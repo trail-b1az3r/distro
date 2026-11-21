@@ -272,9 +272,10 @@ fi
 ((sync && !contain)) && die "-sy requires --contain"
 
 if ((query)); then
-  cpu="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+  cpu="$(lscpu 2>/dev/null | sed -n 's/^Model name:[[:space:]]*//p' | head -n1)"
   ncpu="${cores:-$(nproc 2>/dev/null || echo 1)}"
-  ram="$(awk '/MemTotal/ {printf "%.1f",$2/1024/1024}' /proc/meminfo)"
+  ram_kib="$(awk '/MemTotal/ {print $2}' /proc/meminfo)"
+  ram="$((ram_kib / 1048576))"
   data_root="${DISTROKIT_DATA:-$ROOT}"
   pkgs="$(grep -hEv '^[[:space:]]*(#|$)' "$data_root"/packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
   repo_size="$(du -sh build/repo 2>/dev/null | cut -f1 || echo 0)"
