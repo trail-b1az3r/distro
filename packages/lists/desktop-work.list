@@ -1,0 +1,13 @@
+# Personal My Linux for Work dotfiles (ML4W-derived).
+git
+rsync
+base-devel
+kitty
+waybar
+rofi-wayland
+swww
+grim
+slurp
+brightnessctl
+playerctl
+xdg-desktop-portal-hyprland

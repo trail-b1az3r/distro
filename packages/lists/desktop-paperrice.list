@@ -1,0 +1,16 @@
+# PaperRice Quickshell / Hyprland theme requirements.
+git
+base-devel
+kitty
+quickshell
+qt6-base
+qt6-declarative
+qt6-wayland
+qt6-shadertools
+qt6-svg
+waybar
+grim
+slurp
+brightnessctl
+playerctl
+xdg-desktop-portal-hyprland

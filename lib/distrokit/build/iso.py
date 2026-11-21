@@ -118,6 +118,8 @@ SQUASHFS = {
 @dataclass
 class Options:
     profile: str = "standard"
+    desktop: str = "halcyon"
+    shell: str = "fish"
     edition: str = "standard"  # standard | nano; independent of install profile
     compression: str = "auto"  # auto | release | nano
     offline: str = "minimal"  # minimal | full
@@ -322,6 +324,8 @@ def build_info(b: Branding, opts: Options, epoch: int) -> dict:
         "codename": b.get("ISO_CODENAME"),
         "label": iso_label(b, epoch),
         "profile": opts.profile,
+        "desktop": opts.desktop,
+        "shell": opts.shell,
         "edition": opts.edition,
         "compression": ("debug" if opts.debug else (opts.compression if opts.compression != "auto" else ("nano" if opts.edition == "nano" else "release"))),
         "offline": opts.offline,
@@ -796,6 +800,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("action", choices=["build", "profile", "info"], nargs="?", default="build")
     p.add_argument("--profile", default=os.environ.get("ISO_PROFILE"),
                    help="installation profile the ISO offers by default (Nano defaults to minimal)")
+    p.add_argument("--desktop", choices=["halcyon", "work", "hyde", "sekaipop", "macshell", "none", "frameshell", "paperrice"], default=os.environ.get("ISO_DESKTOP", "halcyon"), help="default installed desktop/dotfiles profile")
+    p.add_argument("--shell", choices=["fish", "zsh", "spire"], default=os.environ.get("ISO_SHELL", "fish"), help="default login shell")
     p.add_argument("--edition", choices=["standard", "nano"], default=os.environ.get("ISO_EDITION", "standard"),
                    help="ISO edition: standard (unchanged) or nano (compact live package set)")
     p.add_argument("--compression", choices=["auto", "release", "nano"], default=os.environ.get("ISO_COMPRESSION", "auto"),

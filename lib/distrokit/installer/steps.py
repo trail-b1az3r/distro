@@ -258,6 +258,7 @@ class Installation:
         # They are carried in the full offline repository, so this also works with no network.
         pk += ["archlinux-keyring", "endeavouros-keyring"]
         pk += self.cfg.kernels
+        pk += {"zsh": ["zsh"], "spire": ["git", "base-devel"], "fish": ["fish"]}.get(self.cfg.user.shell, [])
         micro = self.hw.cpu.microcode_package
         if micro:
             pk.append(micro)
@@ -685,7 +686,11 @@ class Installation:
         if self.features.get("containers") == "docker":
             self.chroot(["groupadd", "-f", "docker"])
             groups.append("docker")
-        shell = "/usr/bin/fish" if u.shell == "fish" else "/bin/bash"
+        if u.shell == "spire":
+            if not self.online:
+                raise InstallError("Spire Shell requires an internet connection during installation.")
+            self.chroot(["bash", "-lc", "tmp=$(mktemp -d) && git clone --depth 1 https://github.com/trail-b1az3r/spire-shell.git \"$tmp/spire-shell\" && make -C \"$tmp/spire-shell\" && install -D -m 0755 \"$tmp/spire-shell/spire\" /usr/local/bin/spire && grep -qxF /usr/local/bin/spire /etc/shells || echo /usr/local/bin/spire >> /etc/shells; rm -rf \"$tmp\""])
+        shell = {"fish": "/usr/bin/fish", "zsh": "/usr/bin/zsh", "spire": "/usr/local/bin/spire"}.get(u.shell, "/bin/bash")
         cmd = ["useradd", "-m", "-U", "-G", ",".join(groups), "-s", shell]
         if u.fullname:
             cmd += ["-c", u.fullname]
@@ -767,9 +772,11 @@ class Installation:
         editors = load_editors()
         editor = editors.get(self.branding.get("CODE_EDITOR", "code"))
         primary = str(self.features.get("desktop_environment", "halcyon"))
-        external = [name for name, enabled in (("ml4w", self.features.get("desktop_ml4w")),
-                    ("sekaipop", self.features.get("desktop_sekaipop")), ("hyde", self.features.get("desktop_hyde"))) if enabled]
-        if primary != "halcyon":
+        external = [name for name, enabled in (("work", self.features.get("desktop_work")),
+                    ("sekaipop", self.features.get("desktop_sekaipop")), ("hyde", self.features.get("desktop_hyde")),
+                    ("macshell", self.features.get("desktop_macshell")), ("frameshell", self.features.get("desktop_frameshell")),
+                    ("paperrice", self.features.get("desktop_paperrice"))) if enabled]
+        if primary not in ("halcyon", "none"):
             external.insert(0, primary)
         external = list(dict.fromkeys(external))
         settings = desktop_deploy.UserSettings(
@@ -813,7 +820,7 @@ class Installation:
         if session_source.is_file():
             session_dir = self.t("/usr/share/wayland-sessions")
             session_dir.mkdir(parents=True, exist_ok=True)
-            labels = {"ml4w": "ML4W", "sekaipop": "SekaiPop", "hyde": "HyDE"}
+            labels = {"work": "My Linux for Work", "sekaipop": "SekaiPop", "hyde": "HyDE", "macshell": "MacShell", "frameshell": "Frameshell", "paperrice": "PaperRice"}
             for profile in selected:
                 if profile not in labels:
                     continue

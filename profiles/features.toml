@@ -10,13 +10,17 @@ kind = "choice"
 group = "Desktop"
 order = 1
 label = "Primary desktop"
-description = "Choose the primary external desktop profile. Halcyon is retained as the bootstrap and fallback session; additional profiles can be selected separately."
+description = "Choose the primary desktop/dotfiles profile. Halcyon remains available as the recovery session."
 default = "halcyon"
 [desktop_environment.choices]
 halcyon = ["desktop-halcyon"]
-ml4w = ["desktop-halcyon", "desktop-ml4w"]
-sekaipop = ["desktop-halcyon", "desktop-sekaipop"]
+work = ["desktop-halcyon", "desktop-work"]
 hyde = ["desktop-halcyon", "desktop-hyde"]
+sekaipop = ["desktop-halcyon", "desktop-sekaipop"]
+macshell = ["desktop-halcyon", "desktop-macshell"]
+none = ["desktop-halcyon"]
+frameshell = ["desktop-halcyon", "desktop-frameshell"]
+paperrice = ["desktop-halcyon", "desktop-paperrice"]
 
 [desktop_ml4w]
 kind = "bool"
@@ -184,3 +188,35 @@ order = 20
 label = "Firewall"
 description = "An nftables ruleset that blocks unsolicited incoming connections. No background daemon."
 lists = ["firewall"]
+
+[desktop_work]
+kind = "bool"
+group = "Desktop"
+order = 5
+label = "Also install My Linux for Work"
+description = "Install your personal dotfiles as an isolated session."
+lists = ["desktop-work"]
+
+[desktop_macshell]
+kind = "bool"
+group = "Desktop"
+order = 6
+label = "Also install MacShell"
+description = "Install MacShell as an isolated Quickshell desktop."
+lists = ["desktop-macshell"]
+
+[desktop_frameshell]
+kind = "bool"
+group = "Desktop"
+order = 7
+label = "Also install Frameshell"
+description = "Install Frameshell as an isolated Hyprland desktop."
+lists = ["desktop-frameshell"]
+
+[desktop_paperrice]
+kind = "bool"
+group = "Desktop"
+order = 8
+label = "Also install PaperRice"
+description = "Install PaperRice as an isolated Hyprland desktop."
+lists = ["desktop-paperrice"]
