@@ -887,6 +887,44 @@ def cmd_reset_desktop(a) -> int:
     return 0
 
 
+def cmd_logout(a) -> int:
+    from .system import logout
+
+    action = a.when or "+1"
+    try:
+        if action == "stop":
+            print(S.ok("Logout cancelled.") if logout.cancel() else "No logout was pending.")
+            return 0
+        if action == "status":
+            at = logout.pending()
+            print(f"Logout pending: {at}" if at else "No logout pending.")
+            return 0
+        seconds = logout.when(action)
+        users = logout.target_users(a.all)
+        targets = logout.sessions(users)
+        if not targets:
+            who = "anyone" if users is None else ", ".join(sorted(users))
+            print(f"No graphical session of {who} to log out.")
+            return 0
+        if seconds == 0:
+            failed = logout.end(targets)
+            if failed:
+                print(S.fail("Could not log out: " + "; ".join(failed)))
+                return 1
+            if not a.quiet:
+                print(S.ok(f"Logged out {len(targets)} session{'s' if len(targets) != 1 else ''}."))
+            return 0
+        logout.schedule(seconds, B.cli, a.all, users)
+        message = (f"Logging out {logout.describe(seconds)}. Save your work. "
+                   f"Cancel with: {'sudo ' if os.geteuid() == 0 else ''}logout stop")
+        logout.warn(targets, message)
+        print(S.ok(message))
+        return 0
+    except logout.LogoutError as exc:
+        print(S.fail(str(exc)))
+        return 2
+
+
 def cmd_rescue(a) -> int:
     from .system import repair
 
@@ -1142,6 +1180,12 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("reset-desktop", help="restore the default desktop configuration (backs up yours)")
     s.add_argument("-y", "--yes", action="store_true")
     s.set_defaults(func=cmd_reset_desktop)
+
+    s = sub.add_parser("logout", help="log out graphical sessions: now, +MINUTES, HH:MM (default: in 1 minute), stop")
+    s.add_argument("when", nargs="?", help="now | +MINUTES | HH:MM | stop | status (default: +1, in 1 minute)")
+    s.add_argument("--all", action="store_true", help="every user's graphical sessions (root)")
+    s.add_argument("--quiet", action="store_true", help=argparse.SUPPRESS)
+    s.set_defaults(func=cmd_logout)
 
     s = sub.add_parser("rescue", help="live ISO: mount an installed system and repair it")
     s.add_argument("index", nargs="?")

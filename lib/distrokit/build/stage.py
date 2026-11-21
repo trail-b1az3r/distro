@@ -124,6 +124,9 @@ class Stage:
         self.python_entry(f"/usr/bin/{b.cli}", "distrokit.cli", comment=f"{b.pretty_name} system tool")
         self.link(f"/usr/bin/{b.id}-gpu", b.cli)
         self.link("/usr/bin/distro-gpu", b.cli)
+        # `sudo logout`, `sudo logout now`, `sudo logout stop`: `<cli> logout` (bash's own logout builtin still ends a
+        # login shell when typed without sudo).
+        self.text("/usr/bin/logout", f'#!/bin/sh\nexec /usr/bin/{b.cli} logout "$@"\n', 0o755)
         # micro is the text editor; `nano` opens it too (the package provides nano).
         self.link("/usr/bin/nano", "micro")
         self.python_entry(f"{lib}/bin/{b.id}-privileged", "distrokit.privileged",

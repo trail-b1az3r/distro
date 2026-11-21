@@ -29,6 +29,7 @@ themselves through `sudo`.
 | `nexora logs [status\|save\|on\|off\|send]` | Diagnostic logs: `save` keeps a bundle in `~/.local/state/nexora/logs`; sharing is off by default, `on` allows `send`, which files the logs in the repository set by `DISTRO_LOG_REPO` (with the GitHub CLI, or a pre-filled issue in the browser) |
 | `nexora repair-gpu [--safe]` | Re-detect GPUs and reinstall drivers (`--safe`: open-source drivers) |
 | `nexora reset-desktop` | Restore the default desktop configuration; yours is backed up first |
+| `sudo logout` / `nexora logout [now\|+MIN\|HH:MM\|stop\|status]` | Log out graphical sessions like `shutdown`: in 1 minute by default (with a warning), `now`, later, or `stop` to cancel; SSH and text logins stay, `--all` for every user |
 | `nexora rescue` | From the live ISO: mount an installed system (unlocking it) and repair it |
 | `nexora setup [status\|resume]` | Setup tasks that need the network (AI tools, models) after an offline install |
 | `nexora installer [--config FILE] [--dry-run]` | Start the installer |
