@@ -258,7 +258,9 @@ class Installation:
         # They are carried in the full offline repository, so this also works with no network.
         pk += ["archlinux-keyring", "endeavouros-keyring"]
         pk += self.cfg.kernels
-        pk += {"zsh": ["zsh"], "spire": ["git", "base-devel"], "fish": ["fish"]}.get(self.cfg.user.shell, [])
+        # spire-shell: spire's Zsharpend edition with its runtime, built into the distribution repository (so the
+        # offline repository has it too), and listed in /etc/shells by its package.
+        pk += {"zsh": ["zsh"], "spire": ["spire-shell"], "fish": ["fish"]}.get(self.cfg.user.shell, [])
         micro = self.hw.cpu.microcode_package
         if micro:
             pk.append(micro)
@@ -334,8 +336,6 @@ class Installation:
 
     # 1 -----------------------------------------------------------------------
     def preflight(self) -> None:
-        if self.cfg.user.shell == "spire" and not self.online:
-            raise InstallError("Spire Shell requires an internet connection; choose Fish or Zsh for an offline installation.")
         if not self.runner.dry_run and os.geteuid() != 0:
             raise InstallError("The installer must run as root.")
         for tool in ("sfdisk", "pacstrap", "arch-chroot", "genfstab"):
@@ -688,21 +688,7 @@ class Installation:
         if self.features.get("containers") == "docker":
             self.chroot(["groupadd", "-f", "docker"])
             groups.append("docker")
-        if u.shell == "spire":
-            if not self.online:
-                raise InstallError("Spire Shell requires an internet connection during installation.")
-            spire_install = (
-                "set -euo pipefail; "
-                "tmp=$(mktemp -d); "
-                "trap 'rm -rf \"$tmp\"' EXIT; "
-                "git clone --depth 1 https://github.com/trail-b1az3r/spire-shell.git \"$tmp/spire-shell\"; "
-                "make -C \"$tmp/spire-shell\"; "
-                "install -D -m 0755 \"$tmp/spire-shell/spire\" /usr/local/bin/spire; "
-                "grep -qxF /usr/local/bin/spire /etc/shells || "
-                "echo /usr/local/bin/spire >> /etc/shells"
-            )
-            self.chroot(["bash", "-lc", spire_install])
-        shell = {"fish": "/usr/bin/fish", "zsh": "/usr/bin/zsh", "spire": "/usr/local/bin/spire"}.get(u.shell, "/bin/bash")
+        shell = {"fish": "/usr/bin/fish", "zsh": "/usr/bin/zsh", "spire": "/usr/bin/spire"}.get(u.shell, "/bin/bash")
         cmd = ["useradd", "-m", "-U", "-G", ",".join(groups), "-s", shell]
         if u.fullname:
             cmd += ["-c", u.fullname]

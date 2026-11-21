@@ -19,6 +19,15 @@ if [[ ! -d "$home" && ! -d "$PROFILE_ROOT/configs/$profile" ]]; then
 fi
 profile_home_setup "$profile"
 
+# The power button opens a power menu in this desktop, not an instant power-off (power-button.sh). It waits in the
+# background for the Hyprland started below, found by the instance folder it makes.
+DISTRO_ID="$(basename "$(dirname "$(dirname "$SCRIPT_DIR")")")"
+hypr_before="$(ls "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr" 2>/dev/null || true)"
+if [[ -x "$SCRIPT_DIR/power-button.sh" ]]; then
+    DISTRO_ID="$DISTRO_ID" REAL_HOME="$REAL_HOME" "$SCRIPT_DIR/power-button.sh" "$hypr_before" >/dev/null 2>&1 &
+    disown 2>/dev/null || true
+fi
+
 # PaperRice ships a legacy hyprland.conf, but Frontline's Hyprland 0.57 session is Lua-only.
 # Keep its Quickshell config and run it on a minimal Lua compositor session instead.
 if [[ "$profile" == paperrice && -f "$home/.config/quickshell/paper/shell.qml" ]]; then

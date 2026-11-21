@@ -224,6 +224,8 @@ def offline_sets(b: Branding, profile_id: str, multilib: bool = True) -> list[li
                   "virt-vmware", "virt-hyperv"):
         base += read_list(extra, b)
     base += ["linux", "linux-headers", "amd-ucode", "intel-ucode", "sbctl", "zram-generator", "linux-firmware-marvell"]
+    # The login shells the installer offers (installer/steps.py): fish, zsh, and spire (from this repository).
+    base += ["fish", "zsh", "spire-shell"]
     with (root / "ai" / "runtime" / "llama-server.toml").open("rb") as fh:
         llama = tomllib.load(fh)["packages"]
     base += [llama["vulkan"], llama["cpu"]]
@@ -524,6 +526,8 @@ def nano_offline_packages(opts: Options, b: Branding) -> set[str]:
     required = set(live_packages(b, "nano"))
     profile = load_profiles()[opts.profile]
     required.update(select_packages(profile, branding=b).packages)
+    if opts.shell == "spire":
+        required.add("spire-shell")   # the ISO's default login shell (iso.json "shell")
 
     archives = [p for p in sorted(opts.repo.glob("*.pkg.tar.*"))
                 if not p.name.endswith(".sig") and not DEBUG_PACKAGE.search(p.name)]

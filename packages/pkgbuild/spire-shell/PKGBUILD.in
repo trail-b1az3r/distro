@@ -1,0 +1,56 @@
+# Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
+#
+# spire, a fish/bash-flavored interactive shell: its Zsharpend edition (spire-shell's z#nd branch), run by
+# Whetstone with the os extender (z-nd's claude/spire-in-zsharpend branch). Both pinned by commit, both MIT.
+# Installs /usr/bin/spire (registered in /etc/shells), the shell's sources and Whetstone in /usr/lib/spire.
+# Generated from packages/pkgbuild/spire-shell/PKGBUILD.in.
+
+pkgname=spire-shell
+_spire=dfaf97d85282484a24100111bfd930f29617d17d
+_znd=0e76f62f310f94f49c2628dcf978e17cc7c8203b
+pkgver=0.1.0.r1.dfaf97d
+pkgrel=1
+pkgdesc="spire, a fish/bash-flavored interactive shell (Zsharpend edition, with its Whetstone runtime)"
+arch=(x86_64 aarch64)
+url="https://github.com/trail-b1az3r/spire-shell"
+license=(MIT)
+depends=(glibc gcc-libs)
+makedepends=(git rust cargo)
+provides=(spire)
+install=spire-shell.install
+options=(!lto)
+source=("spire::git+https://github.com/trail-b1az3r/spire-shell.git#commit=${_spire}"
+        "z-nd::git+https://github.com/trail-b1az3r/z-nd.git#commit=${_znd}")
+sha256sums=('SKIP' 'SKIP')
+
+prepare() {
+  cd z-nd
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd z-nd
+  export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=target
+  cargo build --frozen --release -p whetstone
+}
+
+check() {
+  # spire's own scripts and their expected output, through the Whetstone just built.
+  cd spire
+  WHETSTONE="$srcdir/z-nd/target/release/whetstone" sh tests/run.sh
+}
+
+package() {
+  install -Dm755 z-nd/target/release/whetstone "$pkgdir/usr/lib/spire/whetstone"
+  install -Dm644 z-nd/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE.whetstone"
+  cd spire
+  install -Dm755 spire "$pkgdir/usr/lib/spire/spire"
+  install -Dm644 spire.wtf "$pkgdir/usr/lib/spire/spire.wtf"
+  install -Dm644 src/*.zxx -t "$pkgdir/usr/lib/spire/src"
+  install -d "$pkgdir/usr/bin"
+  printf '#!/bin/sh\nWHETSTONE=/usr/lib/spire/whetstone exec /usr/lib/spire/spire "$@"\n' > "$pkgdir/usr/bin/spire"
+  chmod 755 "$pkgdir/usr/bin/spire"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

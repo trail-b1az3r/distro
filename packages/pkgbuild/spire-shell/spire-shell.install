@@ -1,0 +1,12 @@
+# spire as a login shell: listed in /etc/shells while it is installed (chsh accepts only those).
+post_install() {
+  grep -qxF /usr/bin/spire etc/shells 2>/dev/null || echo /usr/bin/spire >> etc/shells
+}
+
+post_upgrade() {
+  post_install
+}
+
+pre_remove() {
+  sed -i '\|^/usr/bin/spire$|d' etc/shells
+}

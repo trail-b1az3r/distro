@@ -343,6 +343,8 @@ class Stage:
         b = self.b
         self.python_entry(f"/usr/bin/{b.id}-welcome", "distrokit.gui.welcome_app", comment=f"Welcome to {b.name}")
         self.python_entry(f"/usr/bin/{b.id}-update", "distrokit.gui.updater_app", comment="System update")
+        # The power menu the extra desktops' power button opens (desktop/profiles/power-button.sh).
+        self.python_entry(f"/usr/bin/{b.id}-power-menu", "distrokit.gui.power_app", comment="Power menu")
         self.desktop_entry("welcome")
         self.desktop_entry("update")
         self.license(f"{b.id}-welcome")
