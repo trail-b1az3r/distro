@@ -136,10 +136,13 @@ package_@DISTRO_ID@-ai() {
 _profile_meta() {
   local profile="$1"
   local list="$PWD/packages/lists/desktop-$profile.list"
+  local base_package="@DISTRO_ID@-desktop"
   local -a profile_deps=()
   [[ -f "$list" ]] || error "missing desktop package list: $list"
-  mapfile -t profile_deps < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$list")
-  depends=("@DISTRO_ID@-desktop" "${profile_deps[@]}")
+  mapfile -t profile_deps < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e '/^base-devel$/d' "$list")
+  # Alternate profiles keep Halcyon available as the recovery/default session.
+  [[ "$profile" == halcyon ]] || base_package="halcyon-desktop"
+  depends=("$base_package" "${profile_deps[@]}")
   install -Dm644 /dev/null "$pkgdir/usr/share/@DISTRO_ID@/desktop-profiles/$profile"
   printf '%s\n' "$profile" > "$pkgdir/usr/share/@DISTRO_ID@/desktop-profiles/$profile"
 }

@@ -285,8 +285,10 @@ if ((query)); then
   if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
     gen="${BASH_REMATCH[1]:0:1}"
     if [[ ${#BASH_REMATCH[1]} -ge 5 ]]; then gen="${BASH_REMATCH[1]:0:2}"; fi
-  elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{4}) ]]; then
-    gen="$((${BASH_REMATCH[1]:0:1}+2))"
+  elif [[ "$cpu" =~ Intel.*Ultra[[:space:]]+[3579][[:space:]]+([0-9]{3}) ]]; then
+    gen="${BASH_REMATCH[1]:0:1}"
+  elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{3,5}) ]]; then
+    gen="${BASH_REMATCH[1]:0:1}"
   fi
   ram_factor=100
   if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
