@@ -388,22 +388,22 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
             source = Path.cwd() / source
         if not source.exists():
             raise SystemExit(f"lmkiso: desktop config does not exist: {source}")
-        skel = air / "etc" / "skel" / ".config"
-        skel.mkdir(parents=True, exist_ok=True)
+        custom_root = air / "usr" / "share" / b.id / "desktop" / "custom-config"
+        custom_root.mkdir(parents=True, exist_ok=True)
         if source.is_file():
             if source.name == "config.kdl":
-                target = skel / "niri" / "config.kdl"
+                target = custom_root / "niri" / "config.kdl"
             elif source.name == "hyprland.conf":
-                target = skel / "hypr" / "hyprland.conf"
+                target = custom_root / "hypr" / "hyprland.conf"
             else:
-                raise SystemExit("lmkiso: single --de files must be named hyprland.conf or config.kdl; pass a .config directory for other desktops")
+                raise SystemExit("lmkiso: single --de files must be named hyprland.conf or config.kdl; pass a config directory for other desktops")
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
         elif (source / ".config").is_dir():
-            shutil.copytree(source / ".config", skel, dirs_exist_ok=True)
+            shutil.copytree(source / ".config", custom_root, dirs_exist_ok=True)
         else:
             # A supplied config directory is accepted for any desktop environment.
-            shutil.copytree(source, skel, dirs_exist_ok=True)
+            shutil.copytree(source, custom_root, dirs_exist_ok=True)
     offline_dir = f"/var/cache/{b.id}/repo"
     live_conf = pacmanconf.render("live", b, offline_repo=offline_dir, multilib=opts.multilib)
     (air / "etc").mkdir(parents=True, exist_ok=True)

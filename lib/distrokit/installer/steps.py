@@ -822,7 +822,16 @@ class Installation:
             )
             report = dep.deploy(settings, first=True)
             self.log(f"Desktop: {len(report.written)} files")
-            self.chroot(["chown", "-R", f"{self.user}:{self.user}", self.home])
+        # lmkiso places custom settings in the live ISO's shared data tree.
+        # Copy them into the target user's home after the distro defaults so
+        # the supplied DE/Hyprland/niri configuration takes precedence.
+        custom_config = Path(f"/usr/share/{self.branding.id}/desktop/custom-config")
+        if custom_config.is_dir():
+            target_config = self.t(f"{self.home}/.config")
+            target_config.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(custom_config, target_config, dirs_exist_ok=True)
+            self.log("Desktop: applied custom lmkiso configuration")
+        self.chroot(["chown", "-R", f"{self.user}:{self.user}", self.home])
 
     def _schedule_external_desktops(self, selected: list[str]) -> None:
         """Run upstream setup interactively at first login, never silently as root."""
