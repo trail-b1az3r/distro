@@ -824,7 +824,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--dry-run", action="store_true", help="print the commands instead of running them")
     a = p.parse_args(argv)
     opts = Options(profile=a.profile or ("minimal" if a.edition == "nano" else "standard"),
-                   edition=a.edition, compression=a.compression, offline=a.offline, clean=a.clean, debug=a.debug,
+                   desktop=a.desktop, shell=a.shell, edition=a.edition, compression=a.compression, offline=a.offline, clean=a.clean, debug=a.debug,
                    skip_packages=a.skip_packages, dist=Path(a.dist), build=Path(a.build_dir),
                    releng=Path(a.releng), archive_date=a.archive_date, sign_key=a.sign, multilib=not a.no_multilib,
                    user_packages=Path(a.user_packages).resolve() if a.user_packages else None)

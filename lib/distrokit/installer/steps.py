@@ -689,7 +689,7 @@ class Installation:
         if u.shell == "spire":
             if not self.online:
                 raise InstallError("Spire Shell requires an internet connection during installation.")
-            self.chroot(["bash", "-lc", "set -euo pipefail; tmp=$(mktemp -d); git clone --depth 1 https://github.com/trail-b1az3r/spire-shell.git \"$tmp/spire-shell\" && make -C \"$tmp/spire-shell\" && install -D -m 0755 \"$tmp/spire-shell/spire\" /usr/local/bin/spire && grep -qxF /usr/local/bin/spire /etc/shells || echo /usr/local/bin/spire >> /etc/shells; rm -rf \"$tmp\""])
+            self.chroot(["bash", "-lc", "set -euo pipefail; tmp=$(mktemp -d); git clone --depth 1 https://github.com/trail-b1az3r/spire-shell.git \"$tmp/spire-shell\"; make -C \"$tmp/spire-shell\"; install -D -m 0755 \"$tmp/spire-shell/spire\" /usr/local/bin/spire; grep -qxF /usr/local/bin/spire /etc/shells || echo /usr/local/bin/spire >> /etc/shells; rm -rf \"$tmp\""])
         shell = {"fish": "/usr/bin/fish", "zsh": "/usr/bin/zsh", "spire": "/usr/local/bin/spire"}.get(u.shell, "/bin/bash")
         cmd = ["useradd", "-m", "-U", "-G", ",".join(groups), "-s", shell]
         if u.fullname:
