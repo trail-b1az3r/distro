@@ -1,8 +1,16 @@
-# PaperRice Quickshell / Hyprland theme requirements.
+# PaperRice runtime and its own setup script dependencies.
 git
 base-devel
 kitty
 quickshell
+hyprlock
+kvantum
+glib2
+fastfetch
+zenity
+rofi-wayland
+dunst
+starship
 qt6-base
 qt6-declarative
 qt6-wayland

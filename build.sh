@@ -18,7 +18,7 @@ usage() {
 Options:
   --edition E      ISO edition: standard (default) or nano (compact live environment)
   --profile P      installation profile offered by default (standard by default; Nano defaults to minimal)
-  --desktop D      default desktop: halcyon, work, hyde, sekaipop, macshell, none, frameshell, paperrice
+  --desktop D      default desktop: halcyon, ml4w, work, hyde, sekaipop, macshell, none, frameshell, paperrice
   --shell S        default login shell: fish, zsh or spire
   --compression C  SquashFS preset: auto (default), release or nano
   --offline MODE   minimal: distribution packages on the ISO, the rest is downloaded while installing

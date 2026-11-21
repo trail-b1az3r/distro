@@ -156,4 +156,4 @@ qemu-system-x86_64 -enable-kvm -m 4G -smp 2 -cdrom dist/*.iso \
 
 ## Default desktop and shell
 
-The manual ISO workflow accepts `desktop` and `shell` inputs. Local builds use `./build.sh --desktop <halcyon|work|hyde|sekaipop|macshell|none|frameshell|paperrice> --shell <fish|zsh|spire>` or `ISO_DESKTOP` and `ISO_SHELL` in a build config. These are installer defaults and can still be changed during installation. Spire Shell is built from upstream source during an online installation and is not available for offline installs.
+The manual ISO workflow accepts `desktop` and `shell` inputs. Local builds use `./build.sh --desktop <halcyon|ml4w|work|hyde|sekaipop|macshell|none|frameshell|paperrice> --shell <fish|zsh|spire>` or `ISO_DESKTOP` and `ISO_SHELL` in a build config. These are installer defaults and can still be changed during installation. Spire Shell is built from upstream source during an online installation and is not available for offline installs.
