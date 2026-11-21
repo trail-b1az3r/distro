@@ -14,7 +14,7 @@ def test_welcome_backend_exposes_multi_profile_selection():
     source = (Path(__file__).resolve().parents[2] / "lib" / "distrokit" / "gui" / "welcome_app.py").read_text()
     assert 'def desktopProfiles(self)' in source
     assert 'def saveDesktopProfiles(self, profile_ids: list)' in source
-    assert 'allowed = {"ml4w", "hyde", "sekaipop"}' in source
+    assert 'allowed = {"ml4w", "hyde", "sekaipop", "work", "macshell", "frameshell", "paperrice"}' in source
 
 
 def test_profile_installer_prefers_user_selection_and_falls_back_to_system_config():

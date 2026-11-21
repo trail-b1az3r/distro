@@ -122,16 +122,40 @@ class WelcomeBackend(QObject):
             },
             {
                 "id": "sekaipop",
-                "name": "SekaiPop",
+                "name": "Sikai Pop",
                 "description": "An expressive, themed Hyprland desktop.",
                 "installed": (state / "sekaipop.done").exists(),
+            },
+            {
+                "id": "work",
+                "name": "My Linux for Work",
+                "description": "Your personal ML4W-derived desktop configuration.",
+                "installed": (state / "work.done").exists(),
+            },
+            {
+                "id": "macshell",
+                "name": "MacShell",
+                "description": "A macOS-inspired Quickshell desktop.",
+                "installed": (state / "macshell.done").exists(),
+            },
+            {
+                "id": "frameshell",
+                "name": "Frameshell",
+                "description": "A Hyprland and Quickshell desktop in a unified frame.",
+                "installed": (state / "frameshell.done").exists(),
+            },
+            {
+                "id": "paperrice",
+                "name": "PaperRice",
+                "description": "A paper-and-parchment themed Hyprland and Quickshell desktop.",
+                "installed": (state / "paperrice.done").exists(),
             },
         ]
 
     @Slot("QVariantList", result=bool)
     def saveDesktopProfiles(self, profile_ids: list) -> bool:  # noqa: N802
         """Persist a validated multi-profile selection for the user installer."""
-        allowed = {"ml4w", "hyde", "sekaipop"}
+        allowed = {"ml4w", "hyde", "sekaipop", "work", "macshell", "frameshell", "paperrice"}
         selected = list(dict.fromkeys(str(item) for item in profile_ids))
         if not selected or any(item not in allowed for item in selected):
             self.log.emit("Select at least one supported desktop profile.")
