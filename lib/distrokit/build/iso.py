@@ -401,10 +401,9 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
             shutil.copy2(source, target)
         elif (source / ".config").is_dir():
             shutil.copytree(source / ".config", skel, dirs_exist_ok=True)
-        elif (source / "hypr").is_dir() or (source / "niri").is_dir():
-            shutil.copytree(source, skel, dirs_exist_ok=True)
         else:
-            raise SystemExit("lmkiso: --de directory must contain .config/, hypr/ or niri/")
+            # A supplied config directory is accepted for any desktop environment.
+            shutil.copytree(source, skel, dirs_exist_ok=True)
     offline_dir = f"/var/cache/{b.id}/repo"
     live_conf = pacmanconf.render("live", b, offline_repo=offline_dir, multilib=opts.multilib)
     (air / "etc").mkdir(parents=True, exist_ok=True)
