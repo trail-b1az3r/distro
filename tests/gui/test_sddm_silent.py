@@ -9,8 +9,9 @@ import shutil
 
 import pytest
 
-pytest.importorskip("PySide6.QtQuick")
-pytest.importorskip("PySide6.QtMultimedia")
+pytest.importorskip("PySide6.QtQuick", exc_type=ImportError)
+# QtMultimedia (the theme's video backgrounds) also needs the system's PulseAudio library.
+pytest.importorskip("PySide6.QtMultimedia", exc_type=ImportError)
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import Property, QByteArray, QEventLoop, QObject, Qt, QTimer, QUrl, Signal, Slot  # noqa: E402

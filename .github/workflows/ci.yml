@@ -56,7 +56,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 \
-            libglib2.0-0 fonts-dejavu-core librsvg2-bin
+            libglib2.0-0 fonts-dejavu-core librsvg2-bin libpulse0
           pip install pytest pyside6 pillow numpy
       - name: Unit and GUI tests
         env:
@@ -66,6 +66,11 @@ jobs:
         run: sudo -E env "PATH=$PATH" python -m pytest tests/integration
       - name: Artwork generation
         run: PYTHONPATH=lib python -m distrokit.build.branding
+      - name: Login screen with the generated artwork
+        env:
+          QT_QPA_PLATFORM: offscreen
+        # Skipped in the first test run (its backgrounds are made by the artwork step above).
+        run: python -m pytest -rs tests/gui/test_sddm_silent.py
 
 
   write-rust:
