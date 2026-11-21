@@ -13,6 +13,14 @@ pkgname=(
   @DISTRO_ID@-welcome
   @DISTRO_ID@-installer
   @DISTRO_ID@-ai
+  halcyon-desktop
+  ml4w-desktop
+  work-desktop
+  hyde-desktop
+  sekaipop-desktop
+  macshell-desktop
+  frameshell-desktop
+  paperrice-desktop
 )
 pkgver=@PKGVER@
 pkgrel=1
@@ -122,3 +130,25 @@ package_@DISTRO_ID@-ai() {
   )
   _stage ai
 }
+
+
+# Per-desktop meta-packages use the exact lists selected by the installer.
+_profile_meta() {
+  local profile="$1"
+  local list="$PWD/packages/lists/desktop-$profile.list"
+  local -a profile_deps=()
+  [[ -f "$list" ]] || error "missing desktop package list: $list"
+  mapfile -t profile_deps < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$list")
+  depends=("@DISTRO_ID@-desktop" "${profile_deps[@]}")
+  install -Dm644 /dev/null "$pkgdir/usr/share/@DISTRO_ID@/desktop-profiles/$profile"
+  printf '%s\n' "$profile" > "$pkgdir/usr/share/@DISTRO_ID@/desktop-profiles/$profile"
+}
+
+package_halcyon-desktop() { pkgdesc="Halcyon desktop profile"; _src; _profile_meta halcyon; }
+package_ml4w-desktop() { pkgdesc="ML4W desktop profile"; _src; _profile_meta ml4w; }
+package_work-desktop() { pkgdesc="My Linux for Work desktop profile"; _src; _profile_meta work; }
+package_hyde-desktop() { pkgdesc="HyDE desktop profile"; _src; _profile_meta hyde; }
+package_sekaipop-desktop() { pkgdesc="SekaiPop desktop profile"; _src; _profile_meta sekaipop; }
+package_macshell-desktop() { pkgdesc="MacShell desktop profile"; _src; _profile_meta macshell; }
+package_frameshell-desktop() { pkgdesc="Frameshell desktop profile"; _src; _profile_meta frameshell; }
+package_paperrice-desktop() { pkgdesc="PaperRice desktop profile"; _src; _profile_meta paperrice; }

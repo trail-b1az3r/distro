@@ -28,6 +28,10 @@ def test_components_and_their_packages():
     assert experiments.packages("nmx", B) == ("nmx",)
     assert experiments.packages("touchd", B) == ("touchd-dkms",)
     assert experiments.packages("fonts", B) == ("nexora-fonts-google-sans-flex",)
+    for desktop in ("halcyon", "ml4w", "work", "hyde", "sekaipop", "macshell", "frameshell", "paperrice"):
+        component = f"{desktop}-desktop"
+        assert component in experiments.COMPONENTS
+        assert experiments.packages(component, B) == (component,)
 
 
 def test_sources_go_after_every_repository():
