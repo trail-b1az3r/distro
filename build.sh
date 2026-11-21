@@ -29,7 +29,7 @@ Options:
   --skip-packages  reuse the packages already built in build/repo
   --dry-run        print the build commands without running them
   --archive-date D pin Arch packages to the Arch Linux Archive snapshot of day D (YYYY/MM/DD)
-  --config FILE    read settings (ISO_PROFILE, ISO_OFFLINE, ARCHIVE_DATE, ...) from FILE;
+  --config FILE    read settings (ISO_PROFILE, ISO_DESKTOP, ISO_SHELL, ISO_OFFLINE, ARCHIVE_DATE, ...) from FILE;
                    see iso/build.env.example
   --publish        after a successful build, publish the ISO as a GitHub release, tag the
                    commit it was built from and update the package repository
