@@ -148,7 +148,11 @@ if ((apkg)); then
    [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
   done
  fi
- export USER_PACKAGES="$ROOT/build/lmkiso-packages"
+ if compgen -G "build/lmkiso-packages/*.pkg.tar.*" >/dev/null; then
+  export USER_PACKAGES="$ROOT/build/lmkiso-packages"
+ else
+  echo "lmkiso: no matching local package archives found; continuing without cached package additions." >&2
+ fi
 fi
 if ((contain)); then args+=(--container); fi
 if ((fold)); then args+=(--compression nano); fi
@@ -160,8 +164,10 @@ if ((query)); then
  cpu="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
  ncpu="$(nproc 2>/dev/null || echo 1)"
  ram="$(awk '/MemTotal/ {printf "%.1f",$2/1024/1024}' /proc/meminfo)"
- pkgs="$(grep -hEv '^[[:space:]]*(#|$)' packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
+ data_root="${DISTROKIT_DATA:-$ROOT}"
+ pkgs="$(grep -hEv '^[[:space:]]*(#|$)' "$data_root"/packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
  repo_size="$(du -sh build/repo 2>/dev/null | cut -f1 || echo 0)"
+ work_size="$(du -sh build 2>/dev/null | cut -f1 || echo 0)"
  iso_size="$(du -ch dist/*.iso 2>/dev/null | tail -n1 | cut -f1 || echo 0)"
  gen=4
  if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
@@ -173,8 +179,8 @@ if ((query)); then
  ram_factor=100
  if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
  elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
- eta="$(( (pkgs*200+2500)*100/(ncpu*gen*ram_factor) ))"
- printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
+ eta="$(( (pkgs*1200+9000)*100/(ncpu*gen*ram_factor) ))"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
  exit 0
 fi
 if (( !no_confirm && !plan )); then
