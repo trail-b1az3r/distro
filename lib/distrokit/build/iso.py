@@ -381,6 +381,30 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
         pkgbuild.build_pacman_conf(b, opts.repo, opts.archive_date, opts.multilib))
 
     air = prof / "airootfs"
+    custom_de = os.environ.get("LMKISO_DE_CONFIG", "").strip()
+    if custom_de:
+        source = Path(custom_de)
+        if not source.is_absolute():
+            source = Path.cwd() / source
+        if not source.exists():
+            raise SystemExit(f"lmkiso: desktop config does not exist: {source}")
+        skel = air / "etc" / "skel" / ".config"
+        skel.mkdir(parents=True, exist_ok=True)
+        if source.is_file():
+            if source.name == "config.kdl":
+                target = skel / "niri" / "config.kdl"
+            elif source.name == "hyprland.conf":
+                target = skel / "hypr" / "hyprland.conf"
+            else:
+                raise SystemExit("lmkiso: single --de files must be named hyprland.conf or config.kdl; pass a .config directory for other desktops")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+        elif (source / ".config").is_dir():
+            shutil.copytree(source / ".config", skel, dirs_exist_ok=True)
+        elif (source / "hypr").is_dir() or (source / "niri").is_dir():
+            shutil.copytree(source, skel, dirs_exist_ok=True)
+        else:
+            raise SystemExit("lmkiso: --de directory must contain .config/, hypr/ or niri/")
     offline_dir = f"/var/cache/{b.id}/repo"
     live_conf = pacmanconf.render("live", b, offline_repo=offline_dir, multilib=opts.multilib)
     (air / "etc").mkdir(parents=True, exist_ok=True)
