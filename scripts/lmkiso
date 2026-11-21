@@ -4,6 +4,7 @@ VERSION=1.0.0
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 [[ -f "$ROOT/build.sh" ]] || { echo "lmkiso: run inside a Nexora distro source checkout" >&2; exit 2; }
 cd "$ROOT"
+original_args=("$@")
 C0=$'\033[0m'; C1=$'\033[36m'; C2=$'\033[32m'; C3=$'\033[33m'; C4=$'\033[31m'
 die(){ printf '%slmkiso: %s%s\n' "$C4" "$*" "$C0" >&2; exit 2; }
 help(){
@@ -39,8 +40,14 @@ while (($#)); do
   -q) query=1 ;;
   -D) (($#>1)) || die "-D requires a name"; distro_name="$2"; shift ;;
   -ocl)
-    printf 'curl -fsSL https://raw.githubusercontent.com/trail-b1az3r/distro/main/scripts/lmkiso | sudo bash -s --'
-    for x in "$@"; do printf ' %q' "$x"; done
+    printf 'git clone --recursive https://github.com/trail-b1az3r/distro.git nexora-distro && cd nexora-distro && curl -fsSL https://raw.githubusercontent.com/trail-b1az3r/distro/main/scripts/lmkiso | sudo bash -s --'
+    has_container=0
+    for x in "${original_args[@]}"; do
+     [[ "$x" == "-ocl" ]] && continue
+     [[ "$x" == "--contain" || "$x" == "--container" || "$x" == "-sy" ]] && has_container=1
+     printf ' %q' "$x"
+    done
+    ((has_container)) || printf ' --contain'
     printf '\n'; exit 0 ;;
   --) shift; args+=("$@"); break ;;
   *) args+=("$1") ;;
@@ -229,7 +236,8 @@ if [[ -n "$output" ]]; then
  [[ -n "$iso" ]] || die "no ISO found in dist/"
  if [[ -d "$output" || "$output" == */ ]]; then mkdir -p "$output"; dest="$output/$(basename "$iso")"
  else mkdir -p "$(dirname "$output")"; dest="$output"; fi
- mv -f "$iso" "$dest"; iso="$dest"
+ if [[ "$(realpath -m "$iso")" != "$(realpath -m "$dest")" ]]; then mv -f "$iso" "$dest"; fi
+  iso="$dest"
 else
  iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
 fi
