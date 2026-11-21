@@ -65,3 +65,42 @@ def test_extension_manifest():
     assert "generated" in ext and "colors.json" in ext and "workbench.colorCustomizations" in ext
     build = (PKG / "PKGBUILD.in").read_text()
     assert "sha256sums=('ca1895aa040bd91a09c709d79eac7862d8c1aa0237fdc25b503deeb8bcd87efd'" in build
+
+
+def _launch(tmp_path, *, signed_in=True, gitconfig=""):
+    """Runs the launcher with a fake gh and a fake editor that prints the git environment it was given."""
+    launcher = (PKG / "@DISTRO_ID@-code.in").read_text().replace("@DISTRO_ID@", "nexora").replace("@DISTRO_NAME@", "Nexora")
+    editor = tmp_path / "codium"
+    editor.write_text("#!/bin/sh\ngit config --get user.name\ngit config --get user.email\n"
+                      "git config --get-urlmatch credential.helper https://github.com\n")
+    editor.chmod(0o755)
+    script = tmp_path / "nexora-code"
+    script.write_text(launcher.replace("/usr/lib/nexora-code/bin/codium", str(editor)))
+    script.chmod(0o755)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir(exist_ok=True)
+    gh = bin_dir / "gh"
+    gh.write_text("#!/bin/sh\n"
+                  f'if [ "$1 $2" = "auth status" ]; then exit {0 if signed_in else 1}; fi\n'
+                  'if [ "$1" = api ]; then printf "Mason Example\\t42+mason@users.noreply.github.com\\n"; fi\n')
+    gh.chmod(0o755)
+    home = tmp_path / "home"
+    home.mkdir(exist_ok=True)
+    (home / ".gitconfig").write_text(gitconfig)
+    env = {"PATH": f"{bin_dir}:/usr/bin:/bin", "HOME": str(home)}
+    return subprocess.run(["bash", str(script)], capture_output=True, text=True, env=env, timeout=30).stdout.splitlines()
+
+
+def test_git_in_the_editor_uses_the_gh_login_and_github_identity(tmp_path):
+    name, email, helper = _launch(tmp_path)
+    assert (name, email, helper) == ("Mason Example", "42+mason@users.noreply.github.com", "!gh auth git-credential")
+    assert not (tmp_path / "home/.gitconfig").read_text(), "the user's git config is not changed"
+
+
+def test_your_own_git_config_wins(tmp_path):
+    out = _launch(tmp_path, gitconfig="[user]\n\tname = Me\n\temail = me@example.org\n[credential]\n\thelper = store\n")
+    assert out == ["Me", "me@example.org", "store"]
+
+
+def test_nothing_without_a_gh_login(tmp_path):
+    assert _launch(tmp_path, signed_in=False) == []

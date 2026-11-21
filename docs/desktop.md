@@ -44,7 +44,7 @@ changed outside `custom/` is backed up before it is replaced
 
 ## Default applications
 
-Alacritty (terminal; Konsole stays installed), Nexora Write (MDXL documents, notes and books, and EPUB reading; see `apps/write`), Dolphin (files), OyNIx (the default browser; Firefox and others are used if it is not installed), Nexora Code (the code editor: VSCodium with Nexora's themes, following Halcyon's colours; `packages/pkgbuild/nexora-code`), Okular
+Alacritty (terminal; Konsole stays installed), Nexora Write (MDXL documents, notes and books, and EPUB reading; see `apps/write`), Dolphin (files), OyNIx (the default browser; Firefox and others are used if it is not installed), Nexora Code (the code editor: VSCodium with Nexora's themes, following Halcyon's colours; signed in to GitHub through the GitHub CLI: after `gh auth login`, git in it pushes and pulls with that login and commits carry your GitHub name and email unless your git config sets its own; `packages/pkgbuild/nexora-code`), Okular
 (PDF), Gwenview (images), Haruna/mpv (media), Ark (archives), OnlyOffice
 (documents), Kate (text), and the code editor from `CODE_EDITOR` in
 `distro.conf` (Code - OSS by default). Change them in

@@ -11,4 +11,37 @@ if [[ -f "$conf" ]]; then
         [[ -z "$line" || "$line" == \#* ]] || flags+=("$line")
     done < "$conf"
 fi
+
+# Your accounts: when the GitHub CLI is signed in (gh auth login), git in the editor (Source Control, its terminal,
+# extensions) signs in to GitHub with that login, and commits carry your name and email. Given to the editor's git
+# only, through git's environment settings (GIT_CONFIG_COUNT): ~/.gitconfig is not changed, and anything set there
+# (a credential helper of your own, user.name, user.email) wins. Off with @DISTRO_ID@-code-no-gh in ~/.config.
+git_env() {
+    local n="${GIT_CONFIG_COUNT:-0}"
+    export "GIT_CONFIG_KEY_$n=$1" "GIT_CONFIG_VALUE_$n=$2"
+    export GIT_CONFIG_COUNT=$((n + 1))
+}
+if [[ ! -e "${XDG_CONFIG_HOME:-$HOME/.config}/@DISTRO_ID@-code-no-gh" ]] && command -v gh >/dev/null \
+        && command -v git >/dev/null && gh auth status --hostname github.com >/dev/null 2>&1; then
+    if [[ -z "$(git config --get-urlmatch credential.helper https://github.com 2>/dev/null)" ]]; then
+        git_env "credential.https://github.com.helper" "!gh auth git-credential"
+        git_env "credential.https://gist.github.com.helper" "!gh auth git-credential"
+    fi
+    if [[ -z "$(git config --get user.name 2>/dev/null)" || -z "$(git config --get user.email 2>/dev/null)" ]]; then
+        # Who the account is, kept a day (asking GitHub at each start would slow it down).
+        cache="${XDG_CACHE_HOME:-$HOME/.cache}/@DISTRO_ID@-code/github-identity"
+        if [[ ! -s "$cache" || -n "$(find "$cache" -mmin +1440 2>/dev/null)" ]]; then
+            mkdir -p "$(dirname -- "$cache")"
+            gh api user --jq '[(.name // .login), (.email // "\(.id)+\(.login)@users.noreply.github.com")] | @tsv' \
+                > "$cache.tmp" 2>/dev/null && mv -f "$cache.tmp" "$cache"
+            rm -f "$cache.tmp"
+        fi
+        if [[ -s "$cache" ]]; then
+            IFS=$'\t' read -r gh_name gh_email < "$cache"
+            [[ -n "$(git config --get user.name 2>/dev/null)" || -z "$gh_name" ]] || git_env user.name "$gh_name"
+            [[ -n "$(git config --get user.email 2>/dev/null)" || -z "$gh_email" ]] || git_env user.email "$gh_email"
+        fi
+    fi
+fi
+
 ELECTRON_RUN_AS_NODE= exec /usr/lib/@DISTRO_ID@-code/bin/codium "${flags[@]}" "$@"
