@@ -148,7 +148,7 @@ if ((apkg)); then
    [[ -n "\${installed[$name]:-}" && "\${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
   done
  fi
- export USER_PACKAGES=build/lmkiso-packages
+ export USER_PACKAGES="$ROOT/build/lmkiso-packages"
 fi
 if ((contain)); then args+=(--container); fi
 if ((fold)); then args+=(--compression nano); fi

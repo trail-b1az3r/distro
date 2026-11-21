@@ -10,6 +10,7 @@
 # anywhere with Docker or Podman using --container. See docs/iso-building.md.
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")"
+if [[ ${LMKISO_VERBOSE:-0} == 1 ]]; then set -x; fi
 
 usage() {
     sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
@@ -139,7 +140,7 @@ if ((container)); then
             "reboot if the container fails to start" >&2
     fi
     envs=()
-    for v in SOURCE_DATE_EPOCH ARCHIVE_DATE GPGKEY ISO_PROFILE ISO_DESKTOP ISO_SHELL ISO_OFFLINE ISO_EDITION ISO_COMPRESSION AUR_GIT_MIRROR; do
+    for v in SOURCE_DATE_EPOCH ARCHIVE_DATE GPGKEY ISO_PROFILE ISO_DESKTOP ISO_SHELL ISO_OFFLINE ISO_EDITION ISO_COMPRESSION AUR_GIT_MIRROR DISTROKIT_DATA LMKISO_SYNC LMKISO_VERBOSE LMKISO_DE_CONFIG LMKISO_DISTRO_NAME; do
         if [[ -v $v ]]; then envs+=(-e "$v=${!v}"); fi
     done
     mounts=()
@@ -148,7 +149,7 @@ if ((container)); then
         envs+=(-e USER_PACKAGES=/user-packages)
     fi
     owner="${HOST_UID:-${SUDO_UID:-$(id -u)}}:${HOST_GID:-${SUDO_GID:-$(id -g)}}"
-    inner="scripts/bootstrap.sh --container && BUILD_USER=builder ./build.sh ${args[*]@Q}"
+    inner="scripts/bootstrap.sh --container && if [[ ${LMKISO_SYNC:-0} == 1 ]]; then pacman -Syu --noconfirm; fi && BUILD_USER=builder ./build.sh ${args[*]@Q}"
     # The package repository's release files need repo-add, which only the container has.
     ((publish)) && inner+=" && scripts/publish-repo.sh build/repo build/repo-assets"
     inner+=" ; status=\$?; chown -R $owner build dist checksums metadata 2>/dev/null; exit \$status"
@@ -193,7 +194,7 @@ PY
 fi
 
 if ((EUID != 0)) && [[ " ${args[*]} " != *" --dry-run "* ]]; then
-    sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,ISO_PROFILE,ISO_DESKTOP,ISO_SHELL,ISO_OFFLINE,ISO_EDITION,ISO_COMPRESSION,AUR_GIT_MIRROR,BUILD_PYTHON,BUILD_PYTHONPATH,BUILD_PYTHON_CHECKED,USER_PACKAGES "$0" "${args[@]}"
+    sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,ISO_PROFILE,ISO_DESKTOP,ISO_SHELL,ISO_OFFLINE,ISO_EDITION,ISO_COMPRESSION,AUR_GIT_MIRROR,BUILD_PYTHON,BUILD_PYTHONPATH,BUILD_PYTHON_CHECKED,USER_PACKAGES,DISTROKIT_DATA,LMKISO_SYNC,LMKISO_VERBOSE,LMKISO_DE_CONFIG,LMKISO_DISTRO_NAME,MAKEFLAGS "$0" "${args[@]}"
     publish_release
     exit
 fi

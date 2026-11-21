@@ -7,6 +7,7 @@ small template renderer that replaces ``@KEY@`` tokens.
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -153,7 +154,12 @@ class Branding:
 
 
 def load_file(path: Path) -> Branding:
-    b = Branding(parse_conf(path.read_text(encoding="utf-8")))
+    values = parse_conf(path.read_text(encoding="utf-8"))
+    display_name = os.environ.get("LMKISO_DISTRO_NAME", "").strip()
+    if display_name:
+        values["DISTRO_NAME"] = display_name
+        values["DISTRO_PRETTY_NAME"] = display_name
+    b = Branding(values)
     b.validate()
     return b
 

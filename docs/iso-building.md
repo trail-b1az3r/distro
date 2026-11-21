@@ -157,3 +157,10 @@ qemu-system-x86_64 -enable-kvm -m 4G -smp 2 -cdrom dist/*.iso \
 ## Default desktop and shell
 
 The manual ISO workflow accepts `desktop` and `shell` inputs. Local builds use `./build.sh --desktop <halcyon|ml4w|work|hyde|sekaipop|macshell|none|frameshell|paperrice> --shell <fish|zsh|spire>` or `ISO_DESKTOP` and `ISO_SHELL` in a build config. These are installer defaults and can still be changed during installation. Spire Shell is built from upstream source during an online installation and is not available for offline installs.
+
+
+## Local Make ISO (`lmkiso`)
+
+Run `sudo lmkiso` from a recursive Nexora source checkout. It wraps the existing `build.sh` pipeline. `-apkg` includes cached archives matching installed pacman packages; `-apkge` also includes AUR-helper caches and selects the full offline package closure. `--contain` builds in Docker/Podman; `-sy` updates packages inside that container before the build. `--de PATH` seeds `/etc/skel/.config` from a Hyprland, niri or generic config tree. `-f` uses the stronger xz SquashFS preset, `-s` splits the completed ISO, `-c N` sets build parallelism, `-o PATH` chooses output, `-P ID` chooses an install profile, `-Pc FILE` loads custom JSON profiles, `-q` estimates package count, sizes and ETA, `-D NAME` changes the display name without changing package IDs, and `-ocl` prints a curl invocation for another PC. `-v`, `-p`, `--no-confirm`, `-h` and `-V` provide verbose, dry-run, noninteractive, help and version modes.
+
+A custom `profiles.json` has `default` and `profiles` fields. Each profile defines `name`, `base` (`minimal`, `standard`, `developer` or `ai`), `packages` (additional package names), and optional `desktop`, `shell` and `de_config`. The build creates a temporary data overlay; tracked profiles are not modified.
