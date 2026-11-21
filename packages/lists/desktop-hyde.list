@@ -10,3 +10,6 @@ slurp
 brightnessctl
 playerctl
 xdg-desktop-portal-hyprland
+# HyDE's Python environment (its deez-dots deployer): made with uv, which it otherwise has to install through pip.
+python
+uv

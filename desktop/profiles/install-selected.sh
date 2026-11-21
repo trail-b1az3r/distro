@@ -130,10 +130,21 @@ install_packages() {
 # gsettings it sets (GTK theme, icons, cursor, dark mode) are stored in its own home rather than Halcyon's.
 run_installer() {
     local id="$1" url="$2" dir="$SOURCES/$1"
+    # Up to date with upstream. A checkout that cannot simply move forward (upstream rewrote its history, or an
+    # earlier run was interrupted) is set aside and cloned again, rather than failing the install.
+    if [[ -d "$dir/.git" ]] && ! git -C "$dir" pull --ff-only; then
+        echo "Could not update the $id sources; downloading them again."
+        mv -- "$dir" "$dir.old-$(date +%Y%m%d-%H%M%S)" || return 1
+    fi
     if [[ ! -d "$dir/.git" ]]; then
         git clone --depth 1 "$url" "$dir" || return $?
-    else
-        git -C "$dir" pull --ff-only || return $?
+    fi
+    # HyDE keeps a Python environment (uv, and its deez-dots deployer) in the desktop's home. One left half-made by an
+    # install that failed stops the next with "deez-dots not found in Python environment": set aside, made again.
+    local pyenv
+    pyenv="$(profile_home hyde)/.local/state/hyde/python_env"
+    if [[ "$id" == hyde && ! -f "$STATE/hyde.done" && -e "$pyenv" ]]; then
+        mv -- "$pyenv" "$pyenv.old-$(date +%Y%m%d-%H%M%S)" || return 1
     fi
     (
         profile_env "$id"
@@ -288,6 +299,9 @@ for id in "${selected[@]}"; do
         else
             echo "Installation failed for $name (the installer exited with $status), and $problem; see $LOG"
         fi
+        echo "--- the end of $name's installer output ---"
+        tail -n 25 "$LOG" | sed 's/^/    /'
+        echo "---"
         failed=1
     else
         (( status == 0 )) || echo "$name's installer exited with $status, but its configuration is in place: registering it."

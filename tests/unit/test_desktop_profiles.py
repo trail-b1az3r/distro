@@ -396,3 +396,12 @@ def test_the_desktops_own_copy_is_kept_aside_and_halcyons_is_used(tmp_path):
 def test_the_installer_guard_leaves_shared_browsers_alone():
     text = (Path(__file__).resolve().parents[2] / "desktop/profiles/install-selected.sh").read_text()
     assert "${PROFILE_SHARED_APPS[*]}" in text
+
+
+def test_hyde_is_installed_from_a_fresh_start_after_a_failed_try():
+    text = (Path(__file__).resolve().parents[2] / "desktop/profiles/install-selected.sh").read_text()
+    # A half-made Python environment ("deez-dots not found") is set aside, and so is a checkout that cannot update.
+    assert '.local/state/hyde/python_env' in text and 'mv -- "$pyenv" "$pyenv.old-' in text
+    assert 'mv -- "$dir" "$dir.old-' in text
+    hyde = (Path(__file__).resolve().parents[2] / "packages/lists/desktop-hyde.list").read_text().split()
+    assert "uv" in hyde and "python" in hyde
