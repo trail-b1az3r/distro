@@ -10,6 +10,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 WebEngineQuick)
 find_package(KF6SyntaxHighlighting REQUIRED)
+# Spelling: KDE's Sonnet, with Hunspell (or Aspell) dictionaries.
+find_package(KF6Sonnet REQUIRED)
 find_package(LibArchive REQUIRED)
 include(GNUInstallDirs)
 find_program(CARGO_EXECUTABLE cargo REQUIRED)
@@ -44,9 +46,16 @@ qt_add_qml_module(write
         src/files.h src/files.cpp
         src/rustbackend.h src/rustbackend.cpp
         src/highlighter.h src/highlighter.cpp
+        src/spelling.h src/spelling.cpp
         src/mdxlrenderer.h src/mdxlrenderer.cpp
         src/epubbook.h src/epubbook.cpp
 )
+
+# Autocorrect's list of common typos (src/spelling.cpp reads :/autocorrect.txt).
+qt_add_resources(write "write-data"
+    PREFIX "/"
+    BASE data
+    FILES data/autocorrect.txt)
 
 # The generated QML type registrations include the headers by name.
 target_include_directories(write PRIVATE src)
@@ -59,7 +68,7 @@ target_compile_definitions(write PRIVATE
 
 target_link_libraries(write PRIVATE
     Qt6::Quick Qt6::QuickControls2 Qt6::WebEngineQuick
-    KF6::SyntaxHighlighting LibArchive::LibArchive)
+    KF6::SyntaxHighlighting KF6::SonnetCore LibArchive::LibArchive)
 
 install(TARGETS write RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(PROGRAMS "${WRITE_BACKEND_BINARY}" DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_ID})

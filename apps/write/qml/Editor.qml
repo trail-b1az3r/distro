@@ -106,6 +106,92 @@ Item {
         area.forceActiveFocus()
     }
 
+    // The word around a position in the editor: {start, end, text} (text empty when there is none).
+    function wordAt(pos) {
+        const letter = /[A-Za-z\u00C0-\u024F'\u2019]/
+        let start = pos, end = pos
+        while (start > 0 && letter.test(area.text.charAt(start - 1)))
+            start--
+        while (end < area.text.length && letter.test(area.text.charAt(end)))
+            end++
+        while (end > start && /['\u2019]/.test(area.text.charAt(end - 1)))
+            end--
+        return { start: start, end: end, text: area.text.slice(start, end) }
+    }
+
+    // Autocorrect the word just typed, before the space or punctuation that ends it goes in. Not inside inline code.
+    function autocorrectBefore(pos) {
+        if (!Spelling.autocorrect || area.selectedText.length)
+            return
+        const lineStart = area.text.lastIndexOf("\n", pos - 1) + 1
+        if ((area.text.slice(lineStart, pos).match(/`/g) || []).length % 2 === 1)
+            return
+        const w = wordAt(pos)
+        if (w.end !== pos || !w.text.length)
+            return
+        const fix = Spelling.correction(w.text)
+        if (fix.length && fix !== w.text) {
+            area.remove(w.start, w.end)
+            area.insert(w.start, fix)
+        }
+    }
+
+    // Right-click on a misspelled word: its suggestions, then the dictionary.
+    property var spellWord: ({ start: 0, end: 0, text: "" })
+    property var spellSuggestions: []
+    function openSpellMenu(x, y) {
+        const pos = area.positionAt(x, y)
+        const w = wordAt(pos)
+        spellWord = w
+        spellSuggestions = (w.text.length && Spelling.isMisspelled(w.text)) ? Spelling.suggestions(w.text, 6) : []
+        spellMenu.misspelled = w.text.length > 0 && Spelling.isMisspelled(w.text)
+        spellMenu.popup(area, x, y)
+    }
+    function replaceSpellWord(value) {
+        area.remove(spellWord.start, spellWord.end)
+        area.insert(spellWord.start, value)
+        area.forceActiveFocus()
+    }
+
+    Menu {
+        id: spellMenu
+        property bool misspelled: false
+        Instantiator {
+            model: root.spellSuggestions
+            delegate: MenuItem {
+                required property string modelData
+                text: modelData
+                font.weight: Font.DemiBold
+                onTriggered: root.replaceSpellWord(modelData)
+            }
+            onObjectAdded: (index, object) => spellMenu.insertItem(index, object)
+            onObjectRemoved: (index, object) => spellMenu.removeItem(object)
+        }
+        MenuItem {
+            text: qsTr("No suggestions")
+            enabled: false
+            visible: spellMenu.misspelled && root.spellSuggestions.length === 0
+            height: visible ? implicitHeight : 0
+        }
+        MenuItem {
+            text: qsTr("Add “%1” to dictionary").arg(root.spellWord.text)
+            visible: spellMenu.misspelled
+            height: visible ? implicitHeight : 0
+            onTriggered: Spelling.addToDictionary(root.spellWord.text)
+        }
+        MenuItem {
+            text: qsTr("Ignore “%1”").arg(root.spellWord.text)
+            visible: spellMenu.misspelled
+            height: visible ? implicitHeight : 0
+            onTriggered: Spelling.ignore(root.spellWord.text)
+        }
+        MenuSeparator { visible: spellMenu.misspelled; height: visible ? implicitHeight : 0 }
+        MenuItem { text: qsTr("Cut"); enabled: area.selectedText.length > 0; onTriggered: area.cut() }
+        MenuItem { text: qsTr("Copy"); enabled: area.selectedText.length > 0; onTriggered: area.copy() }
+        MenuItem { text: qsTr("Paste"); enabled: area.canPaste; onTriggered: area.paste() }
+        MenuItem { text: qsTr("Select all"); onTriggered: area.selectAll() }
+    }
+
     onDocumentModeChanged: renderer.render(area.text, true)
 
     Timer { id: autosave; interval: 1500; onTriggered: root.saveNow() }
@@ -264,6 +350,20 @@ Item {
                 ToolButton { text: qsTr("Email"); enabled: Files.betterbirdInstalled(); onClicked: emailDialog.open() }
                 ToolButton { text: qsTr("Undo"); onClicked: area.undo() }
                 ToolButton { text: qsTr("Redo"); onClicked: area.redo() }
+                ToolSeparator {}
+                ToolButton {
+                    text: qsTr("Spelling")
+                    checkable: true
+                    checked: Spelling.enabled
+                    enabled: Spelling.available
+                    onToggled: Spelling.enabled = checked
+                }
+                ToolButton {
+                    text: qsTr("Autocorrect")
+                    checkable: true
+                    checked: Spelling.autocorrect
+                    onToggled: Spelling.autocorrect = checked
+                }
             }
         }
 
@@ -296,6 +396,17 @@ Item {
                         bottomPadding: 20
                         background: null
                         placeholderText: qsTr("Write in MDXL…")
+                        // Autocorrect runs as a word ends: the key still goes in afterwards.
+                        Keys.onPressed: (event) => {
+                            if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                                    || (event.text.length === 1 && ".,;:!?)".indexOf(event.text) >= 0))
+                                root.autocorrectBefore(area.cursorPosition)
+                            event.accepted = false
+                        }
+                        TapHandler {
+                            acceptedButtons: Qt.RightButton
+                            onTapped: (eventPoint) => root.openSpellMenu(eventPoint.position.x, eventPoint.position.y)
+                        }
                         onTextChanged: {
                             if (root.loading)
                                 return
@@ -349,6 +460,11 @@ Item {
             Label { text: qsTr("%1 words").arg(Files.words(area.text)); color: Theme.c.onSurfaceVariant }
             Label { text: qsTr("%1 characters").arg(area.length); color: Theme.c.onSurfaceVariant }
             Label { text: highlighter.definition; color: Theme.c.onSurfaceVariant }
+            Label {
+                text: !Spelling.available ? qsTr("No spelling dictionary")
+                      : Spelling.enabled ? qsTr("Spelling: %1").arg(Spelling.language) : qsTr("Spelling off")
+                color: Theme.c.onSurfaceVariant
+            }
             Label { text: root.documentMode ? qsTr("Document layout") : ""; color: Theme.c.onSurfaceVariant }
             Label {
                 id: exportError
