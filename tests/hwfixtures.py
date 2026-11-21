@@ -498,7 +498,7 @@ def live_usb_machine(root: Path) -> FakeMachine:
     """An installer boot: the live USB stick must never be offered as a target."""
     m = rtx4080_desktop(root)
     m.disk("sdb", 32 * GB, "SanDisk Ultra", "usb", removable=True, pttype="dos",
-           partitions=[{"start": 1 << 20, "size": 3 * GB, "fstype": "iso9660", "label": "NEXORA_202609",
+           partitions=[{"start": 1 << 20, "size": 3 * GB, "fstype": "iso9660", "label": "FRONTLINE_202609",
                         "mountpoints": ["/run/archiso/bootmnt"]}])
     return m
 

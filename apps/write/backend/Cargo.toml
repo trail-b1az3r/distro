@@ -1,12 +1,12 @@
 [package]
-name = "nexora-write-backend"
+name = "frontline-write-backend"
 version = "0.2.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
-description = "Rust application backend for Nexora Write"
+description = "Rust application backend for Frontline Write"
 
 [[bin]]
-name = "nexora-write-backend"
+name = "frontline-write-backend"
 path = "src/main.rs"
 
 [dependencies]

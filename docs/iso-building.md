@@ -12,20 +12,20 @@ git clone --recursive https://github.com/trail-b1az3r/distro && cd distro
 sudo scripts/bootstrap.sh --builder     # once: archiso, tools, EndeavourOS keyring
 sudo ./build.sh --profile standard
 
-# Compact Nano ISO for Nexora 26.10.0.1.3 (network-enabled installer):
+# Compact Nano ISO for Frontline 26.10.0.1.3 (network-enabled installer):
 sudo ./build.sh --edition nano --profile minimal --offline minimal
 ```
 
 Output:
 
 ```
-dist/Nexora-2026.09-x86_64.iso
-checksums/Nexora-2026.09-x86_64.iso.sha256
-checksums/Nexora-2026.09-x86_64.iso.b2sum
-metadata/Nexora-2026.09-x86_64.json            build information (versions, commits, sizes)
-metadata/Nexora-2026.09-x86_64.packages.txt    every package in the live system
-metadata/Nexora-2026.09-x86_64.offline-repo.txt packages carried for installation
-metadata/Nexora-2026.09-x86_64.aur.lock.json   the AUR commits used
+dist/Frontline-2026.09-x86_64.iso
+checksums/Frontline-2026.09-x86_64.iso.sha256
+checksums/Frontline-2026.09-x86_64.iso.b2sum
+metadata/Frontline-2026.09-x86_64.json            build information (versions, commits, sizes)
+metadata/Frontline-2026.09-x86_64.packages.txt    every package in the live system
+metadata/Frontline-2026.09-x86_64.offline-repo.txt packages carried for installation
+metadata/Frontline-2026.09-x86_64.aur.lock.json   the AUR commits used
 ```
 
 Requirements: x86-64, about 30 GB free (60 GB with `--offline full`), 8 GB
@@ -81,7 +81,7 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
    `iso/` laid over it — branded boot menus, the live session, NetworkManager
    instead of systemd-networkd, no root autologin or SSH, pacman configurations
    and build information. Standard uses `base`, `desktop`, `browser`, `live`;
-   Nano uses `base`, `nano-desktop`, `live` and defaults to the existing Minimal install profile to keep its offline custom-package closure small. LXQt and MATE are only the live desktop sessions; the installer remains unchanged and installs the selected existing Nexora profile (whose desktop remains Halcyon). Nano's SDDM login manager exposes
+   Nano uses `base`, `nano-desktop`, `live` and defaults to the existing Minimal install profile to keep its offline custom-package closure small. LXQt and MATE are only the live desktop sessions; the installer remains unchanged and installs the selected existing Frontline profile (whose desktop remains Halcyon). Nano's SDDM login manager exposes
    LXQt and MATE as the only installed live sessions; it does not install
    the Halcyon desktop meta-package or Plasma. Its live user starts in LXQt by
    default and can switch to MATE at the SDDM session chooser after logging out.
@@ -161,6 +161,6 @@ The manual ISO workflow accepts `desktop` and `shell` inputs. Local builds use `
 
 ## Local Make ISO (`lmkiso`)
 
-Run `sudo lmkiso` from a recursive Nexora source checkout. It wraps the existing `build.sh` pipeline. `-apkg` includes all cached pacman package archives; `-apkge` also includes AUR-helper caches and selects the full offline package closure. `--contain` builds in Docker/Podman; `-sy` updates packages inside that container before the build. `--de plasma|gnome|xfce|mate|lxqt|cinnamon|hyprland|niri|sway` adds that desktop's packages to the selected install profile; `--de PATH` instead seeds `/etc/skel/.config` from a Hyprland, niri or generic config tree. `-f` uses the stronger xz SquashFS preset, `-s` splits the completed ISO, `-c N` sets build parallelism, `-o PATH` chooses output, `-P ID` chooses an install profile, `-Pc FILE` loads custom JSON profiles, `-q` estimates package count, sizes and ETA, `-D NAME` changes the display name without changing package IDs, and `-ocl` prints a curl invocation for another PC. `-v`, `-p`, `--no-confirm`, `-h` and `-V` provide verbose, dry-run, noninteractive, help and version modes.
+Run `sudo lmkiso` from a recursive Frontline source checkout. It wraps the existing `build.sh` pipeline. `-apkg` includes all cached pacman package archives; `-apkge` also includes AUR-helper caches and selects the full offline package closure. `--contain` builds in Docker/Podman; `-sy` updates packages inside that container before the build. `--de plasma|gnome|xfce|mate|lxqt|cinnamon|hyprland|niri|sway` adds that desktop's packages to the selected install profile; `--de PATH` instead seeds `/etc/skel/.config` from a Hyprland, niri or generic config tree. `-f` uses the stronger xz SquashFS preset, `-s` splits the completed ISO, `-c N` sets build parallelism, `-o PATH` chooses output, `-P ID` chooses an install profile, `-Pc FILE` loads custom JSON profiles, `-q` estimates package count, sizes and ETA, `-D NAME` changes the display name without changing package IDs, and `-ocl` prints a curl invocation for another PC. `-v`, `-p`, `--no-confirm`, `-h` and `-V` provide verbose, dry-run, noninteractive, help and version modes.
 
 A custom `profiles.json` has `default` and `profiles` fields. Each profile defines `name`, `base` (`minimal`, `standard`, `developer` or `ai`), `packages` (additional package names), and optional `desktop`, `shell` and `de_config`. The build creates a temporary data overlay; tracked profiles are not modified.

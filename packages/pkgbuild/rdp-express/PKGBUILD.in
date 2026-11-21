@@ -1,14 +1,14 @@
 # Maintainer: @DISTRO_NAME@ contributors <@DISTRO_BUG_URL@>
 #
 # rdp-express (apps/rdp-express): @DISTRO_NAME@'s remote desktop server. It shares the Wayland desktop (Hyprland,
-# sway, wlroots) with nexora-msg's remote desktop viewer, over its own encrypted protocol, on the local network
+# sway, wlroots) with frontline-msg's remote desktop viewer, over its own encrypted protocol, on the local network
 # and Tailscale. A separate package from @DISTRO_ID@-msg: install it only where a desktop should be shared.
 # Generated from packages/pkgbuild/rdp-express/PKGBUILD.in.
 
 pkgname=@DISTRO_ID@-rdp-express
 pkgver=@PKGVER@
 pkgrel=1
-pkgdesc="@DISTRO_NAME@'s remote desktop server (Wayland: Hyprland, sway, wlroots), for nexora-msg's viewer"
+pkgdesc="@DISTRO_NAME@'s remote desktop server (Wayland: Hyprland, sway, wlroots), for frontline-msg's viewer"
 arch=(x86_64)
 url="@DISTRO_HOME_URL@"
 license=(GPL-3.0-or-later)

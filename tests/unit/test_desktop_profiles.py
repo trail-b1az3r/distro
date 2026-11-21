@@ -153,7 +153,7 @@ def test_extra_desktops_install_in_their_own_home(tmp_path):
     (sysroot / "usr/share/wayland-sessions").mkdir(parents=True)
     (sysroot / "usr/share/wayland-sessions/hyprland.desktop").write_text("[Desktop Entry]\nName=Halcyon\n")
     (sysroot / "etc/sddm.conf.d").mkdir(parents=True)
-    data = tmp_path / "share/nexora"
+    data = tmp_path / "share/frontline"
     (data / "packages/lists").mkdir(parents=True)
     for p in ("ml4w", "hyde", "sekaipop"):
         (data / f"packages/lists/desktop-{p}.list").write_text("kitty\n")
@@ -196,9 +196,9 @@ def test_extra_desktops_install_in_their_own_home(tmp_path):
     sessions = sysroot / "usr/share/wayland-sessions"
     assert (sessions / "hyprland.desktop").read_text() == "[Desktop Entry]\nName=Halcyon\n"
     assert not (sessions / "hyde-hyprland.desktop").exists() and not (sysroot / "etc/sddm.conf.d/hyde.conf").exists()
-    assert (sysroot / "var/lib/nexora/set-aside/hyde-hyprland.desktop").exists()
-    assert "/usr/bin/distro-desktop-session hyde" in (sessions / "nexora-hyde.desktop").read_text() or \
-        "run-session.sh hyde" in (sessions / "nexora-hyde.desktop").read_text()
+    assert (sysroot / "var/lib/frontline/set-aside/hyde-hyprland.desktop").exists()
+    assert "/usr/bin/distro-desktop-session hyde" in (sessions / "frontline-hyde.desktop").read_text() or \
+        "run-session.sh hyde" in (sessions / "frontline-hyde.desktop").read_text()
 
     # Run again: installed in its own home, so only its login entry is checked.
     calls.write_text("")
@@ -206,14 +206,14 @@ def test_extra_desktops_install_in_their_own_home(tmp_path):
                          capture_output=True, text=True, env=env, timeout=60)
     assert res.returncode == 0 and "already installed" in res.stdout and "pacman" not in calls.read_text()
     log = calls.read_text()
-    assert "sudo install -D -m 0644" in log and "/usr/share/wayland-sessions/nexora-hyde.desktop" in log
+    assert "sudo install -D -m 0644" in log and "/usr/share/wayland-sessions/frontline-hyde.desktop" in log
     assert "chsh" not in log  # the shell did not change (the login theme is only re-set where it is installed)
 
 
 def _install_env(tmp_path, bin_dir):
     home = tmp_path / "home"
     (home / ".config").mkdir(parents=True, exist_ok=True)
-    data = tmp_path / "share/nexora"
+    data = tmp_path / "share/frontline"
     (data / "packages/lists").mkdir(parents=True, exist_ok=True)
     for p in ("ml4w", "hyde", "sekaipop"):
         (data / f"packages/lists/desktop-{p}.list").write_text("kitty\n")
@@ -233,7 +233,7 @@ def test_a_desktop_without_its_own_lua_config_is_not_registered(tmp_path):
     res = subprocess.run(["bash", str(root / "desktop/profiles/install-selected.sh"), "hyde"], input="y\n",
                          capture_output=True, text=True, env={**env, "HYDE_CONF_ONLY": "1"}, timeout=60)
     assert res.returncode == 1 and "only hyprland.conf" in res.stdout and "not registered" in res.stdout
-    assert not (tmp_path / "sys/usr/share/wayland-sessions/nexora-hyde.desktop").exists()
+    assert not (tmp_path / "sys/usr/share/wayland-sessions/frontline-hyde.desktop").exists()
     assert not (home / ".local/state/distro-desktop-profiles/hyde.done").exists()
 
 

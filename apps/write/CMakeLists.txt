@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 project(write VERSION 0.1.0 LANGUAGES CXX)
 
 # The distribution sets these (packages/pkgbuild/write/PKGBUILD.in).
-set(APP_ID "nexora-write" CACHE STRING "Executable, desktop file and data directory name")
-set(APP_NAME "Nexora Write" CACHE STRING "Name shown to the user")
+set(APP_ID "frontline-write" CACHE STRING "Executable, desktop file and data directory name")
+set(APP_NAME "Frontline Write" CACHE STRING "Name shown to the user")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,13 +17,13 @@ include(GNUInstallDirs)
 find_program(CARGO_EXECUTABLE cargo REQUIRED)
 set(WRITE_BACKEND_MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/backend/Cargo.toml")
 set(WRITE_BACKEND_TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/rust-target")
-set(WRITE_BACKEND_BINARY "${WRITE_BACKEND_TARGET_DIR}/release/nexora-write-backend")
+set(WRITE_BACKEND_BINARY "${WRITE_BACKEND_TARGET_DIR}/release/frontline-write-backend")
 add_custom_command(OUTPUT "${WRITE_BACKEND_BINARY}"
     COMMAND ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${WRITE_BACKEND_TARGET_DIR}
             ${CARGO_EXECUTABLE} build --release --manifest-path "${WRITE_BACKEND_MANIFEST}"
     DEPENDS "${WRITE_BACKEND_MANIFEST}" "${CMAKE_CURRENT_SOURCE_DIR}/backend/src/main.rs"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/backend"
-    COMMENT "Building Nexora Write Rust backend"
+    COMMENT "Building Frontline Write Rust backend"
     VERBATIM)
 add_custom_target(write-rust-backend ALL DEPENDS "${WRITE_BACKEND_BINARY}")
 

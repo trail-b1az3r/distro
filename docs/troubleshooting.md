@@ -5,8 +5,8 @@ network, audio, desktop, package manager, disk space, services, time and the
 AI backend, and prints a fix for each problem:
 
 ```bash
-nexora doctor              # -v for details, --report writes a support bundle (kept local)
-sudo nexora repair         # repairs what the doctor found, after showing the plan
+frontline doctor              # -v for details, --report writes a support bundle (kept local)
+sudo frontline repair         # repairs what the doctor found, after showing the plan
 ```
 
 ## Boot
@@ -19,27 +19,27 @@ sudo nexora repair         # repairs what the doctor found, after showing the pl
 | Rufus or a copy of the ISO's files does not boot | Use a current ISO (older ones had a file too large for FAT32), or write it in Rufus's DD Image mode, with balenaEtcher or with `dd`. |
 | Black screen after the boot menu | Live ISO: the **safe graphics** entry. Installed system: boot the **diagnostic** entry (text boot, no splash). If that works, it is graphics: see below. |
 | "Please enter passphrase" does not appear | Press Esc to hide the splash; type the passphrase blind and Enter. |
-| Boot menu missing after a firmware update | From the live ISO: `sudo nexora rescue` (reinstalls the boot loader). |
-| Windows disappeared from the menu | systemd-boot: check the Windows boot manager is on the ESP. GRUB: `sudo nexora repair boot` (runs os-prober). |
-| Kernel update and the system no longer boots | Choose another kernel (e.g. LTS) or the fallback initramfs entry in the boot menu, then `sudo nexora repair boot`. |
+| Boot menu missing after a firmware update | From the live ISO: `sudo frontline rescue` (reinstalls the boot loader). |
+| Windows disappeared from the menu | systemd-boot: check the Windows boot manager is on the ESP. GRUB: `sudo frontline repair boot` (runs os-prober). |
+| Kernel update and the system no longer boots | Choose another kernel (e.g. LTS) or the fallback initramfs entry in the boot menu, then `sudo frontline repair boot`. |
 
 ## Graphics
 
 | Symptom | Try |
 |---|---|
-| No desktop after login, NVIDIA | `sudo nexora repair-gpu`, or `--safe` for nouveau |
-| Hybrid laptop: external display dead | `nexora-gpu status`; the port may hang off the NVIDIA GPU, which needs its driver loaded |
-| Screen tearing / flicker on NVIDIA | make sure `nexora-gpu status` shows the NVIDIA driver in use and `nvidia_drm.modeset=1` |
+| No desktop after login, NVIDIA | `sudo frontline repair-gpu`, or `--safe` for nouveau |
+| Hybrid laptop: external display dead | `frontline-gpu status`; the port may hang off the NVIDIA GPU, which needs its driver loaded |
+| Screen tearing / flicker on NVIDIA | make sure `frontline-gpu status` shows the NVIDIA driver in use and `nvidia_drm.modeset=1` |
 | Blurry XWayland apps on HiDPI | set the display scale in `~/.config/hypr/custom/general.lua` (XWayland apps render at 1x unless they support scaling) |
-| Games: missing 32-bit drivers | multilib is on by default; `sudo nexora gpu configure` adds the `lib32-` drivers |
+| Games: missing 32-bit drivers | multilib is on by default; `sudo frontline gpu configure` adds the `lib32-` drivers |
 
 ## Desktop
 
 | Symptom | Try |
 |---|---|
-| Bar or widgets missing | `qs -c ii` in a terminal shows Quickshell's errors; `nexora reset-desktop` restores defaults (your files are backed up) |
+| Bar or widgets missing | `qs -c ii` in a terminal shows Quickshell's errors; `frontline reset-desktop` restores defaults (your files are backed up) |
 | A keybind stopped working after editing | your files in `~/.config/hypr/custom/` load last; `hyprctl configerrors` shows mistakes |
-| Wallpaper colours not applied | the shell's Python environment may still be setting up after an offline install: `nexora setup status` |
+| Wallpaper colours not applied | the shell's Python environment may still be setting up after an offline install: `frontline setup status` |
 
 ## Network, audio, Bluetooth
 
@@ -54,23 +54,23 @@ sudo nexora repair         # repairs what the doctor found, after showing the pl
 
 | Symptom | Try |
 |---|---|
-| "unable to lock database" | `sudo nexora repair packages` removes a stale lock (only if no pacman is running) |
-| signature / keyring errors | `sudo nexora repair packages` refreshes the keyrings first |
-| "failed retrieving file 'nexora.db'", "file does not exist" or "failed to synchronize all databases" | the distribution repository is not published (yet), and pacman syncs nothing while one repository is missing. `sudo nexora repo off` turns `[nexora]` off in `/etc/pacman.conf` (`nexora update` and `nexora repair packages` do it too), and `sudo nexora repo auto` turns it back on once it is published. New installations only turn it on when it is there. On a system installed before `nexora repo` existed: `sudo sed -i 's/^\[nexora\]$/#[nexora]/; /^#\[nexora\]$/,/^$/ s/^\(SigLevel\|Server\)/#\1/' /etc/pacman.conf`. If the server is just unreachable, retry later |
+| "unable to lock database" | `sudo frontline repair packages` removes a stale lock (only if no pacman is running) |
+| signature / keyring errors | `sudo frontline repair packages` refreshes the keyrings first |
+| "failed retrieving file 'frontline.db'", "file does not exist" or "failed to synchronize all databases" | the distribution repository is not published (yet), and pacman syncs nothing while one repository is missing. `sudo frontline repo off` turns `[frontline]` off in `/etc/pacman.conf` (`frontline update` and `frontline repair packages` do it too), and `sudo frontline repo auto` turns it back on once it is published. New installations only turn it on when it is there. On a system installed before `frontline repo` existed: `sudo sed -i 's/^\[frontline\]$/#[frontline]/; /^#\[frontline\]$/,/^$/ s/^\(SigLevel\|Server\)/#\1/' /etc/pacman.conf`. If the server is just unreachable, retry later |
 | an AUR package fails to build | report it to the AUR package; the rest of the system is unaffected |
 
 ## AI
 
 | Symptom | Try |
 |---|---|
-| an assistant is "not installed" after an offline install | `nexora setup resume` once online |
+| an assistant is "not installed" after an offline install | `frontline setup resume` once online |
 | OpenClaw needs a newer Node.js | the error names the package to install |
-| the model server does not start | `journalctl --user -u nexora-llm`; is a model installed and set as default (`nexora model installed`)? |
-| CUDA not used | `nexora ai backend`; on hybrid laptops run tools with `prime-run` |
-| model too slow | pick a smaller model or a mixture-of-experts one; see `nexora model recommend` |
+| the model server does not start | `journalctl --user -u frontline-llm`; is a model installed and set as default (`frontline model installed`)? |
+| CUDA not used | `frontline ai backend`; on hybrid laptops run tools with `prime-run` |
+| model too slow | pick a smaller model or a mixture-of-experts one; see `frontline model recommend` |
 
 ## Reporting a bug
 
-Attach the output of `nexora doctor --report` (the bundle contains hardware
+Attach the output of `frontline doctor --report` (the bundle contains hardware
 and configuration details but no personal files; review it first) and, for
-installation problems, `/var/log/nexora/install.log`.
+installation problems, `/var/log/frontline/install.log`.

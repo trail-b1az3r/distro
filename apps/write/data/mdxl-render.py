@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MDXL rendering for Nexora Write, including document metadata and review markup."""
+"""MDXL rendering for Frontline Write, including document metadata and review markup."""
 import html
 from html.parser import HTMLParser
 import json

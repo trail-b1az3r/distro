@@ -100,7 +100,7 @@ def test_sddm_theme_loads_and_logs_in(tmp_path):
 
     b = load_branding()
     branding.generate(quick=True, log=lambda _m: None)
-    theme = paths.data("branding") / "generated" / "sddm"
+    theme = paths.data("branding") / "generated" / "sddm-classic"
     app = QGuiApplication.instance() or QGuiApplication([])
     assert app
 
@@ -121,7 +121,7 @@ def test_sddm_theme_loads_and_logs_in(tmp_path):
     from distrokit import sddm_info
     info_file.write_text(sddm_info.qml("box", [["OS", f"{b.pretty_name} x86_64"], ["Kernel", "Linux 6.18"]]))
     config = QQmlPropertyMap(None)
-    conf = (paths.data("branding") / "generated" / "sddm" / "theme.conf").read_text()
+    conf = (paths.data("branding") / "generated" / "sddm-classic" / "theme.conf").read_text()
     for line in conf.splitlines():
         if "=" in line and not line.startswith("#"):
             k, v = line.split("=", 1)

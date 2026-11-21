@@ -40,28 +40,28 @@ def test_systemd_boot_entries_per_kernel(tmp_path):
     # A stale entry for a removed kernel is cleaned up.
     entries = tmp_path / "boot/loader/entries"
     entries.mkdir(parents=True)
-    (entries / "nexora-linux-zen.conf").write_text("stale")
+    (entries / "frontline-linux-zen.conf").write_text("stale")
     (entries / "windows.conf").write_text("keep")
     msg = boot.update(tmp_path, util.Runner(), b)
     assert "entries written" in msg
     names = sorted(p.name for p in entries.iterdir())
-    assert "nexora-linux.conf" in names and "nexora-linux-fallback.conf" in names
-    assert "nexora-linux-surface.conf" in names and "nexora-linux-surface-fallback.conf" not in names
-    assert "nexora-linux-surface-diagnostic.conf" in names
-    assert "nexora-linux-zen.conf" not in names and "windows.conf" in names
-    main = (entries / "nexora-linux.conf").read_text()
+    assert "frontline-linux.conf" in names and "frontline-linux-fallback.conf" in names
+    assert "frontline-linux-surface.conf" in names and "frontline-linux-surface-fallback.conf" not in names
+    assert "frontline-linux-surface-diagnostic.conf" in names
+    assert "frontline-linux-zen.conf" not in names and "windows.conf" in names
+    main = (entries / "frontline-linux.conf").read_text()
     assert "options root=UUID=abc rw quiet splash" in main
-    diag = (entries / "nexora-linux-diagnostic.conf").read_text()
+    diag = (entries / "frontline-linux-diagnostic.conf").read_text()
     assert "systemd.unit=multi-user.target" in diag and " quiet" not in diag and "splash" not in diag
     loader = (tmp_path / "boot/loader/loader.conf").read_text()
-    assert "default nexora-linux-surface.conf" in loader and "editor no" in loader
+    assert "default frontline-linux-surface.conf" in loader and "editor no" in loader
 
 
 def test_grub_defaults_edit():
     b = load_branding()
     text = 'GRUB_DEFAULT=0\nGRUB_TIMEOUT=5\nGRUB_DISTRIBUTOR="Arch"\nGRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet"\n#GRUB_DISABLE_OS_PROBER=false\n'
     out = boot.grub_defaults(text, b, ["root=UUID=x", "rw", "rootflags=subvol=@", "rd.luks.name=u=cryptroot", "quiet", "splash"])
-    assert 'GRUB_DISTRIBUTOR="Nexora"' in out
+    assert 'GRUB_DISTRIBUTOR="Frontline"' in out
     # grub-mkconfig adds root= and rootflags= itself.
     assert 'GRUB_CMDLINE_LINUX_DEFAULT="rd.luks.name=u=cryptroot quiet splash"' in out
     assert 'GRUB_DISABLE_OS_PROBER="false"' in out and "#GRUB_DISABLE_OS_PROBER" not in out

@@ -8,7 +8,7 @@ The distribution's writer and e-book reader (packaged as `<id>-write`): Qt Quick
 * **PDF export**: export the current rendered document from the paper layout to a PDF.
 * **Headers and footers**: add document-level header/footer text from the ribbon; the metadata is stored in MDXL and shown in Document preview.\n* **Review tools**: mark selected text as an insertion or deletion, then accept or reject all pending marks. Add comments anchored to selected text; comments appear in the preview review panel and remain in the MDXL source.\n* **Email**: the Email command is disabled unless the `betterbird` executable is installed. When enabled, it opens a prefilled message in Betterbird for review and sending; Write does not silently send mail.\n* **Page breaks**: insert a page break from the formatting ribbon; the marker remains in MDXL, renders as a page break in Document view, and exports as a Word page break.
 * **Spelling**: misspelled words get a red wavy underline (KDE's Sonnet, with Hunspell dictionaries: English by default, others from `hunspell-*` packages, following your locale). Right-click one for suggestions, **Add to dictionary** or **Ignore**. Inline code, links and code blocks are not checked. **Spelling** in the ribbon turns it off.
-* **Autocorrect**: as you type a space or punctuation, known typos are fixed (`teh` → `the`, `recieve` → `receive`: the list is `data/autocorrect.txt`), as are TWo INitial CApitals and a lone `i`. It never guesses from suggestions, and Ctrl+Z undoes a fix. Add your own in `~/.config/nexora-write/autocorrect.txt` (`typo=fix`, one a line; yours win). **Autocorrect** in the ribbon turns it off.
+* **Autocorrect**: as you type a space or punctuation, known typos are fixed (`teh` → `the`, `recieve` → `receive`: the list is `data/autocorrect.txt`), as are TWo INitial CApitals and a lone `i`. It never guesses from suggestions, and Ctrl+Z undoes a fix. Add your own in `~/.config/frontline-write/autocorrect.txt` (`typo=fix`, one a line; yours win). **Autocorrect** in the ribbon turns it off.
 * **Notes**: `~/Documents/Notes`, newest first, searchable. Ctrl+N starts one.
 * **Books**: a book is a folder of MDXL chapters in `~/Documents/Books` (`01-…`, `02-…`); **Reading** opens EPUB books a chapter at a time with their table of contents, remembers where you were, and sizes the text.
 * **Theme and interface**: translucent, rounded Material 3 Expressive surfaces inspired by Loaf's visual language; desktop Halcyon colours (`~/.local/state/quickshell/user/generated/colors.json`, followed live), dark copper without one, Google Sans Flex and JetBrains Mono.
@@ -26,9 +26,9 @@ it to `.epub` if a reader insists on the extension); Write opens it in Reading, 
 * **Export**: Books, select a book, **Export EPUB-MXL…**.
 * Inside: `OEBPS/chapter-NNN.xhtml` (the rich text, in reading order), `OEBPS/mdxl/` (the MDXL files, unchanged),
   `OEBPS/images/`, `OEBPS/nav.xhtml` (contents) and `OEBPS/content.opf`, which marks the book with
-  `<meta property="nexora:format">epub-mxl 1</meta>`.
-* From a terminal: `nexora-write --export-epub-mxl BOOK_FOLDER OUT.epub-mxl [AUTHOR]` and
-  `nexora-write --import-epub-mxl BOOK.epub-mxl` (prints the new book folder).
+  `<meta property="frontline:format">epub-mxl 1</meta>`.
+* From a terminal: `frontline-write --export-epub-mxl BOOK_FOLDER OUT.epub-mxl [AUTHOR]` and
+  `frontline-write --import-epub-mxl BOOK.epub-mxl` (prints the new book folder).
 * The container is written by the Rust backend; MDXL's renderer makes the chapters' rich text.
 
 ## Keyboard shortcuts
@@ -49,8 +49,8 @@ Reading shortcuts are available when an EPUB is open. Ctrl+4 and Ctrl+Alt+4 are 
 
 ```bash
 cmake -S apps/write -B build/write -G Ninja && cmake --build build/write
-WRITE_MDXL_RENDER=apps/write/data/mdxl-render.py MDXL_LIB=/path/to/mdxl build/write/nexora-write
-build/write/nexora-write --self-test book.epub note.mdxl
+WRITE_MDXL_RENDER=apps/write/data/mdxl-render.py MDXL_LIB=/path/to/mdxl build/write/frontline-write
+build/write/frontline-write --self-test book.epub note.mdxl
 ```
 
 Needs Qt 6.5+ (Quick, Quick Controls, WebEngine), KF6 SyntaxHighlighting and libarchive.
@@ -58,4 +58,4 @@ Needs Qt 6.5+ (Quick, Quick Controls, WebEngine), KF6 SyntaxHighlighting and lib
 
 ## Architecture migration
 
-The UI remains Qt Quick/QML. Application operations are being moved into the standalone Rust backend in `backend/`, built and installed beside the UI as `nexora-write-backend`. The current migration is still in progress; the Rust service is not yet the sole backend. Its newline-delimited JSON protocol keeps Qt concerns out of the Rust core. The Rust implementation currently handles file reads and collision-safe atomic writes, word counts, library listing, notes, books, chapters, safe image-asset imports, recent-book history (including migration of existing QSettings entries) and EPUB reading positions. The existing C++ implementations remain compatibility paths during migration; EPUB, DOCX, PDF, MDXL rendering, autosave and remaining settings are not considered migrated until equivalent Rust implementations are wired in and covered by tests. No existing feature is intentionally removed during this transition.
+The UI remains Qt Quick/QML. Application operations are being moved into the standalone Rust backend in `backend/`, built and installed beside the UI as `frontline-write-backend`. The current migration is still in progress; the Rust service is not yet the sole backend. Its newline-delimited JSON protocol keeps Qt concerns out of the Rust core. The Rust implementation currently handles file reads and collision-safe atomic writes, word counts, library listing, notes, books, chapters, safe image-asset imports, recent-book history (including migration of existing QSettings entries) and EPUB reading positions. The existing C++ implementations remain compatibility paths during migration; EPUB, DOCX, PDF, MDXL rendering, autosave and remaining settings are not considered migrated until equivalent Rust implementations are wired in and covered by tests. No existing feature is intentionally removed during this transition.

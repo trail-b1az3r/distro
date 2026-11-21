@@ -1,4 +1,4 @@
-"""nexora-msg: the store (Rust, through Python), backups, Bluetooth's formats and the companion's protocol."""
+"""frontline-msg: the store (Rust, through Python), backups, Bluetooth's formats and the companion's protocol."""
 
 from __future__ import annotations
 
@@ -19,13 +19,13 @@ sys.path.insert(0, str(APP))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import fakephone  # noqa: E402
-from nexora_msg import bmessage, companion, core, vcard  # noqa: E402
-from nexora_msg.service import Service  # noqa: E402
+from frontline_msg import bmessage, companion, core, vcard  # noqa: E402
+from frontline_msg.service import Service  # noqa: E402
 
 
 @pytest.fixture
 def svc(tmp_path, monkeypatch):
-    monkeypatch.setenv("NEXORA_MSG_DATA", str(tmp_path / "data"))
+    monkeypatch.setenv("FRONTLINE_MSG_DATA", str(tmp_path / "data"))
     try:
         core.find_binary()
     except core.CoreError:
@@ -86,11 +86,11 @@ def test_encrypted_backup_is_refused_clearly(svc, tmp_path):
 
 
 def test_cli(tmp_path, monkeypatch):
-    monkeypatch.setenv("NEXORA_MSG_DATA", str(tmp_path / "data"))
+    monkeypatch.setenv("FRONTLINE_MSG_DATA", str(tmp_path / "data"))
     backup = fakephone.make(tmp_path / "backup")
     env = {**os.environ, "PYTHONPATH": str(APP)}
     store = str(tmp_path / "s.db")
-    run = lambda *a: subprocess.run([sys.executable, "-m", "nexora_msg", "--store", store, *a], env=env,
+    run = lambda *a: subprocess.run([sys.executable, "-m", "frontline_msg", "--store", store, *a], env=env,
                                     capture_output=True, text=True, timeout=60)
     out = run("import", str(backup))
     assert out.returncode == 0 and "5 new messages" in out.stdout, out.stderr
@@ -129,7 +129,7 @@ def test_bmessage_round_trip():
 
 
 def test_map_listing_entry():
-    from nexora_msg.bluetooth import message_from_listing
+    from frontline_msg.bluetooth import message_from_listing
     m = message_from_listing({"Subject": "hi", "SenderAddress": "+15550102030", "Timestamp": "20231114T221320Z",
                               "Type": "sms-gsm"}, "inbox")
     assert m == {"handle": "+15550102030", "from_me": False, "date_ms": 1_700_000_000_000, "text": "hi",

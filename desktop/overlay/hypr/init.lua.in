@@ -22,7 +22,7 @@ local function load_env_file(path)
     f:close()
 end
 
--- Halcyon dotfile installer: keep Nexora's distro-owned Fastfetch logo/config.
+-- Halcyon dotfile installer: keep Frontline's distro-owned Fastfetch logo/config.
 -- Set this in the compositor environment so graphical apps and update helpers
 -- inherit it even when they are not launched from a login shell.
 hl.env("HALCYON_FASTFETCH_LOGO_OVERRIDE", "0")

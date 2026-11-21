@@ -18,15 +18,15 @@
 ## 1. Write the ISO to a USB stick
 
 Check the download first (the release page lists the SHA-256 sum; files over
-2 GiB are split: `cat Nexora-*.iso.part-* > Nexora.iso`):
+2 GiB are split: `cat Frontline-*.iso.part-* > Frontline.iso`):
 
 ```bash
-sha256sum -c Nexora-2026.09-x86_64.iso.sha256
+sha256sum -c Frontline-2026.09-x86_64.iso.sha256
 ```
 
 Then write it. **This erases the USB stick.**
 
-* Linux: `sudo dd if=Nexora-2026.09-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync`
+* Linux: `sudo dd if=Frontline-2026.09-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync`
   (find `/dev/sdX` with `lsblk`; use the whole device, not a partition), or
   GNOME Disks ("Restore Disk Image"). Avoid KDE ISO Image Writer: some of its
   versions stop with "The last block was not fully written (-1 of 1,048,576
@@ -97,7 +97,7 @@ to disk before that.
     change spelled out (ERASE / FORMAT lines). You confirm by typing or
     selecting the disk.
 13. **Install** — progress and a live log. The log is kept at
-    `/var/log/nexora/install.log` on the new system.
+    `/var/log/frontline/install.log` on the new system.
 
 ## Partitioning
 
@@ -139,7 +139,7 @@ On first login the **Welcome** wizard opens: updates, driver status, AI setup
 and model download, appearance, apps, privacy, backups. Anything that needed
 the internet and could not run during installation (AI tools, models, the
 desktop's Python environment) is resumed automatically once you are online
-(`nexora setup status` shows what is pending).
+(`frontline setup status` shows what is pending).
 
 ## Unattended installation
 
@@ -148,9 +148,9 @@ installer ([installer/schema.json](../installer/schema.json),
 examples in [installer/examples](../installer/examples)):
 
 ```bash
-sudo nexora-installer --config install.json --dry-run      # show the plan and every command
+sudo frontline-installer --config install.json --dry-run      # show the plan and every command
 INSTALL_USER_PASSWORD=... INSTALL_DISK_PASSPHRASE=... \
-  sudo -E nexora-installer --config install.json --yes-i-understand
+  sudo -E frontline-installer --config install.json --yes-i-understand
 ```
 
 Passwords can stay out of the file (`INSTALL_USER_PASSWORD`,
@@ -161,9 +161,9 @@ erases anything.
 To install many machines, boot the ISO with an extra kernel parameter (press
 `e` in the UEFI menu or Tab in the BIOS menu):
 
-* `nexora.autoinstall=label:MYSTICK:install.json` reads the file from a USB
+* `frontline.autoinstall=label:MYSTICK:install.json` reads the file from a USB
   stick whose file system is labelled `MYSTICK`;
-* `nexora.autoinstall=fw_cfg` reads it from QEMU's fw_cfg (used by the tests);
-* add `nexora.autoinstall.poweroff=1` to power off afterwards.
+* `frontline.autoinstall=fw_cfg` reads it from QEMU's fw_cfg (used by the tests);
+* add `frontline.autoinstall.poweroff=1` to power off afterwards.
 
 This **erases disks without asking**; never put it on a boot entry by accident.

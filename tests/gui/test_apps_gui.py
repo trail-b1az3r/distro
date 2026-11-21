@@ -50,7 +50,7 @@ def test_welcome_sections(app, tmp_path, monkeypatch):
     assert [t["id"] for t in backend.tasks] == ["model:qwen3-8b"]
     assert any(i["id"] == "tasks" for i in backend.checklist)
     backend.finish()
-    assert (tmp_path / "state" / "nexora" / "firstboot-done").exists() or (backend.state_dir / "firstboot-done").exists()
+    assert (tmp_path / "state" / "frontline" / "firstboot-done").exists() or (backend.state_dir / "firstboot-done").exists()
     assert warnings.items == []
     engine.deleteLater()
 

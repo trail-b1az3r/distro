@@ -2,7 +2,7 @@
 name = "rdp-express"
 version = "1.0.0"
 edition = "2021"
-description = "Nexora's remote desktop server: the Wayland desktop over an encrypted, low-latency protocol"
+description = "Frontline's remote desktop server: the Wayland desktop over an encrypted, low-latency protocol"
 license = "GPL-3.0-or-later"
 publish = false
 

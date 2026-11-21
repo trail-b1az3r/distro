@@ -4,15 +4,15 @@
 # offline repository. Editors that are not redistributable are installed from
 # their source at installation time instead, and only when the user picks them.
 
-[nexora-code]
-name = "Nexora Code"
-package = "nexora-code"
-source = "local"         # packages/pkgbuild/nexora-code, in the distribution repository
+[frontline-code]
+name = "Frontline Code"
+package = "frontline-code"
+source = "local"         # packages/pkgbuild/frontline-code, in the distribution repository
 license = "MIT"
 redistributable = true
-command = "nexora-code"
-desktop_file = "nexora-code.desktop"
-notes = "The built-in editor: VSCodium with Nexora's themes (following Halcyon's colours), defaults and its own settings."
+command = "frontline-code"
+desktop_file = "frontline-code.desktop"
+notes = "The built-in editor: VSCodium with Frontline's themes (following Halcyon's colours), defaults and its own settings."
 
 [code]
 name = "Code - OSS"

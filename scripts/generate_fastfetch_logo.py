@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convert Nexora's canonical SVG logo mark into a colour-limited Fastfetch logo.
+"""Convert Frontline's canonical SVG logo mark into a colour-limited Fastfetch logo.
 
 Example:
   python3 scripts/generate_fastfetch_logo.py branding/generated/logo/logo-mark.svg branding/generated/fastfetch/logo.ansi
@@ -18,7 +18,7 @@ from distrokit.build.branding import ansi_logo, rasterise  # noqa: E402
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", type=Path, help="rendered Nexora logo-mark.svg")
+    parser.add_argument("source", type=Path, help="rendered Frontline logo-mark.svg")
     parser.add_argument("output", type=Path, help="destination .ansi file")
     parser.add_argument("--columns", type=int, default=24, help="terminal logo width (default: 24)")
     parser.add_argument("--max-colors", type=int, choices=range(1, 10), default=9,

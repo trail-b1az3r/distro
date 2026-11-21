@@ -15,12 +15,12 @@ def test_fastfetch_lines_with_the_distributions_config(tmp_path, monkeypatch):
     fake.parent.mkdir()
     # fastfetch --pipe with a tab separator: the title, separators, session lines and colour blocks are left out.
     fake.write_text("#!/bin/sh\necho \"$@\" > " + str(seen) + "\n"
-                    "printf 'root@box\\n-------\\nOS\\tNexora Linux x86_64\\nKernel\\tLinux 6.18\\n"
+                    "printf 'root@box\\n-------\\nOS\\tFrontline Linux x86_64\\nKernel\\tLinux 6.18\\n"
                     "Uptime\\t3 mins\\nShell\\tbash 5.3\\nCPU\\tIntel i7: 8 cores\\n\\033[40m   \\033[m\\n'\n")
     fake.chmod(0o755)
     monkeypatch.setenv("PATH", f"{fake.parent}:{os.environ['PATH']}")
     rows = sddm_info.fastfetch_rows(config)
-    assert rows == [["OS", "Nexora Linux x86_64"], ["Kernel", "Linux 6.18"], ["CPU", "Intel i7: 8 cores"]]
+    assert rows == [["OS", "Frontline Linux x86_64"], ["Kernel", "Linux 6.18"], ["CPU", "Intel i7: 8 cores"]]
     args = seen.read_text()
     assert f"--config {config}" in args and "--logo none" in args and "--pipe" in args
 
@@ -42,5 +42,5 @@ def test_service_runs_before_sddm(tmp_path):
     assert f"ExecStart=/usr/lib/{b.id}/bin/{b.id}-sddm-info" in unit and "Before=display-manager.service" in unit
     dropin = (tmp_path / f"usr/lib/systemd/system/sddm.service.d/{b.id}-sddm-info.conf").read_text()
     assert f"Wants={b.id}-sddm-info.service" in dropin and f"After={b.id}-sddm-info.service" in dropin
-    theme = Path(__file__).resolve().parents[2] / "branding/sddm/theme.conf.in"
+    theme = Path(__file__).resolve().parents[2] / "branding/sddm-classic/theme.conf.in"
     assert "infoFile=/var/lib/@DISTRO_ID@/sddm/SystemInfo.qml" in theme.read_text()

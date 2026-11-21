@@ -362,6 +362,36 @@ def source_tarball(src: Path, dest: Path, prefix: str, epoch: int) -> Path:
     return dest
 
 
+def legacy_replaces(text: str, b: Branding) -> str:
+    """Make every ``<id>-x`` package replace (and conflict with) ``<legacy>-x`` for the distribution's former IDs
+    (``DISTRO_LEGACY_IDS``), so ``pacman -Syu`` on a system that had them swaps them for the renamed ones."""
+    olds = [o for o in b.get("DISTRO_LEGACY_IDS").split() if o and o != b.id]
+    if not olds:
+        return text
+    prefix = f"{b.id}-"
+
+    def names(pkg: str) -> str:
+        return " ".join(f"{o}-{pkg[len(prefix):]}" for o in olds)
+
+    # In a split PKGBUILD: at the end of each package_<id>-x() function, after its own conflicts=/replaces=.
+    lines, out_lines, current = text.split("\n"), [], None
+    for line in lines:
+        m = re.match(r"^package_([A-Za-z0-9@._+-]+)\(\) \{\s*$", line)
+        if m and m.group(1).startswith(prefix):
+            current = m.group(1)
+        elif current and line == "}":
+            out_lines += [f"  replaces+=({names(current)})", f"  conflicts+=({names(current)})"]
+            current = None
+        out_lines.append(line)
+    out = "\n".join(out_lines)
+    single = re.search(r"(?m)^pkgname=([A-Za-z0-9@._+-]+)$", out)
+    if single and single.group(1).startswith(prefix):
+        # At the end, so the template's own replaces=/conflicts= (set earlier) are added to, not overwritten.
+        out = (out.rstrip("\n") + f"\n\n# The distribution's former name (distro.conf DISTRO_LEGACY_IDS).\n"
+               f"replaces+=({names(single.group(1))})\nconflicts+=({names(single.group(1))})\n")
+    return out
+
+
 def render(out: Path, b: Branding | None = None, src: Path | None = None) -> list[Path]:
     """Render the distribution's PKGBUILD templates into ``out/<dir>/``."""
     b = b or load_branding()
@@ -382,7 +412,10 @@ def render(out: Path, b: Branding | None = None, src: Path | None = None) -> lis
         for f in sorted(tsrc.iterdir()):
             name = b.render(f.name.removesuffix(".in"))
             if f.suffix == ".in":
-                (target / name).write_text(b.render(f.read_text(), extra))
+                rendered_text = b.render(f.read_text(), extra)
+                if name == "PKGBUILD":
+                    rendered_text = legacy_replaces(rendered_text, b)
+                (target / name).write_text(rendered_text)
             else:
                 shutil.copyfile(f, target / name)
         rendered.append(target)

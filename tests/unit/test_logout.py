@@ -1,4 +1,4 @@
-"""`logout` (`nexora logout`): graphical sessions end now, later, or not at all; text and SSH logins stay."""
+"""`logout` (`frontline logout`): graphical sessions end now, later, or not at all; text and SSH logins stay."""
 
 import json
 import subprocess
@@ -70,9 +70,9 @@ def test_all_needs_root(monkeypatch):
 def test_schedule_and_stop(monkeypatch):
     monkeypatch.setattr(logout.os, "geteuid", lambda: 0)
     run = FakeRun()
-    logout.schedule(60, "nexora", False, {"mason"}, run=run)
+    logout.schedule(60, "frontline", False, {"mason"}, run=run)
     timer = [c for c in run.calls if c[0] == "systemd-run"][0]
-    assert "--unit=nexora-logout" in timer and "--on-active=60" in timer
+    assert "--unit=frontline-logout" in timer and "--on-active=60" in timer
     assert "--setenv=SUDO_USER=mason" in timer and timer[-3:] == ["logout", "now", "--quiet"]
     assert logout.cancel(run=FakeRun(timer_active=True)) is True
     assert logout.cancel(run=FakeRun()) is False
@@ -81,7 +81,7 @@ def test_schedule_and_stop(monkeypatch):
 def test_a_user_schedules_with_their_own_systemd(monkeypatch):
     monkeypatch.setattr(logout.os, "geteuid", lambda: 1000)
     run = FakeRun()
-    logout.schedule(300, "nexora", False, {"mason"}, run=run)
+    logout.schedule(300, "frontline", False, {"mason"}, run=run)
     assert any(c[:2] == ["systemd-run", "--user"] for c in run.calls)
 
 

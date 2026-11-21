@@ -81,15 +81,15 @@ def test_install_units_fills_in_only_what_the_packages_did_not(tmp_path):
     packaged = tmp_path / f"usr/lib/systemd/system/{B.id}-auto-update.timer"
     packaged.parent.mkdir(parents=True)
     packaged.write_text("from the package\n")
-    written = autoupdate.install_units(B, tmp_path, command="/opt/nexora/bin/nexora")
+    written = autoupdate.install_units(B, tmp_path, command="/opt/frontline/bin/frontline")
     names = sorted(p.relative_to(tmp_path).as_posix() for p in written)
     assert names == [f"etc/systemd/system/{B.id}-auto-update.service",
                      f"etc/systemd/user/{B.id}-update-notify.service",
                      f"etc/systemd/user/{B.id}-update-notify.timer"]
     service = (tmp_path / f"etc/systemd/system/{B.id}-auto-update.service").read_text()
-    assert "ExecStart=/opt/nexora/bin/nexora auto-update run --system" in service
+    assert "ExecStart=/opt/frontline/bin/frontline auto-update run --system" in service
     # Run again: nothing to write.
-    assert autoupdate.install_units(B, tmp_path, command="/opt/nexora/bin/nexora") == []
+    assert autoupdate.install_units(B, tmp_path, command="/opt/frontline/bin/frontline") == []
 
 
 def test_enable_turns_both_timers_on(tmp_path):

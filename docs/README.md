@@ -1,6 +1,6 @@
 # Documentation
 
-Commands are shown with the default names (`nexora`, `nexora-gpu`); they come
+Commands are shown with the default names (`frontline`, `frontline-gpu`); they come
 from `distro.conf`, so a rebranded build uses its own names.
 
 **Using the system**

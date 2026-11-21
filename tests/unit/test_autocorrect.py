@@ -85,7 +85,7 @@ def test_runner_backend_defaults_to_legacy_and_can_be_changed(tmp_path, monkeypa
     from distrokit.ai import runtime
 
     class FakeBranding:
-        id = "nexora"
+        id = "frontline"
 
     monkeypatch.setattr(runtime, "runner_config_path", lambda _branding=None: tmp_path / "ai-runtime.toml")
     assert runtime.runner_backend(FakeBranding()) == "legacy"

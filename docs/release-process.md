@@ -78,7 +78,7 @@ repository is used with `DISTRO_REPO_SIGLEVEL_UNSIGNED`.
 ## After the release
 
 * Announce with the release notes, the checksums, and known issues.
-* Watch for bug reports with `nexora doctor --report` bundles.
+* Watch for bug reports with `frontline doctor --report` bundles.
 
 ## The RELEASE_TOKEN secret
 

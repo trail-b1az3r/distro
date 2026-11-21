@@ -1,4 +1,4 @@
-"""Shared package selection for Nexora ISO editions."""
+"""Shared package selection for Frontline ISO editions."""
 
 from __future__ import annotations
 

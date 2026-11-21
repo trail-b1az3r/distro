@@ -21,3 +21,6 @@ __pycache__/
 .idea/
 *.swp
 /branding/generated/
+
+# Cargo build output of the Rust apps
+target/

@@ -1,21 +1,21 @@
-# nexora-msg: your iPhone's messages on Nexora
+# frontline-msg: your iPhone's messages on Frontline
 
-Texts, pictures, contacts and search for the messages on your iPhone, from Nexora: over **Bluetooth** for what
+Texts, pictures, contacts and search for the messages on your iPhone, from Frontline: over **Bluetooth** for what
 arrives while you work, and over the **cable** for the whole history with its pictures. A small **companion app** on
 the iPhone, sideloaded, adds sending pictures and contacts with their photos.
 
 ![Messages: a conversation](docs/chat.jpg)
 
-    nexora-msg                    # the window
-    nexora-msg sync               # back up over the cable and import (only changes after the first time)
-    nexora-msg import FOLDER      # an existing, unencrypted iPhone backup (or Finder/iTunes's)
-    nexora-msg search pizza 7pm   # messages, people and conversations
-    nexora-msg chats | devices | stats
+    frontline-msg                    # the window
+    frontline-msg sync               # back up over the cable and import (only changes after the first time)
+    frontline-msg import FOLDER      # an existing, unencrypted iPhone backup (or Finder/iTunes's)
+    frontline-msg search pizza 7pm   # messages, people and conversations
+    frontline-msg chats | devices | stats
 
-## What iOS allows, and how nexora-msg works with it
+## What iOS allows, and how frontline-msg works with it
 
 iOS lets no app, and no computer, read iMessage directly: there is no API for it, on the phone or off it. What there
-is, nexora-msg uses:
+is, frontline-msg uses:
 
 | | Bluetooth (MAP, PBAP) | Cable (backup) | Companion app |
 |---|---|---|---|
@@ -31,9 +31,9 @@ is, nexora-msg uses:
   head units use. BlueZ's obexd (package `bluez-obex`) carries both.
 - **Cable.** libimobiledevice makes a local backup (unlock the phone and tap **Trust** the first time), and the Rust
   store reads the messages (`sms.db`), their pictures and the address book out of it. The backup must not be
-  encrypted ("Encrypt local backup" off), since nexora-msg cannot read an encrypted one. After the first time only
+  encrypted ("Encrypt local backup" off), since frontline-msg cannot read an encrypted one. After the first time only
   changes are copied. A Mac's `~/Library/Messages/chat.db` imports too (same format).
-- **Companion app** (`ios/`, "Nexora Messages"). iOS never lets an app send a message without you, so a picture
+- **Companion app** (`ios/`, "Frontline Messages"). iOS never lets an app send a message without you, so a picture
   from the computer opens in Messages' own sheet on the phone, filled in, and you tap Send (a notification brings
   the app forward if it was in the background). It also gives the computer your contacts with photos. It keeps
   running in the background by playing silence, as SideStore does (mixed with your audio, so nothing is
@@ -52,12 +52,12 @@ Everything that goes over the network also goes over [Tailscale](https://tailsca
 - **Remote desktop:** the computers on your tailnet that share their desktop are listed in the remote desktop
   dialog, and rdp-express listens on its Tailscale addresses by default.
 
-`nexora-msg remote` lists those computers from the command line.
+`frontline-msg remote` lists those computers from the command line.
 
 ## Remote desktop
 
 Messages can also show another computer's desktop, and you can use it with your mouse and keyboard: the button
-next to the phone opens it. The other computer runs **rdp-express**, a separate package (`nexora-rdp-express`, in
+next to the phone opens it. The other computer runs **rdp-express**, a separate package (`frontline-rdp-express`, in
 `apps/rdp-express`): a small Rust server that shares a Wayland desktop (Hyprland, sway, wlroots) over its own
 protocol.
 
@@ -68,26 +68,26 @@ protocol.
 
 The remote desktop opens in its own window, with Ctrl+Alt+Enter for full screen and a quality slider.
 
-    nexora-msg remote                               # computers on your tailnet that share their desktop
-    nexora-msg remote desk --code "1234 5678"       # pair with one (the code from `rdp-express pair` there)
-    nexora-msg remote desk --snapshot desk.png      # a picture of its screen
+    frontline-msg remote                               # computers on your tailnet that share their desktop
+    frontline-msg remote desk --code "1234 5678"       # pair with one (the code from `rdp-express pair` there)
+    frontline-msg remote desk --snapshot desk.png      # a picture of its screen
 
 ## Inside
 
-- `core/` (Rust): the store, one SQLite file in `~/.local/share/nexora-msg/` with full-text search (FTS5, accents
+- `core/` (Rust): the store, one SQLite file in `~/.local/share/frontline-msg/` with full-text search (FTS5, accents
   and prefixes: "cafe stat" finds "café near the station"). It also holds the backup importer. It reads iOS 16+
   messages whose text is only in `attributedBody` (a typedstream NSAttributedString), skips reactions (tapbacks),
   copies attachments out of the backup, and matches people by their numbers' last ten digits or their email. The app
-  runs it as a service (`nexora-msg-core serve STORE`, JSON lines).
-- `nexora_msg/` (Python 3.14 and 3.15): the remote desktop viewer (`rdp.py`, `rdpview.py`), Tailscale
+  runs it as a service (`frontline-msg-core serve STORE`, JSON lines).
+- `frontline_msg/` (Python 3.14 and 3.15): the remote desktop viewer (`rdp.py`, `rdpview.py`), Tailscale
   (`tailscale.py`), Bluetooth (`bluetooth.py`: obexd over D-Bus, bMessage and vCard parsing),
   the cable (`wired.py`: idevicebackup2), the companion link (`companion.py`, `usbmux.py`), and the window's bridge
   (`app.py`).
-- `nexora_msg/qml/` (Qt 6.12, Qt Quick Controls Material): conversations, bubbles with pictures, search, new
+- `frontline_msg/qml/` (Qt 6.12, Qt Quick Controls Material): conversations, bubbles with pictures, search, new
   message, and the iPhone dialog. Coloured by Halcyon's theme when there is one.
 - `ios/` (Swift, SwiftUI, iOS 16+): the companion app. `xcodegen generate` makes the Xcode project, and
   `ios/scripts/build-ipa.sh` builds an unsigned `.ipa`. CI (`.github/workflows/msg.yml`) builds it on macOS and
-  publishes it to the `nexora-msg-ios` release. Install it with SideStore, AltStore or Sideloadly, which sign it
+  publishes it to the `frontline-msg-ios` release. Install it with SideStore, AltStore or Sideloadly, which sign it
   with your Apple ID (a free account works; re-sign every 7 days, which SideStore does by itself).
 
 ### The companion link
@@ -105,7 +105,7 @@ iPhone's address if Avahi is not running). Frames are a 4-byte big-endian length
 ## Tests
 
     cd core && cargo test
-    NEXORA_MSG_CORE=core/target/debug/nexora-msg-core python -m pytest tests   # Python 3.14 or 3.15
+    FRONTLINE_MSG_CORE=core/target/debug/frontline-msg-core python -m pytest tests   # Python 3.14 or 3.15
 
 `tests/fakephone.py` makes an iPhone backup to test against: an iOS 17 message, a group chat with a picture, a
 reaction and the address book. The companion test runs the iPhone side of the protocol in Python.

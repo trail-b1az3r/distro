@@ -1,7 +1,0 @@
-#!/usr/bin/env python3
-"""nexora-msg: the window, or with a command (sync, import, search, chats, devices) the command line."""
-import sys
-
-from nexora_msg.__main__ import main
-
-sys.exit(main())

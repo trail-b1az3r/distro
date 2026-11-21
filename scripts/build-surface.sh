@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the [nexora-surface] pacman repository's packages: Nexora's Surface support, built entirely from the
+# Builds the [frontline-surface] pacman repository's packages: Frontline's Surface support, built entirely from the
 # distribution's own sources instead of linux-surface's package server.
 #
 #   linux-surface, linux-surface-headers   the kernel, from the fork's pkg/arch/kernel (trail-b1az3r/linux-surface)

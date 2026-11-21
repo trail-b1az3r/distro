@@ -1,4 +1,4 @@
-# Publishes the AUR packages in aur/ (nexora-msg, nexora-rdp-express). Each is built and checked with makepkg in a clean Arch container
+# Publishes the AUR packages in aur/ (frontline-msg, frontline-rdp-express). Each is built and checked with makepkg in a clean Arch container
 # first; then its PKGBUILD and .SRCINFO are pushed to aur.archlinux.org.
 #
 # Needs the AUR_SSH_PRIVATE_KEY secret: the private half of an SSH key added to your AUR account
@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [nexora-msg, nexora-rdp-express]
+        package: [frontline-msg, frontline-rdp-express]
     steps:
       - name: Tools
         run: pacman -Syu --noconfirm --needed git openssh

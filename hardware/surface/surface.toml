@@ -2,7 +2,7 @@
 # linux-surface (https://github.com/trail-b1az3r/linux-surface): the kernel from
 # its pkg/arch/kernel, surface-contrib from its contrib/, and iptsd and
 # libwacom-surface, all built by .github/workflows/surface.yml
-# (scripts/build-surface.sh) into the [nexora-surface] repository. Nothing
+# (scripts/build-surface.sh) into the [frontline-surface] repository. Nothing
 # comes from linux-surface's own package server.
 #
 # Nothing here is installed unless the user enables the Surface kernel in the
@@ -10,16 +10,17 @@
 # `<cli> surface enable`.
 
 [repository]
-name = "nexora-surface"
-server = "https://github.com/trail-b1az3r/distro/releases/download/nexora-surface"
+name = "frontline-surface"
+server = "https://github.com/trail-b1az3r/distro/releases/download/frontline-surface"
 # Like the distribution's own repository, served over HTTPS from its GitHub
 # releases, unsigned (docs/packaging.md).
 siglevel = "Optional TrustAll"
 # The repository the distribution used before; removed from pacman.conf when
-# Surface support is enabled, so its packages are replaced by these.
-replaces = ["linux-surface"]
+# Surface support is enabled, so its packages are replaced by these ([nexora-surface]: the name before the
+# distribution became Frontline).
+replaces = ["linux-surface", "nexora-surface"]
 
-# What [nexora-surface] is built from. Bump commit to take a newer fork.
+# What [frontline-surface] is built from. Bump commit to take a newer fork.
 [fork]
 url = "https://github.com/trail-b1az3r/linux-surface"
 commit = "6e5f9f95272c76faad61468e291f7a36e116e357"

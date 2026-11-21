@@ -22,7 +22,7 @@ import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-UNIT = "nexora-logout"
+UNIT = "frontline-logout"
 GRAPHICAL = {"wayland", "x11", "mir"}
 
 

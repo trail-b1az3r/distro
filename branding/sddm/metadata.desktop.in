@@ -1,13 +1,14 @@
+; @DISTRO_PRETTY_NAME@ login screen, based on SilentSDDM (https://github.com/uiriansan/SilentSDDM).
 [SddmGreeterTheme]
 Name=@DISTRO_PRETTY_NAME@
-Description=@DISTRO_NAME@ login screen
-Author=@DISTRO_NAME@ contributors
+Description=@DISTRO_NAME@ login screen (based on SilentSDDM by uiriansan)
+Author=@DISTRO_NAME@ contributors, uiriansan (SilentSDDM)
 License=GPL-3.0-or-later
 Type=sddm-theme
-Version=1.0
+Version=1.5.0
 Website=@DISTRO_HOME_URL@
 MainScript=Main.qml
-ConfigFile=theme.conf
+ConfigFile=configs/theme.conf
 Theme-Id=@DISTRO_ID@
 Theme-API=2.0
 QtVersion=6

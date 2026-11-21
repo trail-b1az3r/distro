@@ -1,3 +1,3 @@
-"""nmx: a network manager for Nexora. nmxd keeps the network up; nmxcli and nmxtui control it."""
+"""nmx: a network manager for Frontline. nmxd keeps the network up; nmxcli and nmxtui control it."""
 
 __version__ = "1.1.0"

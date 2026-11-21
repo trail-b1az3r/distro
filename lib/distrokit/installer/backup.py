@@ -250,7 +250,7 @@ def _export_previous_system(target_disk: str, base: Path, manifest: Path, log, *
         and node.get("type") in ("part", "crypt")
         and node.get("fstype") in ("ext4", "btrfs", "xfs")
     ]
-    temp_root = Path(tempfile.mkdtemp(prefix="nexora-inspect-", dir="/run"))
+    temp_root = Path(tempfile.mkdtemp(prefix="frontline-inspect-", dir="/run"))
     mounted: list[Path] = []
     found = False
     try:
@@ -264,7 +264,7 @@ def _export_previous_system(target_disk: str, base: Path, manifest: Path, log, *
             if proc.returncode:
                 continue
             mounted.append(mountpoint)
-            # Nexora and many Arch installations keep the actual root in a
+            # Frontline and many Arch installations keep the actual root in a
             # Btrfs subvolume (commonly @) beneath the top-level mount.
             root_candidates = [mountpoint, *(mountpoint / name for name in ("@", "@root", "root", "rootfs"))]
             previous_root = next((candidate for candidate in root_candidates

@@ -4,7 +4,7 @@ Every profile has **Git, Fish, yay, OpenSSH, curl, wget, jq, zip/unzip,
 p7zip, tar, rsync, htop/btop** and `base-devel` (GCC, make, binutils,
 fakeroot, …).
 
-| Feature (installer / `nexora install`) | Packages |
+| Feature (installer / `frontline install`) | Packages |
 |---|---|
 | Developer utilities (`dev`, Standard and up) | Python, pip, uv, Node.js, npm, GitHub CLI, git-lfs, ripgrep, fd, bat, eza, fzf, zoxide, tmux, direnv, starship |
 | Compilers and debuggers (`compilers`, Developer and up) | GCC, Clang/LLVM, lld, LLDB, GDB, Valgrind, strace, ltrace, perf, make, CMake, Meson, Ninja, Autotools, pkgconf, Rust (rustup-free `rust`), pipx, virtualenv, ShellCheck, kernel headers |
@@ -13,7 +13,7 @@ fakeroot, …).
 | Claude Code (`claude-code`) | see [ai.md](ai.md#claude-code) |
 
 ```bash
-nexora install compilers editor podman
+frontline install compilers editor podman
 ```
 
 ## Editors and licences
@@ -27,7 +27,7 @@ it from the AUR with yay during or after installation, never from the ISO.
 ## Fish
 
 Terminals open Fish with the dots' configuration and the distribution's
-defaults (`/usr/share/fish/vendor_conf.d/nexora.fish`):
+defaults (`/usr/share/fish/vendor_conf.d/frontline.fish`):
 
 * abbreviations: `up` (update), `doctor`, `gpu`, `hw`, `pacs`/`pacr` (search/remove), `g`/`gs`/`gc`…
 * `ls`/`ll`/`la`/`lt` through eza when installed,

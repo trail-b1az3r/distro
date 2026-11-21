@@ -65,6 +65,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 
 [[package]]
+name = "frontline-msg-core"
+version = "1.0.0"
+dependencies = [
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha1_smol",
+ "tempfile",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -127,17 +138,6 @@ name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
-
-[[package]]
-name = "nexora-msg-core"
-version = "1.0.0"
-dependencies = [
- "rusqlite",
- "serde",
- "serde_json",
- "sha1_smol",
- "tempfile",
-]
 
 [[package]]
 name = "once_cell"

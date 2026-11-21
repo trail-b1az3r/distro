@@ -13,16 +13,17 @@ terminal-top: "10%"
 terminal-width: "80%"
 terminal-height: "80%"
 
+# The logo mark: a drawn sheet with its peak, so it gets room to be seen.
 + image {
-    top = 7%
-    left = 50%-48
-    width = 96
-    height = 96
+    top = 5%
+    left = 50%-80
+    width = 160
+    height = 160
     file = "logo.png"
 }
 
 + label {
-    top = 7%+118
+    top = 5%+170
     left = 0
     width = 100%
     align = "center"
@@ -32,7 +33,7 @@ terminal-height: "80%"
 }
 
 + label {
-    top = 7%+158
+    top = 5%+210
     left = 0
     width = 100%
     align = "center"
@@ -47,9 +48,9 @@ terminal-height: "80%"
 # twice that apart.
 + boot_menu {
     left = 30%
-    top = 7%+206
+    top = 5%+258
     width = 40%
-    height = 80%-206
+    height = 82%-258
     item_font = "DejaVu Sans Regular 20"
     item_color = "@BRAND_MUTED@"
     selected_item_font = "DejaVu Sans Bold 20"

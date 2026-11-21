@@ -6,9 +6,9 @@
 
 bool RustBackend::request(const QJsonObject &request, QJsonValue *result)
 {
-    QString program = qEnvironmentVariable("NEXORA_WRITE_BACKEND");
+    QString program = qEnvironmentVariable("FRONTLINE_WRITE_BACKEND");
     if (program.isEmpty())
-        program = QString::fromUtf8(HELPER_DIR) + QStringLiteral("/nexora-write-backend");
+        program = QString::fromUtf8(HELPER_DIR) + QStringLiteral("/frontline-write-backend");
     if (!QFileInfo(program).isExecutable())
         return false;
 

@@ -29,33 +29,33 @@ to a chord.
 
 1. upstream's defaults (`~/.config/hypr/hyprland/`),
 2. the Halcyon layer (`hyprland/halcyon/`),
-3. the distribution layer (`~/.config/hypr/nexora/init.lua`): driver
-   environment from `/etc/nexora/gpu.env`, your AI environment, `~/.local/bin`
+3. the distribution layer (`~/.config/hypr/frontline/init.lua`): driver
+   environment from `/etc/frontline/gpu.env`, your AI environment, `~/.local/bin`
    on `PATH`, sharp XWayland on HiDPI, first-login setup, the three shortcuts,
 4. **your files in `~/.config/hypr/custom/`** — they win, and nothing ever
    overwrites them. The installer writes your keyboard layout, display scales
    and default applications there (`general.lua`, `variables.lua`); edit
    them freely.
 
-Updates (`nexora update`, the updater) refresh everything else. A file you
+Updates (`frontline update`, the updater) refresh everything else. A file you
 changed outside `custom/` is backed up before it is replaced
-(`~/.local/state/nexora/desktop-backups/<date>/`).
-`nexora reset-desktop` restores the defaults after backing up yours.
+(`~/.local/state/frontline/desktop-backups/<date>/`).
+`frontline reset-desktop` restores the defaults after backing up yours.
 
 ## Default applications
 
-Alacritty (terminal; Konsole stays installed), Nexora Write (MDXL documents, notes and books, and EPUB reading; see `apps/write`), Dolphin (files), OyNIx (the default browser; Firefox and others are used if it is not installed), Nexora Code (the code editor: VSCodium with Nexora's themes, following Halcyon's colours; signed in to GitHub through the GitHub CLI: after `gh auth login`, git in it pushes and pulls with that login and commits carry your GitHub name and email unless your git config sets its own; `packages/pkgbuild/nexora-code`), Okular
+Alacritty (terminal; Konsole stays installed), Frontline Write (MDXL documents, notes and books, and EPUB reading; see `apps/write`), Dolphin (files), OyNIx (the default browser; Firefox and others are used if it is not installed), Frontline Code (the code editor: VSCodium with Frontline's themes, following Halcyon's colours; signed in to GitHub through the GitHub CLI: after `gh auth login`, git in it pushes and pulls with that login and commits carry your GitHub name and email unless your git config sets its own; `packages/pkgbuild/frontline-code`), Okular
 (PDF), Gwenview (images), Haruna/mpv (media), Ark (archives), OnlyOffice
 (documents), Kate (text), and the code editor from `CODE_EDITOR` in
 `distro.conf` (Code - OSS by default). Change them in
 `~/.config/hypr/custom/variables.lua` (keybinds) and with the usual
 `xdg-mime` / *Default Applications* settings.
 
-### Dots and Nexora app unification
+### Dots and Frontline app unification
 
-On installation, Nexora compares the desktop's app roles with the packages selected for the system. It writes
+On installation, Frontline compares the desktop's app roles with the packages selected for the system. It writes
 launch-first-available commands for the apps that are actually installed: terminal, file manager, browser, office
-office suite, text editor, volume mixer and task manager. Terminal-only tools such as Yazi, Micro, btop and htop are wrapped in the detected terminal rather than launched as bare GUI commands. When one preferred app is absent, the next installed Nexora app
+office suite, text editor, volume mixer and task manager. Terminal-only tools such as Yazi, Micro, btop and htop are wrapped in the detected terminal rather than launched as bare GUI commands. When one preferred app is absent, the next installed Frontline app
 is used; if no candidate is installed, that role is left to the dots' own cross-distro fallback list. The resolver
 does not install duplicate applications or overwrite an existing user-owned `custom/` configuration. The editor
 selected by `CODE_EDITOR` remains the authoritative code editor.
@@ -70,7 +70,7 @@ XWayland). Choose the session at the bottom left of the login screen.
 ## Shells
 
 Terminals open Fish, configured by the dots plus the distribution's defaults
-(`/usr/share/fish/vendor_conf.d/nexora.fish`): abbreviations (`up` → update,
+(`/usr/share/fish/vendor_conf.d/frontline.fish`): abbreviations (`up` → update,
 `doctor`, `gpu`, `hw`…), `sysinfo`, zoxide, fzf and direnv integration. Bash
 remains the login shell unless you chose Fish in the installer, so scripts and
 `sudo -i` behave as on any Arch system.

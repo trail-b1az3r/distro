@@ -1,13 +1,13 @@
 [package]
-name = "nexora-msg-core"
+name = "frontline-msg-core"
 version = "1.0.0"
 edition = "2021"
-description = "nexora-msg's message store: iPhone backups (sms.db, AddressBook) imported, messages kept, searched"
+description = "frontline-msg's message store: iPhone backups (sms.db, AddressBook) imported, messages kept, searched"
 license = "MIT"
 publish = false
 
 [[bin]]
-name = "nexora-msg-core"
+name = "frontline-msg-core"
 path = "src/main.rs"
 
 [dependencies]

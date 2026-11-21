@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Update ONLY Nexora's experimental updater implementation from the newest
+# Update ONLY Frontline's experimental updater implementation from the newest
 # published ISO. The experimental updater (distrokit.experiments) ships in
-# nexora-core; no reinstall, partitioning, or full system upgrade is performed.
+# frontline-core; no reinstall, partitioning, or full system upgrade is performed.
 set -Eeuo pipefail
 
 REPO="trail-b1az3r/distro"
@@ -29,16 +29,16 @@ command -v vercmp >/dev/null || die "vercmp is required (provided by pacman)."
 
 [[ -r /etc/os-release ]] || die "Cannot identify this system."
 . /etc/os-release
-[[ "${ID:-}" == "nexora" ]] || die "This script is specifically for an installed Nexora system."
+[[ "${ID:-}" == "frontline" ]] || die "This script is specifically for an installed Frontline system."
 
-installed_version="$(pacman -Q nexora-core 2>/dev/null | awk '{print $2}')"
-[[ -n "$installed_version" ]] || die "nexora-core is not installed."
+installed_version="$(pacman -Q frontline-core 2>/dev/null | awk '{print $2}')"
+[[ -n "$installed_version" ]] || die "frontline-core is not installed."
 
-WORKDIR="$(mktemp -d "${TMPDIR:-/tmp}/nexora-experimental-updater.XXXXXX")"
+WORKDIR="$(mktemp -d "${TMPDIR:-/tmp}/frontline-experimental-updater.XXXXXX")"
 MOUNTPOINT="$WORKDIR/iso"
 mkdir -p "$MOUNTPOINT"
 
-log "Finding the latest published Nexora ISO"
+log "Finding the latest published Frontline ISO"
 curl --fail --location --silent --show-error \
   "https://api.github.com/repos/$REPO/releases/latest" -o "$WORKDIR/release.json"
 
@@ -68,14 +68,14 @@ sudo mount -o loop,ro "$WORKDIR/$iso_name" "$MOUNTPOINT"
 mapfile -t squashfs_files < <(find "$MOUNTPOINT" -type f \( -name 'airootfs.sfs' -o -name '*.squashfs' \))
 (("${#squashfs_files[@]}" > 0)) || die "No live-root SquashFS image was found inside the ISO."
 
-package="$WORKDIR/nexora-core.pkg.tar.zst"
+package="$WORKDIR/frontline-core.pkg.tar.zst"
 found=0
 for squashfs in "${squashfs_files[@]}"; do
   # The ISO's offline package repository is embedded in the live root at
-  # /var/cache/nexora/repo. Stream only nexora-core out; do not unpack the
+  # /var/cache/frontline/repo. Stream only frontline-core out; do not unpack the
   # multi-gigabyte live filesystem onto the installed machine.
   internal_path="$(unsquashfs -ll "$squashfs" 2>/dev/null |
-    sed -nE 's#^.*squashfs-root/(var/cache/nexora/repo/nexora-core-[^/]+\.pkg\.tar\.(zst|xz|gz))$#\1#p' |
+    sed -nE 's#^.*squashfs-root/(var/cache/frontline/repo/frontline-core-[^/]+\.pkg\.tar\.(zst|xz|gz))$#\1#p' |
     head -n1)"
   if [[ -n "$internal_path" ]]; then
     unsquashfs -cat "$squashfs" "$internal_path" > "$package"
@@ -83,28 +83,28 @@ for squashfs in "${squashfs_files[@]}"; do
     break
   fi
 done
-(( found == 1 )) || die "The ISO does not carry nexora-core in /var/cache/nexora/repo. Use a release built with the offline Nexora repository."
+(( found == 1 )) || die "The ISO does not carry frontline-core in /var/cache/frontline/repo. Use a release built with the offline Frontline repository."
 
 package_name="$(pacman -Qp "$package" | awk '{print $1}')"
 package_version="$(pacman -Qp "$package" | awk '{print $2}')"
-[[ "$package_name" == "nexora-core" ]] || die "Extracted package is $package_name, not nexora-core."
+[[ "$package_name" == "frontline-core" ]] || die "Extracted package is $package_name, not frontline-core."
 [[ -n "$package_version" ]] || die "Could not read the package version."
 
 if (( $(vercmp "$package_version" "$installed_version") <= 0 )); then
   printf '\nInstalled experimental updater core: %s\nISO experimental updater core:       %s\n' "$installed_version" "$package_version"
-  die "The ISO does not contain a newer nexora-core package. No changes were made."
+  die "The ISO does not contain a newer frontline-core package. No changes were made."
 fi
 
 printf '\nLatest ISO release: %s\n' "$tag"
-printf 'Installed nexora-core: %s\n' "$installed_version"
-printf 'ISO nexora-core:       %s\n' "$package_version"
-printf '\nThis updates ONLY nexora-core, which contains the nexora experiments experimental updater logic.\n'
-printf 'It does not reinstall Nexora, update other packages, change repositories, or touch user files.\n'
+printf 'Installed frontline-core: %s\n' "$installed_version"
+printf 'ISO frontline-core:       %s\n' "$package_version"
+printf '\nThis updates ONLY frontline-core, which contains the frontline experiments experimental updater logic.\n'
+printf 'It does not reinstall Frontline, update other packages, change repositories, or touch user files.\n'
 read -r -p "Install the newer experimental updater now? [y/N] " answer
 [[ "$answer" =~ ^[Yy]$ ]] || { log "Cancelled; nothing was installed."; exit 0; }
 
 log "Installing the newer experimental updater core"
 sudo pacman -U -- "$package"
 
-log "Experimental updater updated to nexora-core $package_version"
-printf 'You can now run: sudo nexora experiments status\n'
+log "Experimental updater updated to frontline-core $package_version"
+printf 'You can now run: sudo frontline experiments status\n'

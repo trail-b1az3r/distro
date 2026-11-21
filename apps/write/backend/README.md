@@ -1,4 +1,4 @@
-# Nexora Write Rust backend
+# Frontline Write Rust backend
 
 The Qt Quick frontend remains responsible for rendering and interaction. This
 process owns application operations and communicates over newline-delimited

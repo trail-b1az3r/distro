@@ -1,5 +1,5 @@
-//! nexora-msg-core: nexora-msg's store. Run as a service (`serve STORE`: one JSON request per line on stdin, one
-//! JSON reply per line on stdout), or once (`nexora-msg-core STORE OP [JSON]`).
+//! frontline-msg-core: frontline-msg's store. Run as a service (`serve STORE`: one JSON request per line on stdin, one
+//! JSON reply per line on stdout), or once (`frontline-msg-core STORE OP [JSON]`).
 
 mod backup;
 mod store;
@@ -73,7 +73,7 @@ fn reply(store: &Store, path: &str, req: &Value) -> Value {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 3 {
-        eprintln!("usage: nexora-msg-core serve STORE | nexora-msg-core STORE OP [JSON]");
+        eprintln!("usage: frontline-msg-core serve STORE | frontline-msg-core STORE OP [JSON]");
         std::process::exit(2);
     }
     if args[1] == "serve" {
@@ -81,7 +81,7 @@ fn main() {
         let store = match Store::open(path) {
             Ok(s) => s,
             Err(err) => {
-                eprintln!("nexora-msg-core: {path}: {err}");
+                eprintln!("frontline-msg-core: {path}: {err}");
                 std::process::exit(1);
             }
         };
@@ -103,7 +103,7 @@ fn main() {
     }
     let path = &args[1];
     let store = Store::open(path).unwrap_or_else(|err| {
-        eprintln!("nexora-msg-core: {path}: {err}");
+        eprintln!("frontline-msg-core: {path}: {err}");
         std::process::exit(1)
     });
     let mut req: Value = args.get(3).map(|s| serde_json::from_str(s).unwrap_or(json!({}))).unwrap_or(json!({}));

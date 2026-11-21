@@ -43,10 +43,17 @@ out="$(resolve_path "$out_arg")"
 repo="${3:-}"
 
 stage="validate inputs"
-if [[ -z "$repo" ]]; then
-    # shellcheck disable=SC1091
-    . "$repo_root/distro.conf"
+# shellcheck disable=SC1091
+. "$repo_root/distro.conf"
+legacy=()
+if [[ -z "$repo" || "$repo" == "$DISTRO_REPO_NAME" ]]; then
     repo="$DISTRO_REPO_NAME"
+    # The distribution's former names (DISTRO_LEGACY_IDS): systems installed under one still have [<old>] in
+    # pacman.conf, so the same database is published under that name too. Their first upgrade from it brings the
+    # renamed packages, whose hook renames the section (lib/distrokit/system/legacy.py).
+    for old in ${DISTRO_LEGACY_IDS:-}; do
+        [[ "$old" != "$repo" && "$old" =~ ^[a-z0-9-]+$ ]] && legacy+=("$old")
+    done
 fi
 [[ "$repo" =~ ^[A-Za-z0-9._-]+$ ]] || fail "invalid repository name: $repo"
 [[ -d "$src" ]] || fail "package input directory does not exist: $src"
@@ -109,6 +116,18 @@ for kind in db files; do
     else
         printf 'publish-repo.sh: warning: repo-add did not emit optional file-list database %s; continuing\n' "$archive" >&2
     fi
+done
+
+stage="publish legacy database names"
+for old in "${legacy[@]}"; do
+    for kind in db files; do
+        for suffix in "" .tar.gz; do
+            [[ -s "$out/$repo.$kind$suffix" ]] || continue
+            cp -f -- "$out/$repo.$kind$suffix" "$out/$old.$kind$suffix"
+            [[ -f "$out/$repo.$kind$suffix.sig" ]] && cp -f -- "$out/$repo.$kind$suffix.sig" "$out/$old.$kind$suffix.sig"
+        done
+    done
+    printf 'Also published as [%s] (a former name of the distribution)\n' "$old"
 done
 
 stage="count published files"

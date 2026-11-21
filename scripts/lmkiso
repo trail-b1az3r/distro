@@ -3,7 +3,7 @@ set -euo pipefail
 
 VERSION=1.0.0
 ROOT="$(git -c safe.directory='*' rev-parse --show-toplevel 2>/dev/null || pwd)"
-[[ -f "$ROOT/build.sh" ]] || { echo "lmkiso: run inside a Nexora distro source checkout" >&2; exit 2; }
+[[ -f "$ROOT/build.sh" ]] || { echo "lmkiso: run inside a Frontline distro source checkout" >&2; exit 2; }
 cd "$ROOT"
 original_args=("$@")
 
@@ -102,7 +102,7 @@ while (($#)); do
       remote_branch="$(git -c safe.directory='*' rev-parse --abbrev-ref HEAD 2>/dev/null || printf main)"
       [[ -n "$remote_branch" && "$remote_branch" != HEAD ]] || remote_branch=main
       remote_script="https://raw.githubusercontent.com/trail-b1az3r/distro/$remote_branch/scripts/lmkiso"
-      printf 'git clone --recursive --branch %q https://github.com/trail-b1az3r/distro.git nexora-distro && cd nexora-distro && curl -fsSL %q | sudo bash -s --' "$remote_branch" "$remote_script"
+      printf 'git clone --recursive --branch %q https://github.com/trail-b1az3r/distro.git frontline-distro && cd frontline-distro && curl -fsSL %q | sudo bash -s --' "$remote_branch" "$remote_script"
       has_container=0
       for x in "${original_args[@]}"; do
         [[ "$x" == "-ocl" ]] && continue

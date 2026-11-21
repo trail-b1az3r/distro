@@ -7,7 +7,7 @@ memory it needs, and the free space.
 ## Recommendations
 
 ```bash
-nexora model recommend
+frontline model recommend
 ```
 
 The recommendation comes from your GPU's memory (VRAM, or shared memory on
@@ -56,11 +56,11 @@ In the installer's *Model* page, the Welcome wizard, or the AI launcher's
 *Models* tab — or:
 
 ```bash
-nexora model list                        # the catalogue, with what fits
-nexora model install qwen3-8b            # download (resumable), verify, register
-nexora model default qwen3-8b
-nexora model installed
-nexora model remove qwen3-8b
+frontline model list                        # the catalogue, with what fits
+frontline model install qwen3-8b            # download (resumable), verify, register
+frontline model default qwen3-8b
+frontline model installed
+frontline model remove qwen3-8b
 ```
 
 In the installer you can choose to download **now** (while installing) or
@@ -72,11 +72,11 @@ are online; the Welcome wizard shows progress).
 Any GGUF model can be added:
 
 ```bash
-nexora model add --hf unsloth/Qwen3-14B-GGUF --file Qwen3-14B-Q4_K_M.gguf   # Hugging Face repo + file
-nexora model add --url https://example.org/model.gguf                        # direct https link
-nexora model add --path ~/Downloads/model.gguf                               # a local file (used in place)
-nexora model add --hypernix qwen3-8b                                         # a HyperNix model id
-nexora model add ... --name "My model" --context 32768 --default
+frontline model add --hf unsloth/Qwen3-14B-GGUF --file Qwen3-14B-Q4_K_M.gguf   # Hugging Face repo + file
+frontline model add --url https://example.org/model.gguf                        # direct https link
+frontline model add --path ~/Downloads/model.gguf                               # a local file (used in place)
+frontline model add --hypernix qwen3-8b                                         # a HyperNix model id
+frontline model add ... --name "My model" --context 32768 --default
 ```
 
 For Hugging Face, omit `--file` in the model manager to list the repository's
@@ -87,18 +87,18 @@ after the reboot.
 ## Serving
 
 ```bash
-nexora model serve          # start the local server (user service nexora-llm.service)
-nexora model serve --stop
-nexora model serve --status
+frontline model serve          # start the local server (user service frontline-llm.service)
+frontline model serve --stop
+frontline model serve --status
 ```
 
 The server listens on `http://127.0.0.1:8081` (OpenAI-compatible API under
 `/v1`), uses the GPU when the llama.cpp build supports it, and is not started
-at boot unless you enable it: `systemctl --user enable --now nexora-llm`.
+at boot unless you enable it: `systemctl --user enable --now frontline-llm`.
 
 llama.cpp builds: `llama.cpp-vulkan` (any GPU) is the default and `llama.cpp`
 the CPU-only build. The AUR carries them as `llama.cpp-vulkan-git` and
 `llama.cpp-git`, which the distribution repository prebuilds; they provide the
 plain names, so either is recognised. `llama.cpp-cuda` and `llama.cpp-hip` are
-faster on NVIDIA/AMD but are long builds: `nexora ai runtime --backend cuda`.
+faster on NVIDIA/AMD but are long builds: `frontline ai runtime --backend cuda`.
 Settings (port, context) are in [`ai/runtime/llama-server.toml`](../ai/runtime/llama-server.toml).

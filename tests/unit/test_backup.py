@@ -7,7 +7,7 @@ from distrokit.installer.disks import DiskPlan, Volume
 
 def test_copy_image_returns_sha256_and_rejects_short_reads(tmp_path):
     source = tmp_path / "source.img"
-    source.write_bytes(b"nexora rollback image")
+    source.write_bytes(b"frontline rollback image")
     destination = tmp_path / "snapshot.img"
 
     digest = backup._copy_image(str(source), destination, source.stat().st_size, lambda _line: None)

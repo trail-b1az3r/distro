@@ -63,7 +63,7 @@ def _ensure_server() -> None:
         time.sleep(0.25)
     raise AutocorrectError(
         "The local model server did not start. Install a GGUF model and make it the default "
-        "with nexora model default MODEL, then try again."
+        "with frontline model default MODEL, then try again."
     )
 
 
@@ -104,7 +104,7 @@ def correct_text(text: str, timeout: float = 20.0) -> str:
     except (OSError, urllib.error.URLError, KeyError, IndexError, TypeError, ValueError) as exc:
         raise AutocorrectError(
             "The local AI model is unavailable. Install and select a local GGUF model, "
-            "then start it with the Nexora AI launcher."
+            "then start it with the Frontline AI launcher."
         ) from exc
     if not isinstance(corrected, str) or not corrected.strip():
         raise AutocorrectError("The local model returned an empty correction.")

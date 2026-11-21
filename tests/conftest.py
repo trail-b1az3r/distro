@@ -25,6 +25,6 @@ def machine(tmp_path):
     def build(name: str):
         root = tmp_path / name
         hwfixtures.MACHINES[name](root)
-        return root, hardware.detect(root, live_label_prefix="NEXORA")
+        return root, hardware.detect(root, live_label_prefix="FRONTLINE")
 
     return build

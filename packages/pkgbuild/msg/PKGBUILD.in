@@ -44,23 +44,23 @@ build() {
 check() {
   cd "@DISTRO_ID@-$pkgver/apps/msg"
   (cd core && cargo test --frozen)
-  NEXORA_MSG_CORE="$PWD/core/target/release/nexora-msg-core" python -m pytest -q tests
+  FRONTLINE_MSG_CORE="$PWD/core/target/release/frontline-msg-core" python -m pytest -q tests
 }
 
 package() {
   cd "@DISTRO_ID@-$pkgver/apps/msg"
   local site
   site="$(python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')"
-  install -Dm755 core/target/release/nexora-msg-core "$pkgdir/usr/bin/nexora-msg-core"
-  install -d "$pkgdir$site/nexora_msg/qml/icons"
-  install -m644 nexora_msg/*.py "$pkgdir$site/nexora_msg/"
-  install -m644 nexora_msg/qml/*.qml "$pkgdir$site/nexora_msg/qml/"
-  install -m644 nexora_msg/qml/icons/*.svg "$pkgdir$site/nexora_msg/qml/icons/"
-  python -m compileall -q -d "$site/nexora_msg" "$pkgdir$site/nexora_msg"
-  install -Dm755 bin/nexora-msg "$pkgdir/usr/bin/@DISTRO_ID@-msg"
-  install -Dm644 data/nexora-msg.desktop "$pkgdir/usr/share/applications/@DISTRO_ID@-msg.desktop"
-  sed -i "s/^Exec=nexora-msg/Exec=@DISTRO_ID@-msg/; s/^Icon=nexora-msg/Icon=@DISTRO_ID@-msg/" \
+  install -Dm755 core/target/release/frontline-msg-core "$pkgdir/usr/bin/frontline-msg-core"
+  install -d "$pkgdir$site/frontline_msg/qml/icons"
+  install -m644 frontline_msg/*.py "$pkgdir$site/frontline_msg/"
+  install -m644 frontline_msg/qml/*.qml "$pkgdir$site/frontline_msg/qml/"
+  install -m644 frontline_msg/qml/icons/*.svg "$pkgdir$site/frontline_msg/qml/icons/"
+  python -m compileall -q -d "$site/frontline_msg" "$pkgdir$site/frontline_msg"
+  install -Dm755 bin/frontline-msg "$pkgdir/usr/bin/@DISTRO_ID@-msg"
+  install -Dm644 data/frontline-msg.desktop "$pkgdir/usr/share/applications/@DISTRO_ID@-msg.desktop"
+  sed -i "s/^Exec=frontline-msg/Exec=@DISTRO_ID@-msg/; s/^Icon=frontline-msg/Icon=@DISTRO_ID@-msg/" \
     "$pkgdir/usr/share/applications/@DISTRO_ID@-msg.desktop"
-  install -Dm644 data/nexora-msg.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/@DISTRO_ID@-msg.svg"
+  install -Dm644 data/frontline-msg.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/@DISTRO_ID@-msg.svg"
   install -Dm644 README.md "$pkgdir/usr/share/doc/@DISTRO_ID@-msg/README.md"
 }

@@ -68,7 +68,7 @@ def test_assemble_profile(tmp_path, releng):
     opts = iso.Options(profile="ai", offline="full", build=tmp_path / "build", releng=releng)
     offline = opts.offline_repo
     offline.mkdir(parents=True)
-    (offline / "nexora-core-1-1-any.pkg.tar.zst").write_bytes(b"pkg")
+    (offline / "frontline-core-1-1-any.pkg.tar.zst").write_bytes(b"pkg")
     prof = iso.assemble(opts, b, epoch=1790393700)
     air = prof / "airootfs"
 
@@ -129,7 +129,7 @@ def test_assemble_profile(tmp_path, releng):
     assert f"[{b.repo_name}-offline]" in live and f"file:///var/cache/{b.id}/repo" in live
     assert (air / f"etc/{b.id}/pacman-offline.conf").read_text() == pacmanconf.render(
         "offline", b, offline_repo=f"/var/cache/{b.id}/repo")
-    assert (air / f"var/cache/{b.id}/repo/nexora-core-1-1-any.pkg.tar.zst").read_bytes() == b"pkg"
+    assert (air / f"var/cache/{b.id}/repo/frontline-core-1-1-any.pkg.tar.zst").read_bytes() == b"pkg"
 
     info = json.loads((air / f"etc/{b.id}/iso-build.json").read_text())
     assert info["profile"] == "ai" and info["offline"] == "full" and info["version"] == f"26.09.{b['ISO_RELEASE']}" and info["codename"] == b["ISO_CODENAME"]
@@ -195,11 +195,11 @@ def test_nano_uses_only_lxqt_and_mate_live_desktops(tmp_path, releng):
     assert (systemd / "network-online.target.wants" / "NetworkManager-wait-online.service").is_symlink()
     assert (systemd / "dbus-org.freedesktop.NetworkManager.service").is_symlink()
     assert (air / f"etc/{b.id}/nano").is_file()
-    sddm = (air / "etc/sddm.conf.d/10-nexora-nano.conf").read_text()
+    sddm = (air / "etc/sddm.conf.d/10-frontline-nano.conf").read_text()
     assert f"User={b['LIVE_USER']}" in sddm
     assert "Session=lxqt.desktop" in sddm
-    assert "SessionDir=/etc/nexora/xsessions" in sddm
-    assert "WaylandSessionDir=/etc/nexora/wayland-sessions" in sddm
+    assert "SessionDir=/etc/frontline/xsessions" in sddm
+    assert "WaylandSessionDir=/etc/frontline/wayland-sessions" in sddm
     live_setup = (air / f"usr/lib/{b.id}/bin/{b.id}-live-setup").read_text()
     assert f"/etc/{b.id}/nano" in live_setup
     assert 'for session in lxqt mate' in live_setup
@@ -264,35 +264,35 @@ def test_nano_offline_repository_keeps_only_live_and_profile_dependencies(tmp_pa
                        build=tmp_path / "build")
     opts.repo.mkdir(parents=True)
     names = [
-        "nexora-installer-1-1-any.pkg.tar.zst",
-        "nexora-core-1-1-any.pkg.tar.zst",
-        "nexora-desktop-1-1-any.pkg.tar.zst",
+        "frontline-installer-1-1-any.pkg.tar.zst",
+        "frontline-core-1-1-any.pkg.tar.zst",
+        "frontline-desktop-1-1-any.pkg.tar.zst",
         "illogical-shell-1-1-any.pkg.tar.zst",
         "required-dep-1-1-any.pkg.tar.zst",
-        "nexora-ai-1-1-any.pkg.tar.zst",
+        "frontline-ai-1-1-any.pkg.tar.zst",
         "llama.cpp-vulkan-1-1-x86_64.pkg.tar.zst",
     ]
     for name in names:
         (opts.repo / name).write_bytes(b"pkg")
 
     metadata = {
-        names[0]: ("nexora-installer", ["nexora-core"]),
-        names[1]: ("nexora-core", []),
-        names[2]: ("nexora-desktop", ["illogical-shell"]),
+        names[0]: ("frontline-installer", ["frontline-core"]),
+        names[1]: ("frontline-core", []),
+        names[2]: ("frontline-desktop", ["illogical-shell"]),
         names[3]: ("illogical-shell", ["required-dep"]),
         names[4]: ("required-dep", []),
-        names[5]: ("nexora-ai", []),
+        names[5]: ("frontline-ai", []),
         names[6]: ("llama.cpp-vulkan", []),
     }
     monkeypatch.setattr(iso, "package_metadata", lambda path: metadata[path.name])
-    monkeypatch.setattr(iso, "live_packages", lambda _b, _edition: ["nexora-installer"])
+    monkeypatch.setattr(iso, "live_packages", lambda _b, _edition: ["frontline-installer"])
     monkeypatch.setattr(iso, "select_packages",
-                        lambda _profile, branding=None: SimpleNamespace(packages=["nexora-desktop"]))
+                        lambda _profile, branding=None: SimpleNamespace(packages=["frontline-desktop"]))
 
     out = iso.offline_repository(opts, b, iso.util.Runner(dry_run=True), tmp_path / "pacman.conf")
     included = {p.name for p in out.glob("*.pkg.tar.*")}
     assert included == set(names[:5])
-    assert "nexora-ai-1-1-any.pkg.tar.zst" not in included
+    assert "frontline-ai-1-1-any.pkg.tar.zst" not in included
     assert "llama.cpp-vulkan-1-1-x86_64.pkg.tar.zst" not in included
 
 

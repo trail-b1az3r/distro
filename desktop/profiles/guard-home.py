@@ -38,7 +38,7 @@ GUARDED = {
                 "dolphinrc", "xsettingsd", "swappy", "satty", "swaylock", "ags", "eww", "quickshell", "matugen",
                 "wal", "wallust", "swww", "waypaper", "hyprpanel", "nvim", "environment.d", "systemd", "uwsm",
                 "xdg-desktop-portal", "mimeapps.list", "menus", "dconf", "ml4w", "ml4w-hyprland-settings", "hyde",
-                "sekaipop", "illogical-impulse", "halcyon", "nexora", "Thunar", "xfce4", "electron-flags.conf",
+                "sekaipop", "illogical-impulse", "halcyon", "frontline", "Thunar", "xfce4", "electron-flags.conf",
                 "code-flags.conf", "chrome-flags.conf", "MangoHud", "spicetify", "vesktop/themes", "zshrc",
                 "bashrc", "lsd", "eza", "yazi", "ranger", "pipewire", "wireplumber", "autostart"},
     ".local": {"bin"},

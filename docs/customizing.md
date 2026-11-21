@@ -26,9 +26,30 @@ DISTRO_REPO_SERVER="https://github.com/you/aurora/releases/download/repo"
 Then rebuild: `./build.sh`. The logo, icons, wallpapers, boot splash, GRUB,
 SDDM and syslinux themes, fastfetch logo, os-release, pacman hooks, polkit
 policy, completions, man page, the website (`site/`) and every string in the apps follow. The logo
-itself is `branding/logo/logo-mark.svg.in` (an SVG template using the
-`@BRAND_*@` colours: a faceted gem with the initial cut through it and three
-sparks); replace it with your own mark. `make test` checks that a
+itself is `branding/logo/logo-mark.svg.in`: a hand drawing of a sheet with a
+snow-capped peak, traced to vector from `branding/logo/source/frontline-sketch.png`
+by `branding/logo/source/trace-logo.py` (ink lines, pencil lines and blurred
+watercolour washes, in the drawing's own colours). Replace it with your own
+mark; `logo.svg.in` is the same mark with the name beside it. Fastfetch shows the
+mark as Braille line art (`braille_logo` in `lib/distrokit/build/branding.py`).
+
+The login screen is [SilentSDDM](https://github.com/uiriansan/SilentSDDM)
+(`branding/sddm`, see its `UPSTREAM`): `branding/sddm/configs/theme.conf.in`
+holds every option, with the `@BRAND_*@` colours; its lock screen shows the
+mark, its login screen the plain backdrop. The earlier login theme, with desktop
+previews and a system panel, is still installed as `<id>-classic`: choose it with
+`Current=<id>-classic` in `/etc/sddm.conf.d/10-<id>.conf`.
+
+## The rename from Nexora
+
+The distribution was Nexora until 26.11.0.2.1. `DISTRO_LEGACY_IDS="nexora"` in
+`distro.conf` keeps systems installed under that name updating: every
+`frontline-*` package replaces its `nexora-*` one, the package repository is
+also published as `[nexora]`, `/usr/bin/nexora` still works, and a pacman hook
+(`frontline-migrate-legacy`, `lib/distrokit/system/legacy.py`) moves the rest
+over once: pacman.conf's `[nexora...]` sections, `/etc/nexora`, `/var/lib/nexora`,
+enabled units, the login and boot themes, and each user's `nexora*` folders
+(the old paths stay as links). Nothing is deleted. `make test` checks that a
 renamed configuration renders everywhere (`test_branding_rename`).
 
 `distro.conf` is validated: IDs must be lowercase `[a-z0-9-]`, colours
@@ -41,7 +62,7 @@ renamed configuration renders everywhere (`test_branding_rename`).
 * [`profiles/features.toml`](../profiles/features.toml): the switches the
   installer shows (label, description, group, the package lists each value
   adds). Add a feature there and it appears in the installer and in
-  `nexora install`.
+  `frontline install`.
 
 ## Package lists
 

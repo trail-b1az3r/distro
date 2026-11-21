@@ -29,7 +29,7 @@ PROFILE_SHARED_APPS=(
     .config/qutebrowser .local/share/qutebrowser .cache/qutebrowser
     .config/discord .config/vesktop .config/Signal .config/Element .local/share/TelegramDesktop .config/Slack
     .config/spotify .cache/spotify .config/obsidian .config/Nextcloud .local/share/Nextcloud .config/rclone
-    .local/share/nexora-msg .local/share/kwalletd .config/kwalletrc .docker .kube .aws .config/gcloud
+    .local/share/frontline-msg .local/share/kwalletd .config/kwalletrc .docker .kube .aws .config/gcloud
 )
 
 profile_home() { printf '%s/%s\n' "$PROFILE_HOMES" "$1"; }

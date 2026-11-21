@@ -143,7 +143,8 @@ class Branding:
             "BUILD_ID": build_id or "rolling",
             "VERSION_ID": version,
             "VERSION_CODENAME": self.get("ISO_CODENAME").lower(),
-            "ANSI_COLOR": "38;2;124;108;255",
+            "ANSI_COLOR": "38;2;" + ";".join(str(int(self.get("BRAND_ACCENT", "#7C6CFF").lstrip("#")[i:i + 2], 16))
+                                             for i in (0, 2, 4)),
             "HOME_URL": self.get("DISTRO_HOME_URL"),
             "DOCUMENTATION_URL": self.get("DISTRO_DOC_URL"),
             "SUPPORT_URL": self.get("DISTRO_SUPPORT_URL"),

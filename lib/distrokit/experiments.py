@@ -2,14 +2,14 @@
 
 Two sources, both GitHub release pacman repositories:
 
-- ``nexora-experiments``: the latest successful package build of main (refreshed on every main push and nightly).
-- ``nexora-experiments-extra``: beta. The latest successful package build of a development branch: the
+- ``frontline-experiments``: the latest successful package build of main (refreshed on every main push and nightly).
+- ``frontline-experiments-extra``: beta. The latest successful package build of a development branch: the
   distribution's files before they reach main.
 
 Each component (core, nmx, hyprland-plus, …) is enabled from one of the two. Only the packages of enabled
 components are taken from them, and only when they are installed already: the sources sit after every other
 repository in pacman.conf, so `pacman -Syu` keeps preferring the stable repositories, and `<cli> update` installs
-the experimental builds by name (``pacman -S nexora-experiments/<package>``). A stable package with a higher version
+the experimental builds by name (``pacman -S frontline-experiments/<package>``). A stable package with a higher version
 replaces an experimental one by itself.
 """
 from __future__ import annotations
@@ -22,8 +22,8 @@ from pathlib import Path
 from . import pacmanconf
 from .branding import Branding, load as load_branding
 
-MAIN = "nexora-experiments"
-EXTRA = "nexora-experiments-extra"
+MAIN = "frontline-experiments"
+EXTRA = "frontline-experiments-extra"
 SOURCES = (MAIN, EXTRA)
 
 # The distribution's own split packages (<id>-<component>), then its other packages.
@@ -71,7 +71,7 @@ def _component_list(value, path: Path) -> list[str]:
 
 
 def read_config(branding: Branding | None = None) -> dict[str, list[str]]:
-    """{"components": [...], "extra": [...]}: components from nexora-experiments, and from the beta source."""
+    """{"components": [...], "extra": [...]}: components from frontline-experiments, and from the beta source."""
     path = config_path(branding)
     try:
         data = json.loads(path.read_text())
@@ -102,7 +102,7 @@ def source_of(component: str, config: dict[str, list[str]]) -> str | None:
 
 def set_enabled(action: str, requested: str, branding: Branding | None = None, *, extra: bool = False,
                 pacman_conf: Path = Path("/etc/pacman.conf")) -> list[str]:
-    """Enable or disable components. extra=True takes them from the beta source (nexora-experiments-extra)."""
+    """Enable or disable components. extra=True takes them from the beta source (frontline-experiments-extra)."""
     b = branding or load_branding()
     flag = " --extra" if extra else ""
     if os.geteuid() != 0:

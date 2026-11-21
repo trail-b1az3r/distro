@@ -83,7 +83,7 @@ class FakeWorld:
 
 def test_resolver_orders_builds_and_prefers_local_then_repo():
     local = [
-        _node("nexora", "local", depends=["python", "illogical-impulse-widgets"], names=["nexora-core", "nexora-desktop"]),
+        _node("frontline", "local", depends=["python", "illogical-impulse-widgets"], names=["frontline-core", "frontline-desktop"]),
         _node("illogical-impulse-widgets", "local", depends=["fuzzel", "songrec", "hyprland"]),
         _node("illogical-impulse-quickshell-git", "local", depends=["cpptrace", "qt6-base"], provides=["quickshell"]),
     ]
@@ -97,12 +97,12 @@ def test_resolver_orders_builds_and_prefers_local_then_repo():
             _node("visual-studio-code-bin"),
         ],
     )
-    plan = resolve(["fish", "nexora-core", "quickshell", "visual-studio-code-bin"], local, world.in_repos,
+    plan = resolve(["fish", "frontline-core", "quickshell", "visual-studio-code-bin"], local, world.in_repos,
                    world.lookup, exclude=["visual-studio-code-bin"])
-    assert set(plan.nodes) == {"nexora", "illogical-impulse-widgets", "illogical-impulse-quickshell-git",
+    assert set(plan.nodes) == {"frontline", "illogical-impulse-widgets", "illogical-impulse-quickshell-git",
                                "songrec", "libfoo-git", "cpptrace"}
     order = plan.order
-    assert order.index("libfoo-git") < order.index("songrec") < order.index("illogical-impulse-widgets") < order.index("nexora")
+    assert order.index("libfoo-git") < order.index("songrec") < order.index("illogical-impulse-widgets") < order.index("frontline")
     assert order.index("cpptrace") < order.index("illogical-impulse-quickshell-git")
     assert plan.excluded == ["visual-studio-code-bin"]
     assert plan.unresolved == {}
@@ -257,10 +257,10 @@ def test_update_boot_hook_without_config(tmp_path, capsys):
 
 
 def test_lock_pins_only_aur_packages(tmp_path):
-    local = [_node("nexora", "local", depends=["songrec"], names=["nexora-core"])]
+    local = [_node("frontline", "local", depends=["songrec"], names=["frontline-core"])]
     world = FakeWorld(repo={"rust"}, aur=[_node("songrec", makedepends=["rust", "libfoo"]),
                                           _node("libfoo-git", provides=["libfoo"])])
-    plan = resolve(["nexora-core"], local, world.in_repos, world.lookup)
+    plan = resolve(["frontline-core"], local, world.in_repos, world.lookup)
     lock = packages.write_lock(plan, tmp_path / "aur.lock.json", head=lambda base: f"c0ffee-{base}")
     assert lock["packages"] == {
         "libfoo-git": {"version": "1.0-1", "commit": "c0ffee-libfoo-git", "for": ["libfoo"]},

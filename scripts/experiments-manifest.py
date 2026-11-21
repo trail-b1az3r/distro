@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write the public packages.json of a CI pacman source (nexora-experiments, or nexora-experiments-extra: beta).
+"""Write the public packages.json of a CI pacman source (frontline-experiments, or frontline-experiments-extra: beta).
 
     experiments-manifest.py PACKAGE_DIR OUTPUT_JSON [--repo NAME] [--branch B] [--commit SHA] [--run URL]
 
@@ -53,7 +53,7 @@ def pkginfo(archive: Path) -> dict[str, str]:
     return fields
 
 
-def component(name: str, distro_id: str = "nexora") -> str:
+def component(name: str, distro_id: str = "frontline") -> str:
     """The `<cli> experiments` component a package belongs to, or "" for a dependency built alongside."""
     for own in OWN:
         if name == f"{distro_id}-{own}":

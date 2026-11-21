@@ -103,7 +103,7 @@ ColumnLayout {
         title: qsTr("Cancel installation?")
         standardButtons: Dialog.Yes | Dialog.No
         Label {
-            text: qsTr("Nexora will stop after the current operation, unmount the target, and restore the verified pre-install snapshot. Do not power off while rollback is running.")
+            text: qsTr("Frontline will stop after the current operation, unmount the target, and restore the verified pre-install snapshot. Do not power off while rollback is running.")
             wrapMode: Text.WordWrap
         }
         onAccepted: installer.cancel()

@@ -1,7 +1,7 @@
-# XcodeGen project for the Nexora Messages companion app (`xcodegen generate`, then build in Xcode or with
+# XcodeGen project for the Frontline Messages companion app (`xcodegen generate`, then build in Xcode or with
 # scripts/build-ipa.sh). It is sideloaded (SideStore, AltStore, Sideloadly or a free developer account): the
 # unsigned IPA from CI is signed by whichever tool installs it.
-name: NexoraMessages
+name: FrontlineMessages
 options:
   bundleIdPrefix: org.nexora
   deploymentTarget:
@@ -18,15 +18,15 @@ settings:
     CODE_SIGNING_REQUIRED: "NO"
     CODE_SIGN_IDENTITY: ""
 targets:
-  NexoraMessages:
+  FrontlineMessages:
     type: application
     platform: iOS
     sources:
-      - path: NexoraMessages
+      - path: FrontlineMessages
     info:
-      path: NexoraMessages/Info.plist
+      path: FrontlineMessages/Info.plist
       properties:
-        CFBundleDisplayName: Nexora Messages
+        CFBundleDisplayName: Frontline Messages
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen: {}
@@ -34,12 +34,12 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         # Silent audio keeps the app (and its connection to the computer) running in the background.
         UIBackgroundModes: [audio]
-        NSContactsUsageDescription: Your computer shows your contacts' names and photos in Nexora Messages.
+        NSContactsUsageDescription: Your computer shows your contacts' names and photos in Frontline Messages.
         NSLocalNetworkUsageDescription: Your computer connects to this app over Wi-Fi to sync contacts and send pictures.
         NSBonjourServices: [_nexoramsg._tcp]
         NSPhotoLibraryUsageDescription: Pictures from your computer are attached to messages you send.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.nexora.messages
-        INFOPLIST_FILE: NexoraMessages/Info.plist
+        INFOPLIST_FILE: FrontlineMessages/Info.plist
         GENERATE_INFOPLIST_FILE: "NO"

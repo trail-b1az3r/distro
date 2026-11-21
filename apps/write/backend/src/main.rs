@@ -1,4 +1,4 @@
-//! JSON-lines backend for Nexora Write.
+//! JSON-lines backend for Frontline Write.
 //!
 //! The Qt Quick process owns presentation. Application operations are handled
 //! here in Rust; each input line is one request and each output line one reply.
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn creates_unique_notes() {
-        let root = std::env::temp_dir().join(format!("nexora-write-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("frontline-write-test-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         let first = create_note(&root, "Draft").unwrap();
         let second = create_note(&root, "Draft").unwrap();
@@ -298,7 +298,7 @@ mod tests {
 
     #[test]
     fn creates_book_with_first_chapter_and_sequential_followup() {
-        let root = std::env::temp_dir().join(format!("nexora-write-book-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("frontline-write-book-test-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         let book = PathBuf::from(create_book(&root, "A Test Book").unwrap());
         assert!(book.join("00-About.mdxl").exists());
@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn imports_images_into_book_assets() {
-        let root = std::env::temp_dir().join(format!("nexora-write-image-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("frontline-write-image-test-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         let book = root.join("book");
         let source = root.join("cover.png");
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn atomic_write_replaces_existing_document_without_temp_collisions() {
-        let root = std::env::temp_dir().join(format!("nexora-write-atomic-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("frontline-write-atomic-test-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
         let path = root.join("draft.mdxl");
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn chapter_creation_does_not_overwrite_a_numbered_file_after_a_gap() {
-        let root = std::env::temp_dir().join(format!("nexora-write-gap-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("frontline-write-gap-test-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
         fs::write(root.join("00-About.mdxl"), "# About").unwrap();
@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn recent_books_are_deduplicated_and_limited_to_twelve() {
-        let root = std::env::temp_dir().join(format!("nexora-write-recents-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("frontline-write-recents-test-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
         let store = root.join("state.json");
@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn imports_legacy_recent_books_when_the_rust_store_is_new() {
-        let root = std::env::temp_dir().join(format!("nexora-write-legacy-recents-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("frontline-write-legacy-recents-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
         let store = root.join("state.json");
@@ -386,7 +386,7 @@ mod tests {
 
     #[test]
     fn epub_positions_are_persisted_without_discarding_other_state() {
-        let root = std::env::temp_dir().join(format!("nexora-write-epub-position-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("frontline-write-epub-position-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
         let store = root.join("state.json");

@@ -82,7 +82,7 @@ def make_app(app_id: str, title: str) -> QGuiApplication:
     b = load_branding()
     app.setApplicationName(title)
     app.setApplicationDisplayName(title)
-    # Material 3 Expressive type: Google Sans Flex (nexora-fonts-google-sans-flex) for every Text that does not pick
+    # Material 3 Expressive type: Google Sans Flex (frontline-fonts-google-sans-flex) for every Text that does not pick
     # a family itself; Qt falls back to the system's sans-serif where it is missing.
     font = QFont("Google Sans Flex")
     font.setStyleHint(QFont.StyleHint.SansSerif)

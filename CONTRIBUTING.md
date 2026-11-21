@@ -5,9 +5,9 @@ are all welcome.
 
 ## Reporting problems
 
-Include `nexora doctor --report` (review the bundle first) and, for
-installation problems, `/var/log/nexora/install.log`. For hardware that is
-detected wrongly, `nexora hardware --json` and `lspci -nnk` help most.
+Include `frontline doctor --report` (review the bundle first) and, for
+installation problems, `/var/log/frontline/install.log`. For hardware that is
+detected wrongly, `frontline hardware --json` and `lspci -nnk` help most.
 
 ## Development setup
 

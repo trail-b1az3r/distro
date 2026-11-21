@@ -185,6 +185,21 @@ def bootmenu_background(b: Branding, width: int, height: int):
     return Image.fromarray(out.astype(np.uint8), "RGB")
 
 
+def login_background(b: Branding, width: int, height: int, logo_mark: Path):
+    """The login screen's background: the boot menu's backdrop with the logo mark large, a little below the middle
+    (the lock screen's clock sits above it)."""
+    from PIL import Image
+
+    img = bootmenu_background(b, width, height).convert("RGBA")
+    size = int(height * 0.8)
+    mark_png = logo_mark.with_name(f".login-mark-{size}.png")
+    rasterise(logo_mark, mark_png, size)
+    mark = Image.open(mark_png).convert("RGBA")
+    img.alpha_composite(mark, ((width - size) // 2, int(height * 0.58) - size // 2))
+    mark_png.unlink()
+    return img.convert("RGB")
+
+
 # Boot menu icons by GRUB menu entry class (the first class with an icon is
 # shown): the ISO's entries, GRUB's own and os-prober's. "LOGO" is the logo mark.
 GRUB_ICONS = {
@@ -289,6 +304,10 @@ def grub_slices(b: Branding, out: Path) -> None:
     nine("terminal_box", surface + (235,), None, 8)
 
 
+# Fastfetch logo width in character cells (height is half): branding/fastfetch/config.jsonc.in says the same.
+FASTFETCH_COLS = 36
+
+
 def ansi_logo(png: Path, cols: int = 24, max_colors: int = 9) -> str:
     """The logo as a <=9-colour ANSI half-block image for Fastfetch.
 
@@ -329,6 +348,61 @@ def ansi_logo(png: Path, cols: int = 24, max_colors: int = 9) -> str:
     return "\n".join(lines) + "\n"
 
 
+def braille_logo(png: Path, cols: int = 36) -> str:
+    """A line-drawn logo as ANSI Braille art for Fastfetch, light on the terminal's own background.
+
+    Each character cell is 2x4 dots, so the drawing's lines stay sharp where half blocks would blur them away. A dot
+    is on where the drawing has ink (its lines, drawn light: they are dark on the paper, the terminal is dark), snow
+    (the near-white wash, drawn white) or shadow (the darkest wash, drawn dim). A cell takes the colour of the most
+    important thing under it: ink, then snow, then shadow. Everything else stays blank, so there are three colours.
+    Square marks give ``cols`` x ``cols / 2`` cells.
+    """
+    from PIL import Image
+
+    rows = cols // 2
+    scale = 8
+    img = Image.open(png).convert("RGBA").resize((cols * 2 * scale, rows * 4 * scale), Image.Resampling.LANCZOS)
+    px = img.load()
+    bits_at = ((0, 0, 0x01), (0, 1, 0x02), (0, 2, 0x04), (1, 0, 0x08), (1, 1, 0x10), (1, 2, 0x20), (0, 3, 0x40),
+               (1, 3, 0x80))
+    colours = {"ink": (218, 222, 228), "snow": (255, 255, 255), "shadow": (112, 114, 120)}
+    # A dot needs this many pixels of its 8x8 block: lines are thin, washes are not.
+    need = {"ink": 3, "snow": 20, "shadow": 32}
+
+    lines = []
+    for r in range(rows):
+        out = []
+        for c in range(cols):
+            bits, kinds = 0, set()
+            for dx, dy, bit in bits_at:
+                x0, y0 = (c * 2 + dx) * scale, (r * 4 + dy) * scale
+                count = {"ink": 0, "snow": 0, "shadow": 0}
+                for y in range(y0, y0 + scale):
+                    for x in range(x0, x0 + scale):
+                        p = px[x, y]
+                        if p[3] < 128:
+                            continue
+                        luma = 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
+                        if luma < 90:
+                            count["ink"] += 1
+                        elif luma > 200:
+                            count["snow"] += 1
+                        elif luma < 118:
+                            count["shadow"] += 1
+                for kind in ("ink", "snow", "shadow"):
+                    if count[kind] >= need[kind]:
+                        bits |= bit
+                        kinds.add(kind)
+                        break
+            if not bits:
+                out.append(" ")
+                continue
+            kind = next(k for k in ("ink", "snow", "shadow") if k in kinds)
+            out.append("\x1b[38;2;%d;%d;%dm%s\x1b[0m" % (*colours[kind], chr(0x2800 + bits)))
+        lines.append("".join(out).rstrip())
+    return "\n".join(lines) + "\n"
+
+
 def grub_fonts(out: Path) -> list[Path]:
     """PF2 fonts named in theme.txt (needs grub-mkfont and DejaVu fonts;
     GRUB falls back to its built-in font without them)."""
@@ -353,7 +427,9 @@ def generate(quick: bool = False, b: Branding | None = None, log=print) -> None:
     gen = root / "generated"
     rendered = render_templates(root, gen, b)
     log(f"rendered {len(rendered)} templates")
-    shutil.copyfile(root / "sddm" / "Main.qml", gen / "sddm" / "Main.qml")
+    # The classic login theme's QML is not a template; the default one (SilentSDDM, branding/sddm) is installed from
+    # branding/sddm itself, with what is rendered here on top.
+    shutil.copyfile(root / "sddm-classic" / "Main.qml", gen / "sddm-classic" / "Main.qml")
     if quick:
         return
     logo_mark = gen / "logo" / "logo-mark.svg"
@@ -386,16 +462,24 @@ def generate(quick: bool = False, b: Branding | None = None, log=print) -> None:
     grub_dir.mkdir(parents=True, exist_ok=True)
     bootmenu_background(b, 1920, 1080).save(grub_dir / "background.png", optimize=True)
     grub_icons(b, grub_dir / "icons", logo_mark)
-    sddm_dir = gen / "sddm"
-    sddm_dir.mkdir(parents=True, exist_ok=True)
-    bg.save(sddm_dir / "background.png")
-    rasterise(logo_mark, sddm_dir / "logo.png", 192)
-    rasterise(logo_mark, grub_dir / "logo.png", 128)
+    classic = gen / "sddm-classic"
+    classic.mkdir(parents=True, exist_ok=True)
+    bg.save(classic / "background.png")
+    rasterise(logo_mark, classic / "logo.png", 192)
+    # The login screen (SilentSDDM): its lock screen shows the mark on the boot menu's backdrop (default.jpg, also
+    # what it falls back to), its login screen the backdrop alone (login.jpg), so the login box sits on calm ground.
+    (gen / "sddm" / "backgrounds").mkdir(parents=True, exist_ok=True)
+    login_background(b, 2560, 1440, logo_mark).save(gen / "sddm" / "backgrounds" / "default.jpg", quality=92)
+    bootmenu_background(b, 2560, 1440).save(gen / "sddm" / "backgrounds" / "login.jpg", quality=92)
+    rasterise(logo_mark, grub_dir / "logo.png", 192)
     grub_slices(b, grub_dir)
     if not grub_fonts(grub_dir):
         log("grub-mkfont or DejaVu fonts missing: the GRUB theme will use GRUB's built-in font")
     (gen / "fastfetch").mkdir(parents=True, exist_ok=True)
-    (gen / "fastfetch" / "logo.ansi").write_text(ansi_logo(logo256))
+    # The mark is a line drawing: Braille keeps its lines (half blocks at this size would blur them away).
+    logo_ff = gen / "logo-fastfetch.png"
+    rasterise(logo_mark, logo_ff, FASTFETCH_COLS * 16)
+    (gen / "fastfetch" / "logo.ansi").write_text(braille_logo(logo_ff, cols=FASTFETCH_COLS))
     splash = bootmenu_background(b, 640, 480)
     syslinux = gen / "syslinux"
     syslinux.mkdir(parents=True, exist_ok=True)

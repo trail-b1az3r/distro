@@ -4,8 +4,8 @@
 
 1. **Arch Linux** (`core`, `extra`, `multilib`) — almost everything.
 2. **EndeavourOS** (`[endeavouros]`) — its keyring, mirror list and tools.
-3. **The distribution repository** (`[nexora]`) — this distribution's own
-   packages (`nexora-core`, `-desktop`, `-branding`, `-welcome`, `-installer`,
+3. **The distribution repository** (`[frontline]`) — this distribution's own
+   packages (`frontline-core`, `-desktop`, `-branding`, `-welcome`, `-installer`,
    `-ai`, the Google Sans Flex font, and `touchd-dkms` for Surface
    touchscreen and pen support, `surface-contrib` for the extras from the
    linux-surface fork: IPU3 cameras, speaker EQ, Pro 5 suspend) and prebuilt AUR packages the desktop and
@@ -19,7 +19,7 @@
 ```bash
 sudo pacman -S firefox         # official repositories
 yay -S some-aur-package        # AUR (review PKGBUILDs before building)
-nexora install office docker   # features from the installer, by name
+frontline install office docker   # features from the installer, by name
 flatpak install flathub org.gimp.GIMP
 ```
 
@@ -32,9 +32,9 @@ flatpak install flathub org.gimp.GIMP
 * **The command line:**
 
 ```bash
-nexora update             # everything, asking pacman/yay's usual questions
-nexora update --check     # list only (exit code 100 when updates exist)
-nexora update --no-aur --no-flatpak
+frontline update             # everything, asking pacman/yay's usual questions
+frontline update --check     # list only (exit code 100 when updates exist)
+frontline update --no-aur --no-flatpak
 sudo pacman -Syu          # still works exactly as on Arch
 ```
 
@@ -49,7 +49,7 @@ pinned dots version or the distribution layer changes, and never touches
 ## Automatic updates
 
 Every installed system checks for updates once a day. What happens next is
-the mode, in `/etc/nexora/auto-update.conf`:
+the mode, in `/etc/frontline/auto-update.conf`:
 
 | Mode | What it does |
 |---|---|
@@ -58,23 +58,23 @@ the mode, in `/etc/nexora/auto-update.conf`:
 | `off` | Nothing runs. |
 
 ```bash
-nexora auto-update                 # the mode, the timers and the last run
-sudo nexora auto-update mode apply # or notify, or off
-sudo nexora auto-update enable     # set the timers up on any install (disable turns them off)
+frontline auto-update                 # the mode, the timers and the last run
+sudo frontline auto-update mode apply # or notify, or off
+sudo frontline auto-update enable     # set the timers up on any install (disable turns them off)
 ```
 
 It works however the system was installed, not only from the installer or
-the distribution's packages: `sudo nexora auto-update enable` writes any
-missing timers to `/etc/systemd`, pointing at the `nexora` you ran (a
+the distribution's packages: `sudo frontline auto-update enable` writes any
+missing timers to `/etc/systemd`, pointing at the `frontline` you ran (a
 packaged one, or a source checkout), and turns them on. The first
-`sudo nexora update` does the same on a system that has none yet, and
-`sudo nexora auto-update disable` turns them off again.
+`sudo frontline update` does the same on a system that has none yet, and
+`sudo frontline auto-update disable` turns them off again.
 
 An unattended install holds back, and notifies instead, when the computer is
 on battery, when there is Arch Linux news since the last update (it often
 announces a manual step), or when another pacman is running. Two timers do
-the work: `nexora-auto-update.timer` (system, installs in apply mode) and
-`nexora-update-notify.timer` (per user: checks, notifies, refreshes the
+the work: `frontline-auto-update.timer` (system, installs in apply mode) and
+`frontline-update-notify.timer` (per user: checks, notifies, refreshes the
 desktop). The installer enables both.
 
 New Halcyon releases reach the distribution the same way: the *Halcyon
@@ -88,10 +88,10 @@ released, installed systems pick it up with the next update.
 
 | Hook | Does |
 |---|---|
-| `90-nexora-os-release.hook` | keeps `/usr/lib/os-release`, `/etc/issue` and `/etc/lsb-release` branded when `filesystem` or `lsb-release` are updated |
-| `95-nexora-boot.hook` | regenerates boot entries after kernel or initramfs changes (removed kernels drop out of the menu; the GRUB theme is copied next to `grub.cfg`) |
+| `90-frontline-os-release.hook` | keeps `/usr/lib/os-release`, `/etc/issue` and `/etc/lsb-release` branded when `filesystem` or `lsb-release` are updated |
+| `95-frontline-boot.hook` | regenerates boot entries after kernel or initramfs changes (removed kernels drop out of the menu; the GRUB theme is copied next to `grub.cfg`) |
 
 
 ## Desktop meta-packages and experiments
 
-Every selectable profile has a pacman meta-package: `halcyon-desktop`, `ml4w-desktop`, `work-desktop`, `hyde-desktop`, `sekaipop-desktop`, `macshell-desktop`, `frameshell-desktop` and `paperrice-desktop`. Each depends on `nexora-desktop` plus the package list used by the installer. The same names are published in normal and experimental repositories. For example, `sudo nexora experiments enable ml4w-desktop` enables the latest successful CI build; add `--extra` to select the beta source.
+Every selectable profile has a pacman meta-package: `halcyon-desktop`, `ml4w-desktop`, `work-desktop`, `hyde-desktop`, `sekaipop-desktop`, `macshell-desktop`, `frameshell-desktop` and `paperrice-desktop`. Each depends on `frontline-desktop` plus the package list used by the installer. The same names are published in normal and experimental repositories. For example, `sudo frontline experiments enable ml4w-desktop` enables the latest successful CI build; add `--extra` to select the beta source.

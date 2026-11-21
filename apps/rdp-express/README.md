@@ -1,11 +1,11 @@
-# rdp-express: Nexora's remote desktop server
+# rdp-express: Frontline's remote desktop server
 
-rdp-express shares your Wayland desktop (Hyprland, sway or another wlroots compositor) with nexora-msg's remote
+rdp-express shares your Wayland desktop (Hyprland, sway or another wlroots compositor) with frontline-msg's remote
 desktop viewer on another computer. It works on your local network and, by default, over Tailscale. It has its own
 protocol, built to be fast: only the parts of the screen that changed are sent, as JPEG, and only as fast as the
 viewer takes them. Your pointer, wheel and keys go back the other way.
 
-    sudo pacman -S nexora-rdp-express
+    sudo pacman -S frontline-rdp-express
     systemctl --user enable --now rdp-express   # share this desktop while you are logged in
     rdp-express pair                            # a one-time code for a new viewer
 

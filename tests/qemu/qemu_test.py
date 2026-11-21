@@ -510,10 +510,10 @@ def run_live_boot(name: str, scn: dict, iso: Path, out: Path, timeout_min: float
                 _i, mm = con.expect([r"^@@END[ \t]*\n"], 60)
                 output = con.buf[m.end():mm.start()].strip()[-4000:]
             if edition == "nano" and session != "none":
-                con.send("( test -L /etc/nexora/xsessions/lxqt.desktop"
-                         " && test -L /etc/nexora/xsessions/mate.desktop"
-                         " && test \"$(find /etc/nexora/xsessions -maxdepth 1 -name '*.desktop' | wc -l)\" -eq 2"
-                         " && test -z \"$(find /etc/nexora/wayland-sessions -maxdepth 1 -name '*.desktop' -print -quit)\""
+                con.send("( test -L /etc/frontline/xsessions/lxqt.desktop"
+                         " && test -L /etc/frontline/xsessions/mate.desktop"
+                         " && test \"$(find /etc/frontline/xsessions -maxdepth 1 -name '*.desktop' | wc -l)\" -eq 2"
+                         " && test -z \"$(find /etc/frontline/wayland-sessions -maxdepth 1 -name '*.desktop' -print -quit)\""
                          " && systemctl is-active --quiet sddm ) >/dev/null 2>&1; echo \"@@NANO_SESSIONS $?\"\n")
                 _i, sm = con.expect([r"^@@NANO_SESSIONS (\d+)[ \t]*\n"], 60)
                 ok = sm.group(1) == "0"

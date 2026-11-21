@@ -1,6 +1,6 @@
 """Microsoft Surface support (linux-surface kernel and touch/pen stack).
 
-Everything comes from the [nexora-surface] repository, built from the distribution's linux-surface fork
+Everything comes from the [frontline-surface] repository, built from the distribution's linux-surface fork
 (hardware/surface/surface.toml, .github/workflows/surface.yml); linux-surface's own package server is not used, and
 its repository is taken out of pacman.conf when Surface support is enabled.
 
@@ -119,7 +119,7 @@ def plan(info: SurfaceInfo, enabled: bool, secure_boot_mok: bool = False) -> Sur
 
 
 def ensure_repo(root: Path, runner: util.Runner) -> bool:
-    """Add the [nexora-surface] repository to pacman.conf, and take out linux-surface's own."""
+    """Add the [frontline-surface] repository to pacman.conf, and take out linux-surface's own."""
     conf = root / "etc" / "pacman.conf"
     repo = config()["repository"]
     text = conf.read_text() if conf.is_file() else ""

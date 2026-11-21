@@ -25,6 +25,6 @@ def test_documented_subcommands_exist():
     sub = next(a for a in parser._actions if a.__class__.__name__ == "_SubParsersAction")  # noqa: SLF001
     known = set(sub.choices)
     text = "\n".join(p.read_text() for p in PAGES)
-    used = set(re.findall(r"`nexora ([a-z][a-z-]+)", text)) | set(re.findall(r"^nexora ([a-z][a-z-]+)", text, re.M))
+    used = set(re.findall(r"`frontline ([a-z][a-z-]+)", text)) | set(re.findall(r"^frontline ([a-z][a-z-]+)", text, re.M))
     assert used, "no commands found"
     assert used <= known, f"documented but missing: {sorted(used - known)}"

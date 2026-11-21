@@ -1,12 +1,12 @@
 # The GPU manager
 
 ```bash
-sudo nexora-gpu detect      # what is there and what would be installed
-sudo nexora-gpu configure   # install and configure it (asks first)
-nexora-gpu status           # what is running now
+sudo frontline-gpu detect      # what is there and what would be installed
+sudo frontline-gpu configure   # install and configure it (asks first)
+frontline-gpu status           # what is running now
 ```
 
-(`nexora gpu …` and `distro-gpu …` are the same command.) The installer uses
+(`frontline gpu …` and `distro-gpu …` are the same command.) The installer uses
 the same code, so an installed system and a later `configure` agree.
 
 ## Driver stacks
@@ -36,22 +36,22 @@ prime-run blender          # run one program on the NVIDIA GPU
 
 `configure` writes:
 
-* `/etc/modprobe.d/nexora-gpu.conf` — driver options (e.g. NVIDIA dynamic
+* `/etc/modprobe.d/frontline-gpu.conf` — driver options (e.g. NVIDIA dynamic
   power management on Turing+, video memory preservation for suspend),
-* `/etc/mkinitcpio.conf.d/20-nexora-gpu.conf` — early KMS modules,
-* `/etc/udev/rules.d/80-nexora-gpu.rules` — stable `/dev/dri/nexora-primary-card`
-  and `nexora-offload-card` names (card numbers change between boots),
-* `/etc/nexora/gpu.env` — the Hyprland environment (`AQ_DRM_DEVICES`,
+* `/etc/mkinitcpio.conf.d/20-frontline-gpu.conf` — early KMS modules,
+* `/etc/udev/rules.d/80-frontline-gpu.rules` — stable `/dev/dri/frontline-primary-card`
+  and `frontline-offload-card` names (card numbers change between boots),
+* `/etc/frontline/gpu.env` — the Hyprland environment (`AQ_DRM_DEVICES`,
   `LIBVA_DRIVER_NAME`, …),
-* kernel parameters (e.g. `nvidia_drm.modeset=1`) in `/etc/nexora/cmdline.d/`,
+* kernel parameters (e.g. `nvidia_drm.modeset=1`) in `/etc/frontline/cmdline.d/`,
   then regenerates the initramfs and boot entries.
 
 ## Overrides
 
 ```bash
-sudo nexora-gpu configure --driver 0000:01:00.0=nouveau   # use nouveau for this GPU
-sudo nexora-gpu configure --recommended                   # forget overrides
-sudo nexora-gpu configure --compute                       # add CUDA / ROCm toolkits
+sudo frontline-gpu configure --driver 0000:01:00.0=nouveau   # use nouveau for this GPU
+sudo frontline-gpu configure --recommended                   # forget overrides
+sudo frontline-gpu configure --compute                       # add CUDA / ROCm toolkits
 ```
 
 The PCI address comes from `detect`. Overrides are remembered, so updates and
@@ -60,9 +60,9 @@ The PCI address comes from `detect`. Overrides are remembered, so updates and
 ## When graphics break
 
 * Boot the **diagnostic** entry of the boot menu (text mode, no splash).
-* `sudo nexora repair-gpu` re-detects and reinstalls the recommended drivers;
-  `sudo nexora repair-gpu --safe` switches every NVIDIA GPU to nouveau.
-* From the live ISO: `sudo nexora rescue` mounts the installed system and
+* `sudo frontline repair-gpu` re-detects and reinstalls the recommended drivers;
+  `sudo frontline repair-gpu --safe` switches every NVIDIA GPU to nouveau.
+* From the live ISO: `sudo frontline rescue` mounts the installed system and
   repairs it from outside.
 
 See also [troubleshooting.md](troubleshooting.md#graphics).

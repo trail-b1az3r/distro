@@ -1,6 +1,6 @@
-# Nexora Linux: live ISO (packages.x86_64; generated, do not edit)
+# Frontline Linux: live ISO (packages.x86_64; generated, do not edit)
 # lists: base, desktop, desktop-halcyon, browser, live + linux, amd-ucode, intel-ucode
-# 155 packages
+# 159 packages
 
 7zip
 alacritty
@@ -33,6 +33,14 @@ eos-rankmirrors
 exfatprogs
 ffmpegthumbs
 fish
+frontline-branding
+frontline-core
+frontline-desktop
+frontline-fonts-google-sans-flex
+frontline-installer
+frontline-msg
+frontline-welcome
+frontline-write
 git
 gnome-keyring
 gparted
@@ -87,14 +95,6 @@ mkinitcpio-nfs-utils
 modemmanager
 nbd
 networkmanager
-nexora-branding
-nexora-core
-nexora-desktop
-nexora-fonts-google-sans-flex
-nexora-installer
-nexora-msg
-nexora-welcome
-nexora-write
 nm-connection-editor
 nmx
 noto-fonts
@@ -124,6 +124,10 @@ python315
 python315-pip
 qemu-guest-agent
 qt5-wayland
+qt6-imageformats
+qt6-multimedia-ffmpeg
+qt6-svg
+qt6-virtualkeyboard
 qt6-wayland
 reflector
 rsync

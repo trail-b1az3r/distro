@@ -1,4 +1,4 @@
-"""Nexora Write's spelling: Sonnet underlines and suggests, autocorrect fixes only known typos."""
+"""Frontline Write's spelling: Sonnet underlines and suggests, autocorrect fixes only known typos."""
 
 import re
 from pathlib import Path

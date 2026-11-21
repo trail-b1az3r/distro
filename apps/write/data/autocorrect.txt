@@ -1,6 +1,6 @@
-# Nexora Write's autocorrect: common English typos, fixed as you type (after a space or punctuation).
+# Frontline Write's autocorrect: common English typos, fixed as you type (after a space or punctuation).
 # One "typo=fix" a line; case follows what you typed. Only misspellings that are never words themselves are here.
-# Add your own in ~/.config/nexora-write/autocorrect.txt (same format; yours win).
+# Add your own in ~/.config/frontline-write/autocorrect.txt (same format; yours win).
 abbout=about
 abotu=about
 acheive=achieve

@@ -2,7 +2,7 @@
 
 ## What is detected
 
-`nexora hardware` (and the installer's *Hardware* page) reads the kernel's
+`frontline hardware` (and the installer's *Hardware* page) reads the kernel's
 sysfs/procfs and udev; nothing is sent anywhere.
 
 ```
@@ -43,8 +43,8 @@ Recommended Configuration
 | Firmware | UEFI or BIOS, Secure Boot and Setup Mode |
 | Virtualisation | QEMU/KVM, VirtualBox, VMware, Hyper-V (guest tools are installed accordingly) |
 
-`nexora hardware --json` prints the full report; the installer saves it to
-`/var/lib/nexora/hardware.json`.
+`frontline hardware --json` prints the full report; the installer saves it to
+`/var/lib/frontline/hardware.json`.
 
 ## What the recommendations change
 
@@ -60,7 +60,7 @@ Recommended Configuration
 | Microsoft Surface | the linux-surface kernel is recommended (not forced) |
 
 Everything can be overridden in the installer, and later with
-`nexora gpu configure --driver`, `nexora surface enable|disable`, and by editing
+`frontline gpu configure --driver`, `frontline surface enable|disable`, and by editing
 `~/.config/hypr/custom/`.
 
 ## External displays

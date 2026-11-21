@@ -210,7 +210,7 @@ pub fn import_backup(store: &Store, backup: &Path, data: &Path) -> Result<Value,
         let manifest = fs::read(backup.join("Manifest.plist")).unwrap_or_default();
         let text = String::from_utf8_lossy(&manifest);
         if text.contains("<key>IsEncrypted</key>") && text.contains("<key>IsEncrypted</key>\n\t<true/>") {
-            return Err("this backup is encrypted; nexora-msg makes and reads unencrypted backups (turn off \
+            return Err("this backup is encrypted; frontline-msg makes and reads unencrypted backups (turn off \
                         \"Encrypt local backup\": idevicebackup2 encryption off PASSWORD)".into());
         }
     }

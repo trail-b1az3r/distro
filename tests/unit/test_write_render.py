@@ -1,4 +1,4 @@
-"""Nexora Write's MDXL helper (apps/write/data/mdxl-render.py), with a stand-in for MDXL's renderer."""
+"""Frontline Write's MDXL helper (apps/write/data/mdxl-render.py), with a stand-in for MDXL's renderer."""
 import json
 import subprocess
 import sys

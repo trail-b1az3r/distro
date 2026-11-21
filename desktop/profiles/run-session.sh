@@ -19,7 +19,7 @@ if [[ ! -d "$home" && ! -d "$PROFILE_ROOT/configs/$profile" ]]; then
 fi
 profile_home_setup "$profile"
 
-# PaperRice ships a legacy hyprland.conf, but Nexora's Hyprland 0.57 session is Lua-only.
+# PaperRice ships a legacy hyprland.conf, but Frontline's Hyprland 0.57 session is Lua-only.
 # Keep its Quickshell config and run it on a minimal Lua compositor session instead.
 if [[ "$profile" == paperrice && -f "$home/.config/quickshell/paper/shell.qml" ]]; then
     profile_env "$profile"
@@ -78,10 +78,10 @@ LUA
 fi
 
 # A preview of this desktop for the login screen's desktop switcher: a small screenshot a few seconds after it starts
-# (before apps are open), in the shared previews folder. Off with ~/.config/nexora/no-session-preview (in the real
+# (before apps are open), in the shared previews folder. Off with ~/.config/frontline/no-session-preview (in the real
 # home).
-previews=/var/lib/nexora/session-previews
-if [[ -d "$previews" && -w "$previews" && ! -e "$REAL_HOME/.config/nexora/no-session-preview" ]] && command -v grim >/dev/null; then
+previews=/var/lib/frontline/session-previews
+if [[ -d "$previews" && -w "$previews" && ! -e "$REAL_HOME/.config/frontline/no-session-preview" ]] && command -v grim >/dev/null; then
     (
         runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
         before="$(ls "$runtime"/wayland-* 2>/dev/null | grep -v '\.lock$' || true)"
@@ -93,9 +93,9 @@ if [[ -d "$previews" && -w "$previews" && ! -e "$REAL_HOME/.config/nexora/no-ses
         done
         [[ -n "$socket" ]] || exit 0
         sleep 8
-        WAYLAND_DISPLAY="$(basename "$socket")" grim -s 0.5 -t png "$previews/.nexora-$profile.png.tmp" 2>/dev/null \
-            && mv -f "$previews/.nexora-$profile.png.tmp" "$previews/nexora-$profile.png" \
-            && chmod 0644 "$previews/nexora-$profile.png"
+        WAYLAND_DISPLAY="$(basename "$socket")" grim -s 0.5 -t png "$previews/.frontline-$profile.png.tmp" 2>/dev/null \
+            && mv -f "$previews/.frontline-$profile.png.tmp" "$previews/frontline-$profile.png" \
+            && chmod 0644 "$previews/frontline-$profile.png"
     ) &
 fi
 

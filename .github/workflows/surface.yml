@@ -1,6 +1,6 @@
-# Builds Nexora's Surface packages from the distribution's own sources (scripts/build-surface.sh): the kernel from
-# the linux-surface fork, surface-contrib, iptsd and libwacom-surface. Publishes them as the [nexora-surface] pacman
-# repository (release "nexora-surface"), which Nexora's Surface support uses in place of linux-surface's server.
+# Builds Frontline's Surface packages from the distribution's own sources (scripts/build-surface.sh): the kernel from
+# the linux-surface fork, surface-contrib, iptsd and libwacom-surface. Publishes them as the [frontline-surface] pacman
+# repository (release "frontline-surface"), which Frontline's Surface support uses in place of linux-surface's server.
 #
 # Runs when the pins change (hardware/surface/surface.toml), weekly (Arch's toolchain moves on), and by hand.
 name: Surface packages
@@ -26,19 +26,19 @@ permissions:
   contents: write
 
 concurrency:
-  group: nexora-surface
+  group: frontline-surface
   cancel-in-progress: false
 
 jobs:
   build:
-    name: Build and publish [nexora-surface]
+    name: Build and publish [frontline-surface]
     runs-on: ubuntu-24.04
     # A full Arch kernel build takes a few hours on a hosted runner.
     timeout-minutes: 350
     container:
       image: archlinux:base-devel
     env:
-      REPO: nexora-surface
+      REPO: frontline-surface
     steps:
       - name: Tools
         run: pacman -Syu --noconfirm --needed git github-cli pacman-contrib python zstd
@@ -70,9 +70,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          notes="Nexora's Surface support: the linux-surface kernel built from the distribution's fork (trail-b1az3r/linux-surface), surface-contrib, iptsd and libwacom-surface. Turn it on with: sudo nexora surface enable"
+          notes="Frontline's Surface support: the linux-surface kernel built from the distribution's fork (trail-b1az3r/linux-surface), surface-contrib, iptsd and libwacom-surface. Turn it on with: sudo frontline surface enable"
           if ! gh release view "$REPO" >/dev/null 2>&1; then
-            gh release create "$REPO" --title "Nexora Surface packages" --notes "$notes" --prerelease --latest=false
+            gh release create "$REPO" --title "Frontline Surface packages" --notes "$notes" --prerelease --latest=false
           fi
           gh release upload "$REPO" build/surface-assets/* --clobber
           # Older packages the database no longer lists.

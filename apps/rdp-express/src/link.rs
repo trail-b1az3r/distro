@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn same_keys_as_the_python_viewer() {
-        // nexora_msg/rdp.py's derive() gives these (tests/test_rdp.py checks the same values).
+        // frontline_msg/rdp.py's derive() gives these (tests/test_rdp.py checks the same values).
         let hex = |k: [u8; 32]| k.iter().map(|b| format!("{b:02x}")).collect::<String>();
         assert_eq!(hex(derive(b"shared", Some("12345678"), b"c", b"s")),
                    "17d548fba1169b2bad12ddd1f3733f39b64d63ac19ff4c93a127a7e04ab02c65");

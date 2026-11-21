@@ -79,7 +79,7 @@ ColumnLayout {
             Text {
                 Layout.fillWidth: true
                 text: backupChoice.checked
-                    ? qsTr("Optional. Nexora will verify a complete disk image before making changes. You need a separate drive with enough space or sufficient available RAM.")
+                    ? qsTr("Optional. Frontline will verify a complete disk image before making changes. You need a separate drive with enough space or sufficient available RAM.")
                     : qsTr("Backup is disabled. Installation can still proceed after disk confirmation, but automatic restoration will not be available if installation fails.")
                 color: backupChoice.checked ? Theme.muted : Theme.danger
                 wrapMode: Text.WordWrap

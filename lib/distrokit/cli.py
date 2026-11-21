@@ -202,7 +202,7 @@ def cmd_surface(a) -> int:
 
 
 def _apply_halcyon_desktop_update() -> None:
-    """Use Halcyon's own selective updater before Nexora's package update."""
+    """Use Halcyon's own selective updater before Frontline's package update."""
     username = os.environ.get("SUDO_USER") if os.geteuid() == 0 else ""
     if username:
         try:
@@ -220,7 +220,7 @@ def _apply_halcyon_desktop_update() -> None:
     script = home / ".config/hypr/hyprland/halcyon/update"
     if not script.is_file():
         return
-    # Halcyon's updater self-registers a source checkout for Nexora/manual
+    # Halcyon's updater self-registers a source checkout for Frontline/manual
     # installs that never ran ./setup install.
     print(S.header("Updating Halcyon desktop files with Halcyon's updater"))
     result = util.Runner(log=print).run(
@@ -228,7 +228,7 @@ def _apply_halcyon_desktop_update() -> None:
         terminal=True, check=False,
     )
     if result.returncode:
-        print(S.warn(f"Halcyon desktop update failed (exit {result.returncode}); continuing with Nexora packages."))
+        print(S.warn(f"Halcyon desktop update failed (exit {result.returncode}); continuing with Frontline packages."))
 
 
 def cmd_update(a) -> int:
@@ -1095,7 +1095,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("component", choices=["all", *experiment_components],
                    nargs="?", default="all", help="package component (default: all)")
     s.add_argument("--extra", "--beta", dest="extra", action="store_true",
-                   help="from nexora-experiments-extra: beta builds of development branches")
+                   help="from frontline-experiments-extra: beta builds of development branches")
     s.set_defaults(func=cmd_experiments)
 
     s = sub.add_parser("repo", help="the distribution's package repository in pacman.conf: status, on, off, auto")

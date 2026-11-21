@@ -1,7 +1,7 @@
 # A hyprland-plus built from source into /usr/local (by Halcyon's installer, its updater or hyprctl-lite) comes
 # before this package's /usr/bin/Hyprland in PATH, and its wayland-sessions entry is what the login screen starts.
 # It was linked against the libraries of its day: once one moves on (aquamarine 0.16: libaquamarine.so.14 is gone)
-# it cannot start, and with it the desktop. Moved aside here, never deleted; the same as `nexora repair hyprland`.
+# it cannot start, and with it the desktop. Moved aside here, never deleted; the same as `frontline repair hyprland`.
 
 _retire_local_build() {
     local bin=/usr/local/bin/Hyprland dest name session moved=0

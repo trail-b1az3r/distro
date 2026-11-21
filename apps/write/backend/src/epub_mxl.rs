@@ -283,13 +283,13 @@ pub fn pack(request: &Pack) -> Result<String, String> {
         else { format!("    <dc:creator>{}</dc:creator>\n", xml(request.author.trim())) };
     zip.add("OEBPS/content.opf", format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
-         <package xmlns=\"http://www.idpf.org/2007/opf\" version=\"3.0\" unique-identifier=\"bookid\" prefix=\"nexora: https://github.com/trail-b1az3r/distro/ns#\">\n\
+         <package xmlns=\"http://www.idpf.org/2007/opf\" version=\"3.0\" unique-identifier=\"bookid\" prefix=\"frontline: https://github.com/trail-b1az3r/distro/ns#\">\n\
          \x20 <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n\
          \x20   <dc:identifier id=\"bookid\">urn:uuid:{id}</dc:identifier>\n\
          \x20   <dc:title>{title}</dc:title>\n{creator}\
          \x20   <dc:language>{lang}</dc:language>\n\
          \x20   <meta property=\"dcterms:modified\">{modified}</meta>\n\
-         \x20   <meta property=\"nexora:format\">{FORMAT}</meta>\n\
+         \x20   <meta property=\"frontline:format\">{FORMAT}</meta>\n\
          \x20 </metadata>\n  <manifest>\n{manifest}  </manifest>\n  <spine>\n{spine}  </spine>\n</package>\n",
         title = xml(title), lang = xml(language)).as_bytes())?;
 
@@ -387,7 +387,7 @@ mod tests {
                     assert!(listing.contains(name), "{name} missing:\n{listing}");
                 }
                 assert!(listing.contains("<dc:title>My &lt;book&gt;</dc:title>"));
-                assert!(listing.contains("<meta property=\"nexora:format\">epub-mxl 1</meta>"));
+                assert!(listing.contains("<meta property=\"frontline:format\">epub-mxl 1</meta>"));
                 assert!(listing.contains("<dc:creator>Me</dc:creator>"));
             }
         }

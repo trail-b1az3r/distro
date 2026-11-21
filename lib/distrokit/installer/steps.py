@@ -868,7 +868,7 @@ class Installation:
                     "Exec=/usr/bin/distro-desktop-session " + profile,
                     "TryExec=Hyprland",
                     "DesktopNames=Hyprland",
-                    "X-Nexora-Profile=" + profile,
+                    "X-Frontline-Profile=" + profile,
                     "Type=Application",
                     "",
                 ))

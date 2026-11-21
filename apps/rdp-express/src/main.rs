@@ -1,5 +1,5 @@
-//! rdp-express: Nexora's remote desktop server. It shares the Wayland desktop (Hyprland, sway and other wlroots
-//! compositors) with nexora-msg's remote desktop viewer, over an encrypted protocol of its own: JPEG tiles of what
+//! rdp-express: Frontline's remote desktop server. It shares the Wayland desktop (Hyprland, sway and other wlroots
+//! compositors) with frontline-msg's remote desktop viewer, over an encrypted protocol of its own: JPEG tiles of what
 //! changed, sent only as fast as the viewer takes them, and the viewer's pointer and keys back.
 //!
 //!   rdp-express serve [--port 47801] [--listen ADDR]... [--any] [--output NAME] [--quality 1-100] [--fps N]

@@ -72,7 +72,7 @@ for arg in "$@"; do
 done
 
 if (( ${#dropped[@]} )); then
-    echo ":: Nexora: keeping hyprland-plus (it provides hyprland); not touching: ${dropped[*]}" >&2
+    echo ":: Frontline: keeping hyprland-plus (it provides hyprland); not touching: ${dropped[*]}" >&2
     # Nothing else was asked for: done, as pacman --needed would be (a refresh or upgrade still runs).
     if (( targets == 0 )); then
         for arg in "${out[@]}"; do

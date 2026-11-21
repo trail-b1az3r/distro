@@ -3,6 +3,11 @@ hyprland-plus
 wl-clipboard
 wtype
 sddm
+# The login screen (SilentSDDM, branding/sddm)
+qt6-svg
+qt6-virtualkeyboard
+qt6-multimedia-ffmpeg
+qt6-imageformats
 xorg-server
 xorg-xwayland
 qt6-wayland

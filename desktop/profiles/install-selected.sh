@@ -11,7 +11,7 @@
 set -Eeuo pipefail
 
 REAL_HOME="$HOME"
-CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/nexora/desktop-profiles.conf"
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/frontline/desktop-profiles.conf"
 [[ -f "$CONFIG" ]] || CONFIG=/etc/distro-desktop-profiles.conf
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/distro-desktop-profiles"
 LOG="$STATE/install.log"
@@ -40,7 +40,7 @@ LISTS="$DATA_ROOT/packages/lists"
 SYSROOT="${DISTRO_SYSROOT:-}"
 SESSION_DIR="$SYSROOT/usr/share/wayland-sessions"
 SET_ASIDE="$SYSROOT/var/lib/$DISTRO_ID/set-aside"
-# The packaged session wrapper (nexora-desktop installs it in /usr/bin); an ISO-era copy in /usr/local/bin, or the
+# The packaged session wrapper (frontline-desktop installs it in /usr/bin); an ISO-era copy in /usr/local/bin, or the
 # script next to this one, otherwise. The login entry must point at something SDDM can execute.
 SESSION_RUNNER=""
 for candidate in /usr/bin/distro-desktop-session /usr/local/bin/distro-desktop-session "$SCRIPT_DIR/run-session.sh"; do
@@ -61,7 +61,7 @@ if (( $# )); then
 elif [[ -f "$CONFIG" ]]; then
     read -r -a selected < "$CONFIG"
 else
-    echo "No desktop profile selection found. Select desktops in Nexora Welcome first."
+    echo "No desktop profile selection found. Select desktops in Frontline Welcome first."
     exit 0
 fi
 
@@ -96,12 +96,12 @@ register_session() {
     cat > "$desktop_file" <<EOF
 [Desktop Entry]
 Name=$name
-Comment=$name, in its own home (Nexora)
+Comment=$name, in its own home (Frontline)
 Exec=$SESSION_RUNNER $id
 TryExec=Hyprland
 Type=Application
 DesktopNames=Hyprland
-X-Nexora-Profile=$id
+X-Frontline-Profile=$id
 EOF
     sudo install -D -m 0644 "$desktop_file" "$SESSION_DIR/$DISTRO_ID-$id.desktop"
     rm -f "$desktop_file"

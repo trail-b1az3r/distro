@@ -1,7 +1,7 @@
 # Microsoft Surface
 
 Surface devices (Pro, Laptop, Book, Go, Studio) are detected from the
-firmware's product name and Surface ACPI devices. Nexora's Surface support is
+firmware's product name and Surface ACPI devices. Frontline's Surface support is
 built entirely from its own fork of linux-surface,
 [trail-b1az3r/linux-surface](https://github.com/trail-b1az3r/linux-surface). The Surface
 kernel adds touchscreen and pen support (through `iptsd`), cameras on some
@@ -12,7 +12,7 @@ models, better battery life and fixes for the Type Cover.
   is off and can be switched on (for example if detection missed a model).
 * It is installed **in addition** to the regular kernel, which stays in the
   boot menu as a fallback. The Surface kernel is the default entry.
-* The packages come from Nexora's **`[nexora-surface]`** repository, not linux-surface's server. The
+* The packages come from Frontline's **`[frontline-surface]`** repository, not linux-surface's server. The
   [Surface packages workflow](../.github/workflows/surface.yml) builds them (`scripts/build-surface.sh`):
   * `linux-surface` and `linux-surface-headers`, from the fork's `pkg/arch/kernel` at the commit pinned in
     [`surface.toml`](../hardware/surface/surface.toml) (`[fork] commit`);
@@ -22,16 +22,16 @@ models, better battery life and fixes for the Type Cover.
 
   It runs when the pins change, every week, and by hand. Like the distribution's own repository, it is served over
   HTTPS from GitHub releases, unsigned. Enabling Surface support takes linux-surface's `[linux-surface]` repository
-  out of `pacman.conf`, and these packages replace its packages (a Nexora build always has the higher pkgrel).
+  out of `pacman.conf`, and these packages replace its packages (a Frontline build always has the higher pkgrel).
 * **Secure Boot:** the kernel is not signed with linux-surface's MOK key. Use the installer's Secure Boot option
   (sbctl, with systemd-boot), which signs every installed kernel on the machine.
 * To take a newer fork, set `[fork] commit` in `surface.toml`. The push to main rebuilds the repository.
 * Installing it needs the internet (it is not on the ISO).
 
 ```bash
-nexora surface status              # detected model, kernel state
-sudo nexora surface enable         # repository, key, kernel, iptsd, libwacom-surface
-sudo nexora surface disable        # back to the regular kernel (the repository is kept)
+frontline surface status              # detected model, kernel state
+sudo frontline surface enable         # repository, key, kernel, iptsd, libwacom-surface
+sudo frontline surface disable        # back to the regular kernel (the repository is kept)
 ```
 
 ## Extras from the linux-surface fork
@@ -75,7 +75,7 @@ sudo surface-contrib suspend --install    # Pro 5 suspend (--test checks deep id
 
 ## touchD controls
 
-When Surface support is enabled, Nexora installs `touchd-dkms` alongside
+When Surface support is enabled, Frontline installs `touchd-dkms` alongside
 `iptsd` and `libwacom-surface`. It provides the IPTS DKMS fallback, the
 `touchdctl` utility and a Surface Pro 5 profile. The package checks each
 installed kernel and skips DKMS when IPTS is already built in or supplied by
@@ -147,19 +147,19 @@ recognised by its firmware SKU and shown as *Surface Pro (5th Gen)*. Notes:
   `linux-firmware-marvell`, is not part of Arch's `linux-firmware` any more:
   it is on the live ISO, and the installer adds it whenever a Marvell card is
   found, with or without the Surface kernel. Wi-Fi power saving is off for
-  these cards (`/usr/lib/NetworkManager/conf.d/50-nexora-mwifiex.conf`): with
+  these cards (`/usr/lib/NetworkManager/conf.d/50-frontline-mwifiex.conf`): with
   it on, they drop the connection. The card also does not come back from
   suspend, so the recovery hook stops NetworkManager and unloads the driver
   before sleeping, then reloads it, waits for udev, and restores NetworkManager
-  after waking (`/usr/lib/systemd/system-sleep/nexora-mwifiex`).
+  after waking (`/usr/lib/systemd/system-sleep/frontline-mwifiex`).
 * **Saved Wi-Fi passwords**: members of `wheel` manage networks without a
-  password prompt (`/usr/share/polkit-1/rules.d/50-nexora-networkmanager.rules`),
+  password prompt (`/usr/share/polkit-1/rules.d/50-frontline-networkmanager.rules`),
   which NetworkManager needs to keep the passwords the desktop gives it. On a
   system installed before this, connect once with `nmtui` to save a network.
 * **Display**: 2736 × 1824 at 12.3"; the installer suggests a scale of 2
   (a 1368 × 912 desktop, like Windows' 200 %). Change it in
   `~/.config/hypr/custom/general.lua` (1.6 or 1.75 fit more on screen).
-* **Touchscreen and pen** (IPTS) use the Surface kernel and `iptsd`. Nexora also
+* **Touchscreen and pen** (IPTS) use the Surface kernel and `iptsd`. Frontline also
   installs `touchd-dkms`: the upstream IPTS DKMS fallback, `touchdctl`, and
   the Surface Pro 5 tuning profile. If the selected kernel already contains
   IPTS, the package detects that and skips the duplicate DKMS module.

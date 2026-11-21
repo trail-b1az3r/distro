@@ -419,10 +419,10 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
         (sysconf / "nano").write_text("Nano live edition: LXQt and MATE sessions.\n")
         sddm = air / "etc" / "sddm.conf.d"
         sddm.mkdir(parents=True, exist_ok=True)
-        (sddm / "10-nexora-nano.conf").write_text(
+        (sddm / "10-frontline-nano.conf").write_text(
             "[General]\n"
-            "SessionDir=/etc/nexora/xsessions\n"
-            "WaylandSessionDir=/etc/nexora/wayland-sessions\n"
+            "SessionDir=/etc/frontline/xsessions\n"
+            "WaylandSessionDir=/etc/frontline/wayland-sessions\n"
             "\\n"
             "[Autologin]\n"
             f"User={b['LIVE_USER']}\n"
@@ -649,7 +649,7 @@ def finish(opts: Options, b: Branding, epoch: int, runner: util.Runner) -> dict:
             raise SystemExit(f"Nano ISO exceeds the strict {NANO_SIZE_LIMIT:,}-byte limit by "
                              f"{size_bytes - NANO_SIZE_LIMIT:,} bytes. Largest ISO files: {detail}. "
                              "Reduce Nano-only live packages or tune the Nano SquashFS preset; "
-                             "do not remove packages from installed Nexora profiles.")
+                             "do not remove packages from installed Frontline profiles.")
     root = opts.dist.parent
     sums = checksum_files(iso, root / "checksums")
     if opts.sign_key:

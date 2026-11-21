@@ -1,6 +1,6 @@
 """The CLI's man page, generated from its argparse parser.
 
-    python3 -m distrokit.build.manpage > nexora.1
+    python3 -m distrokit.build.manpage > frontline.1
 """
 
 from __future__ import annotations

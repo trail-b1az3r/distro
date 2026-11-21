@@ -1,0 +1,12 @@
+SilentSDDM by uiriansan: https://github.com/uiriansan/SilentSDDM
+Commit d179078e88cde18195b82841d3e879949b06faa8 (2026-11-04), GPL-3.0-or-later (LICENSE in this folder).
+
+Taken unchanged: Main.qml, qmldir, components/, icons/ (without the catppuccin.png and eldritch.png previews), and
+the Red Hat Display variable fonts from fonts/redhat-vf (SIL Open Font License, fonts/OFL.txt). Left out: its
+backgrounds, videos, demo configs, docs and install scripts.
+
+Ours: configs/theme.conf.in (its default.conf with the distribution's colours and background), metadata.desktop.in,
+and backgrounds/default.jpg, which distrokit.build.branding draws at build time.
+
+To take a newer SilentSDDM: copy those files from the new commit over these, update the commit above, and check
+configs/theme.conf.in against its configs/default.conf for new or renamed options.

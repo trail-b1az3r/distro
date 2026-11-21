@@ -10,7 +10,7 @@ def test_surface_detected_and_recommended(machine):
     sp = surface.plan(info, enabled=True)
     assert {"linux-surface", "linux-surface-headers", "iptsd", "libwacom-surface", "touchd-dkms"} <= set(sp.packages)
     assert sp.default_kernel == "linux-surface"
-    assert "[nexora-surface]" in sp.repo_block and "surfacelinux" not in sp.repo_block
+    assert "[frontline-surface]" in sp.repo_block and "surfacelinux" not in sp.repo_block
 
 
 def test_surface_not_forced_but_manual_choice_respected(machine):
@@ -24,9 +24,9 @@ def test_surface_not_forced_but_manual_choice_respected(machine):
 
 
 def test_surface_repository_is_the_forks(tmp_path):
-    # [nexora-surface], built from the fork, replaces linux-surface's own repository in pacman.conf.
+    # [frontline-surface], built from the fork, replaces linux-surface's own repository in pacman.conf.
     cfg = surface.config()
-    assert cfg["repository"]["name"] == "nexora-surface" and "surfacelinux" not in cfg["repository"]["server"]
+    assert cfg["repository"]["name"] == "frontline-surface" and "surfacelinux" not in cfg["repository"]["server"]
     assert cfg["fork"]["url"] == "https://github.com/trail-b1az3r/linux-surface" and len(cfg["fork"]["commit"]) == 40
     conf = tmp_path / "etc/pacman.conf"
     conf.parent.mkdir(parents=True)
@@ -35,7 +35,7 @@ def test_surface_repository_is_the_forks(tmp_path):
     assert surface.ensure_repo(tmp_path, util.Runner())
     text = conf.read_text()
     assert "[linux-surface]" not in text and "surfacelinux" not in text and "[extra]" in text
-    assert "[nexora-surface]\nSigLevel = Optional TrustAll\nServer = https://github.com/trail-b1az3r/distro/releases/download/nexora-surface" in text
+    assert "[frontline-surface]\nSigLevel = Optional TrustAll\nServer = https://github.com/trail-b1az3r/distro/releases/download/frontline-surface" in text
     assert not surface.ensure_repo(tmp_path, util.Runner())  # already there: nothing to change
 
 
@@ -48,12 +48,12 @@ def test_surface_repo_added_once(tmp_path):
     surface.ensure_repo(tmp_path, runner)
     runner.dry_run = False
     text = (tmp_path / "etc/pacman.conf").read_text()
-    assert text.count("[nexora-surface]") == 0  # dry run leaves the file alone
+    assert text.count("[frontline-surface]") == 0  # dry run leaves the file alone
     runner2 = util.Runner(dry_run=False)
     runner2.run = lambda cmd, **kw: util.Result(list(cmd), 0)  # type: ignore[method-assign]
     surface.ensure_repo(tmp_path, runner2)
     surface.ensure_repo(tmp_path, runner2)
-    assert (tmp_path / "etc/pacman.conf").read_text().count("[nexora-surface]") == 1
+    assert (tmp_path / "etc/pacman.conf").read_text().count("[frontline-surface]") == 1
 
 
 def test_profiles_inherit():
@@ -74,9 +74,9 @@ def test_select_packages_contents():
     standard = profiles.select_packages(ps["standard"])
     assert {"oynix-bin", "onlyoffice-bin", "ark", "okular"} <= set(standard.packages)
     dev = profiles.select_packages(ps["developer"])
-    assert {"gcc", "clang", "rust", "cmake", "podman", "nexora-code"} <= set(dev.packages)
+    assert {"gcc", "clang", "rust", "cmake", "podman", "frontline-code"} <= set(dev.packages)
     ai = profiles.select_packages(ps["ai"])
-    assert "nexora-ai" in ai.packages
+    assert "frontline-ai" in ai.packages
     # Feature overrides customise a profile.
     custom = profiles.select_packages(ps["developer"], {"containers": "docker", "office": False})
     assert "docker" in custom.packages and "podman" not in custom.packages
@@ -104,18 +104,18 @@ def test_every_list_parses_and_has_no_duplicates():
 
 def test_branding_values_and_render():
     b = branding.load()
-    assert b.name == "Nexora" and b.id == "nexora" and b.cli == "nexora"
-    assert b.render("@DISTRO_NAME@ @DISTRO_ID@") == "Nexora nexora"
+    assert b.name == "Frontline" and b.id == "frontline" and b.cli == "frontline"
+    assert b.render("@DISTRO_NAME@ @DISTRO_ID@") == "Frontline frontline"
     with pytest.raises(branding.BrandingError):
         b.render("@NOT_A_KEY@")
-    assert 'ID="nexora"' in b.os_release("2026.09")
+    assert 'ID="frontline"' in b.os_release("2026.09")
     assert 'ID_LIKE="endeavouros arch"' in b.os_release("2026.09")
     assert f'VERSION_CODENAME="{b.get("ISO_CODENAME").lower()}"' in b.os_release("2026.09")
 
 
 def test_branding_rename(tmp_path):
     conf = (branding.paths.data("distro.conf")).read_text()
-    renamed = conf.replace('DISTRO_NAME="Nexora"', 'DISTRO_NAME="Aurora"').replace('DISTRO_ID="nexora"', 'DISTRO_ID="aurora"')
+    renamed = conf.replace('DISTRO_NAME="Frontline"', 'DISTRO_NAME="Aurora"').replace('DISTRO_ID="frontline"', 'DISTRO_ID="aurora"')
     p = tmp_path / "distro.conf"
     p.write_text(renamed)
     b = branding.load_file(p)

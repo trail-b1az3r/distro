@@ -71,7 +71,7 @@ def _parse_updates(text: str) -> list[Item]:
 
 def check_packages(branding: Branding | None = None) -> Source:
     branding = branding or load_branding()
-    src = Source("packages", "System & Nexora packages (pacman)", needs_root=True, command=["pacman", "-Syu"])
+    src = Source("packages", "System & Frontline packages (pacman)", needs_root=True, command=["pacman", "-Syu"])
     if util.which("checkupdates"):
         # checkupdates syncs a private copy of the databases: no root, no partial upgrades.
         rc, out = util.run_quiet(["checkupdates", "--nocolor"], timeout=180)
@@ -86,13 +86,13 @@ def check_packages(branding: Branding | None = None) -> Source:
             src.error = "could not read available package updates; run a full system upgrade to refresh package databases"
             return src
     src.items = _parse_updates(out)
-    # Manual installs may have Nexora packages but no active Nexora repository.
+    # Manual installs may have Frontline packages but no active Frontline repository.
     # Surface this as an actionable update when the repository is published.
     conf = Path("/etc/pacman.conf")
     if (conf.is_file() and branding.get("DISTRO_REPO_SERVER")
             and not pacmanconf.distro_repo_enabled(conf.read_text())
             and pacmanconf.distro_repo_published(branding, timeout=4) is True):
-        src.items.append(Item("Nexora repository", "disabled", "enable"))
+        src.items.append(Item("Frontline repository", "disabled", "enable"))
     return src
 
 

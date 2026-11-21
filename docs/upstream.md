@@ -17,6 +17,7 @@ Order of preference for everything the distribution needs:
 | Google Sans Flex | [end-4/google-sans-flex](https://github.com/end-4/google-sans-flex) | packaged (pinned commit + SHA-256) instead of being fetched into each home | no | OFL-1.1 |
 | hyprland-plus | [trail-b1az3r/hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus), from Hyprland | the compositor, built from `packages/pkgbuild/hyprland-plus` (pinned commit); it provides `hyprland`, so it replaces the stock package | no | BSD-3-Clause |
 | MDXL | [trail-b1az3r/mdxl](https://github.com/trail-b1az3r/mdxl) | `mdxl-cli`, `mdxl-preview` and Kate syntax for `.mdxl`, from `packages/pkgbuild/mdxl` (pinned commit) | no | MIT |
+| SilentSDDM | [uiriansan/SilentSDDM](https://github.com/uiriansan/SilentSDDM) | the login screen: its QML, icons and Red Hat Display fonts vendored in `branding/sddm` (pinned commit, `branding/sddm/UPSTREAM`), with the distribution's config and background | no (its own config and background added) | GPL-3.0-or-later; fonts OFL-1.1 |
 | Quickshell | quickshell.org | the shell (via the dots' packages) | no | LGPL-3.0 |
 | HyperNix | [trail-b1az3r/HyperNix-pip](https://github.com/trail-b1az3r/HyperNix-pip) | PyPI package in a per-user uv environment | no | see upstream |
 | Hermes Agent ("Hermis") | [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) | `uv tool install hermes-agent` (instead of the upstream curl-pipe-bash installer) | no | MIT |

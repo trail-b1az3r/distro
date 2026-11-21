@@ -38,7 +38,8 @@ from ..branding import Branding, load as load_branding
 from . import completions
 
 COMPONENTS = ("core", "branding", "desktop", "welcome", "installer", "ai")
-IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", ".git", ".github", ".gitmodules", "*.orig")
+IGNORE_PATTERNS = ("__pycache__", "*.pyc", "*.pyo", ".git", ".github", ".gitmodules", "*.orig")
+IGNORE = shutil.ignore_patterns(*IGNORE_PATTERNS)
 
 
 class Stage:
@@ -138,6 +139,19 @@ class Stage:
                           comment="pacman hook: distribution identity files")
 
         hooks = "/usr/share/libalpm/hooks"
+        # The distribution's former names (DISTRO_LEGACY_IDS): their command still works, and a system that had
+        # them is moved over once the renamed packages are in (system/legacy.py).
+        for old in b.get("DISTRO_LEGACY_IDS").split():
+            if old != b.id and old != b.cli:
+                self.link(f"/usr/bin/{old}", b.cli)
+        self.python_entry(f"{lib}/bin/{b.id}-migrate-legacy", "distrokit.system.legacy",
+                          comment="pacman hook: move a system over from the distribution's former name")
+        self.text(f"{hooks}/80-{b.id}-migrate-legacy.hook", (
+            "[Trigger]\nType = Path\nOperation = Install\nOperation = Upgrade\n"
+            f"Target = {lib.lstrip('/')}/bin/{b.id}-migrate-legacy\n\n"
+            f"[Action]\nDescription = Moving the system over to {b.pretty_name}...\nWhen = PostTransaction\n"
+            f"Exec = {lib}/bin/{b.id}-migrate-legacy\n"
+        ))
         self.text(f"{hooks}/90-{b.id}-os-release.hook", (
             "[Trigger]\nType = Path\nOperation = Install\nOperation = Upgrade\n"
             "Target = usr/lib/os-release\nTarget = etc/lsb-release\nTarget = etc/issue\n"
@@ -208,7 +222,7 @@ class Stage:
             '                    rm -f "$nm_mark"\n'
             "                    systemctl start NetworkManager.service || true\n"
             "                fi\n"
-            '                logger -t nexora-mwifiex "could not unload mwifiex_pcie before suspend"\n'
+            '                logger -t frontline-mwifiex "could not unload mwifiex_pcie before suspend"\n'
             "            fi\n"
             "        fi ;;\n"
             "    post)\n"
@@ -219,7 +233,7 @@ class Stage:
             "                # nmx: the card is back; reconnect now rather than at the next check.\n"
             "                [ -x /usr/bin/nmxcli ] && /usr/bin/nmxcli --internal resume >/dev/null 2>&1\n"
             "            else\n"
-            '                logger -t nexora-mwifiex "could not reload mwifiex_pcie after resume"\n'
+            '                logger -t frontline-mwifiex "could not reload mwifiex_pcie after resume"\n'
             "            fi\n"
             '            if [ -e "$nm_mark" ]; then\n'
             '                rm -f "$nm_mark"\n'
@@ -286,7 +300,17 @@ class Stage:
             name = {"theme.plymouth": f"{b.id}.plymouth", "theme.script": f"{b.id}.script"}.get(f.name, f.name)
             self.file(f, f"{ply}/{name}")
         self.tree(gen / "grub", f"/usr/share/grub/themes/{b.id}")
-        self.tree(gen / "sddm", f"/usr/share/sddm/themes/{b.id}")
+        # The login screen: SilentSDDM with the distribution's config and background (branding/sddm), its fonts for
+        # every app, and the earlier theme as <id>-classic.
+        theme = f"/usr/share/sddm/themes/{b.id}"
+        self.tree("branding/sddm", theme, ignore=shutil.ignore_patterns("*.in", "UPSTREAM", *IGNORE_PATTERNS))
+        rendered = self.src / gen / "sddm"
+        for f in sorted(rendered.rglob("*")):
+            if f.is_file():
+                self.file(f.relative_to(self.src), f"{theme}/{f.relative_to(rendered)}")
+        for font in sorted((self.src / "branding" / "sddm" / "fonts").glob("*.ttf")):
+            self.file(font, f"/usr/share/fonts/{b.id}-redhat/{font.name}")
+        self.tree(gen / "sddm-classic", f"{theme}-classic")
         self.file(gen / "fastfetch" / "config.jsonc", f"{share}/fastfetch.jsonc")
         self.file(gen / "fastfetch" / "logo.ansi", f"{share}/fastfetch-logo.ansi")
         # Plain `fastfetch` would otherwise show the ID_LIKE distribution's logo.

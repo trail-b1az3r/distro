@@ -15,7 +15,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from nexora_msg import rdp, tailscale  # noqa: E402
+from frontline_msg import rdp, tailscale  # noqa: E402
 
 
 def test_keys_match_the_rust_server():
@@ -142,7 +142,7 @@ def test_tailscale_peers_and_who_answers(monkeypatch):
 
 
 def test_companion_is_found_on_tailscale(monkeypatch):
-    from nexora_msg import companion
+    from frontline_msg import companion
     monkeypatch.setattr(companion, "_bonjour", lambda timeout: [])
     monkeypatch.setattr(tailscale, "status", lambda: STATUS)
     monkeypatch.setattr(tailscale, "answers", lambda host, port, timeout=1.5: port == companion.PORT)
@@ -153,7 +153,7 @@ def test_viewer_keys_map_to_linux_codes():
     pytest.importorskip("PySide6")
     from PySide6.QtCore import QEvent, Qt
     from PySide6.QtGui import QKeyEvent
-    from nexora_msg.rdpview import evdev_code
+    from frontline_msg.rdpview import evdev_code
     assert evdev_code(QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_A, Qt.KeyboardModifier.NoModifier)) == 30
     assert evdev_code(QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Return, Qt.KeyboardModifier.NoModifier)) == 28
     assert evdev_code(QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_1, Qt.KeyboardModifier.NoModifier)) == 2

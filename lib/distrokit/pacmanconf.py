@@ -41,8 +41,8 @@ def distro_repo_block(branding: Branding, enabled: bool = True) -> str:
             + "".join(f"#{line}\n" for line in block.splitlines()) + "\n")
 
 
-def experiments_repo_block(branding: Branding, enabled: bool = True, repo: str = "nexora-experiments") -> str:
-    """A CI package source (nexora-experiments, or nexora-experiments-extra for beta builds): a GitHub release."""
+def experiments_repo_block(branding: Branding, enabled: bool = True, repo: str = "frontline-experiments") -> str:
+    """A CI package source (frontline-experiments, or frontline-experiments-extra for beta builds): a GitHub release."""
     home = branding.get("DISTRO_HOME_URL", "").rstrip("/")
     if not home:
         return ""
@@ -52,7 +52,7 @@ def experiments_repo_block(branding: Branding, enabled: bool = True, repo: str =
 
 
 def set_experiments_repo(text: str, enabled: bool, branding: Branding | None = None,
-                         repo: str = "nexora-experiments") -> str:
+                         repo: str = "frontline-experiments") -> str:
     """Add or remove a CI package source. It goes after every other repository, so `pacman -Syu` keeps taking
     packages from the stable ones and only the experimental builds `<cli> update` asks for by name come from it."""
     branding = branding or load_branding()

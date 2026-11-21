@@ -96,6 +96,8 @@ package_@DISTRO_ID@-desktop() {
   depends=(
     @DISTRO_ID@-core @DISTRO_ID@-branding @DISTRO_ID@-fonts-google-sans-flex
     fish konsole dolphin sddm uv
+    # The login screen (SilentSDDM): its icons, on-screen keyboard, background video support and image formats.
+    qt6-svg qt6-virtualkeyboard qt6-multimedia-ffmpeg qt6-imageformats
   )
   backup=(etc/xdg/mimeapps.list etc/xdg/xdg-terminals.list)
   _stage desktop

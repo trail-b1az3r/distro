@@ -2,7 +2,7 @@
 
 [HyperNix](https://github.com/trail-b1az3r/HyperNix-pip) is installed per user
 into its own virtual environment,
-`~/.local/share/nexora/hypernix/venv`, with its commands (`hypernix`, `hnx`,
+`~/.local/share/frontline/hypernix/venv`, with its commands (`hypernix`, `hnx`,
 `hyped-pro`, `hyped-plus`, `tvtop`, `waiter`, `multilama`, `hyprslug`) linked
 into `~/.local/bin`.
 
@@ -22,8 +22,8 @@ backend is chosen from the GPU manager's plan:
 | `cpu` | no usable GPU | CPU |
 
 ```bash
-nexora ai backend                    # the detected backend and why
-nexora ai install hypernix --backend cpu   # override
+frontline ai backend                    # the detected backend and why
+frontline ai install hypernix --backend cpu   # override
 ```
 
 Nothing is hard-coded to one vendor: the index URLs and versions live in
@@ -31,7 +31,7 @@ Nothing is hard-coded to one vendor: the index URLs and versions live in
 
 ## Configuration
 
-`~/.config/nexora/ai.env` holds the environment HyperNix and the assistants
+`~/.config/frontline/ai.env` holds the environment HyperNix and the assistants
 see (loaded by Fish, Bash/Zsh login shells and Hyprland):
 
 * `HYPERNIX_NO_PATH_SETUP=1`, `HYPERNIX_AUTO_INSTALL=0` — the distribution
@@ -44,13 +44,13 @@ Add your own variables at the end of the file.
 ## Models
 
 HyperNix model names can be used directly in the model manager
-(*Add model → HyperNix model*, or `nexora model add --hypernix qwen3-8b`);
+(*Add model → HyperNix model*, or `frontline model add --hypernix qwen3-8b`);
 catalogue entries that HyperNix knows carry their HyperNix id. See
 [models.md](models.md).
 
 ## Updating and removing
 
 ```bash
-nexora ai update          # HyperNix, Hermis, OpenClaw, Claude Code
-nexora ai remove hypernix # deletes the virtual environment and the links
+frontline ai update          # HyperNix, Hermis, OpenClaw, Claude Code
+frontline ai remove hypernix # deletes the virtual environment and the links
 ```

@@ -98,24 +98,24 @@ class UpdaterBackend(QObject):
         halcyon_script = Path.home() / ".config/hypr/hyprland/halcyon/update"
         def work():
             ok = True
-            # Keep Nexora's desktop layer in step with Halcyon's own updater.
+            # Keep Frontline's desktop layer in step with Halcyon's own updater.
             # This is optional on non-Halcyon installs and never blocks packages.
             if any(s["id"] == "packages" for s in wanted) and halcyon_script.is_file():
                 self.log.emit("== Halcyon desktop updates ==")
                 if self._stream(["bash", str(halcyon_script), "apply", "halcyon"]) != 0:
-                    self.log.emit("Halcyon updater failed; continuing with Nexora packages.")
+                    self.log.emit("Halcyon updater failed; continuing with Frontline packages.")
 
             for s in wanted:
                 self.log.emit(f"== {s['label']} ==")
                 if s["id"] == "packages":
-                    # Turn on the Nexora repository when it is published. This
+                    # Turn on the Frontline repository when it is published. This
                     # matters on manual installs that never ran installer setup.
                     repo_rc = self._stream(["pkexec", f"/usr/bin/{self.b.cli}", "repo", "auto"])
                     if repo_rc != 0:
-                        self.log.emit("Could not auto-enable the Nexora repository; continuing with configured repositories.")
-                    # Generic pkexec authorization works without Nexora's custom
+                        self.log.emit("Could not auto-enable the Frontline repository; continuing with configured repositories.")
+                    # Generic pkexec authorization works without Frontline's custom
                     # helper/polkit policy on manually assembled installations.
-                    # Full upgrade includes all installed Nexora packages too.
+                    # Full upgrade includes all installed Frontline packages too.
                     ok &= self._stream(["pkexec", "pacman", "-Syu", "--noconfirm"]) == 0
                 elif s["id"] == "aur":
                     ok &= self._stream(["yay", "-Sua", "--noconfirm", "--sudo", "pkexec", "--answerdiff", "None",

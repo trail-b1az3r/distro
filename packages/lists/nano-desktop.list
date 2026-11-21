@@ -54,6 +54,11 @@ pluma
 
 # Shared display manager, X11 compatibility, Qt and GTK integration.
 sddm
+# The login screen (SilentSDDM, branding/sddm)
+qt6-svg
+qt6-virtualkeyboard
+qt6-multimedia-ffmpeg
+qt6-imageformats
 xorg-server
 xorg-xwayland
 qt5-wayland
@@ -70,7 +75,7 @@ nm-connection-editor
 xdg-user-dirs
 xdg-utils
 
-# Nexora welcome and installer branding. Omit nexora-desktop (it pulls in
-# Halcyon) and nexora-write (it pulls in Qt WebEngine) from the compact live ISO.
+# Frontline welcome and installer branding. Omit frontline-desktop (it pulls in
+# Halcyon) and frontline-write (it pulls in Qt WebEngine) from the compact live ISO.
 # Nano's only desktop sessions are LXQt and MATE.
 @DISTRO_ID@-welcome

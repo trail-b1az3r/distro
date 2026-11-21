@@ -1,4 +1,4 @@
-# Nexora Linux: packages the installer adds per machine (generated, do not edit)
+# Frontline Linux: packages the installer adds per machine (generated, do not edit)
 
 ## every machine: kernel(s) chosen in the installer, CPU microcode
 linux (or linux-lts, linux-zen; +headers when DKMS modules are used)

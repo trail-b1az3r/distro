@@ -62,7 +62,7 @@ def test_hybrid_intel_nvidia_pascal(machine):
     assert "nvidia-prime" in plan.packages
     # No NVIDIA-only globals on a hybrid system: the iGPU drives the desktop.
     assert "LIBVA_DRIVER_NAME" not in plan.env and "__GLX_VENDOR_LIBRARY_NAME" not in plan.env
-    assert plan.env["AQ_DRM_DEVICES"] == "/dev/dri/nexora-primary-card:/dev/dri/nexora-offload-card"
+    assert plan.env["AQ_DRM_DEVICES"] == "/dev/dri/frontline-primary-card:/dev/dri/frontline-offload-card"
     assert 'KERNELS=="0000:00:02.0"' in plan.udev_rules and 'KERNELS=="0000:01:00.0"' in plan.udev_rules
     # Pascal has no fine-grained runtime power management.
     assert not any("DynamicPowerManagement" in m for m in plan.modprobe)
@@ -101,10 +101,10 @@ def test_apply_writes_config_in_target_root(machine, tmp_path):
     log = []
     runner = util.Runner(dry_run=False, log=log.append)
     changed = gpu_apply.write_files(plan, target, branding, runner)
-    env = (target / "etc/nexora/gpu.env").read_text()
+    env = (target / "etc/frontline/gpu.env").read_text()
     assert "AQ_DRM_DEVICES=" in env
-    assert (target / "etc/udev/rules.d/80-nexora-gpu.rules").is_file()
-    mk = (target / "etc/mkinitcpio.conf.d/20-nexora-gpu.conf").read_text()
+    assert (target / "etc/udev/rules.d/80-frontline-gpu.rules").is_file()
+    mk = (target / "etc/mkinitcpio.conf.d/20-frontline-gpu.conf").read_text()
     assert "MODULES+=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)" in mk
     assert "nvidia_drm.modeset=1" in boot.read_cmdline(target, branding)
     assert "kernel command line" in changed
@@ -119,7 +119,7 @@ def test_apply_dry_run_records_commands(machine, tmp_path):
     cmds = [" ".join(c) for c in runner.recorded]
     assert any(c.startswith(f"arch-chroot {tmp_path} pacman -S") and "nvidia-open" in c for c in cmds)
     assert any("mkinitcpio -P" in c for c in cmds)
-    assert not (tmp_path / "etc/nexora/gpu.env").exists()  # dry run writes nothing
+    assert not (tmp_path / "etc/frontline/gpu.env").exists()  # dry run writes nothing
 
 
 def test_status_render(machine):

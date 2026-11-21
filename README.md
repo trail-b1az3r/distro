@@ -1,4 +1,6 @@
-# Nexora Linux
+<p align="center"><img src="docs/logo.svg" width="220" alt="Frontline Linux: a drawn sheet with a snow-capped peak"></p>
+
+# Frontline Linux
 
 An EndeavourOS-based Arch Linux distribution with a polished Hyprland desktop,
 real hardware detection, a GPU manager that gets NVIDIA/AMD/Intel and hybrid
@@ -14,16 +16,16 @@ The name, colours and every user-visible string come from
 | | |
 |---|---|
 | **Base** | Arch Linux + EndeavourOS repositories, `pacman` and `yay`, systemd, NetworkManager, PipeWire + WirePlumber, Bluetooth, Wayland and X11 (XWayland), Plymouth, zram |
-| **Network** | NetworkManager, or (the installer asks; `sudo systemctl enable --now nmx` later) nmx, Nexora's own ([apps/nmx](apps/nmx)): `nmxcli` (nmcli's commands), `nmxtui`, Wi-Fi that comes back after every suspend, WPA3 and enterprise (802.1X) networks with automatic certificate handling. |
+| **Network** | NetworkManager, or (the installer asks; `sudo systemctl enable --now nmx` later) nmx, Frontline's own ([apps/nmx](apps/nmx)): `nmxcli` (nmcli's commands), `nmxtui`, Wi-Fi that comes back after every suspend, WPA3 and enterprise (802.1X) networks with automatic certificate handling. |
 | **Desktop** | [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus) 0.57.2.p2 (Hyprland with the Halcyon additions) with the [illogical-impulse / Halcyon shell](https://github.com/trail-b1az3r/dots) (pinned: Halcyon 2.0.4 "Short Sword"), SDDM login theme, Loaf and Dolphin, Alacritty, Fish (bash stays available), Material You colours from the wallpaper |
 | **Installer** | Graphical: UEFI and BIOS, erase / install alongside / manual partitioning, LUKS2 encryption, Btrfs (with snapshots) or ext4, swap (zram, partition, file, hibernation), separate `/home`, systemd-boot or GRUB, Secure Boot with your own keys (sbctl), profiles, GPU and AI choices. Also unattended from JSON. |
 | **Hardware** | Detection of CPU, GPUs (integrated/discrete/hybrid), RAM, disks, laptop/tablet, Wi-Fi, Bluetooth, touchscreen/pen/touchpad and displays (EDID, HiDPI scale) — shown before installing, with recommendations you can override |
-| **Graphics** | `sudo nexora-gpu detect \| configure \| status`: NVIDIA open/legacy/nouveau, AMD (+ROCm), Intel (incl. Arc), PRIME offload on hybrid laptops, early KMS, suspend support |
-| **Apps** | Built in: **Nexora Code** (the code editor: VSCodium with Nexora's themes, following Halcyon's colours), **Nexora Write** (MDXL documents, notes, books, EPUB and EPUB-MXL), **OyNIx** (the default browser), Welcome, the installer, the updater and the AI assistant, all in Material 3 Expressive |
-| **Surface** | Microsoft Surface detection with the optional Surface kernel, built from Nexora's [linux-surface fork](https://github.com/trail-b1az3r/linux-surface) (`[nexora-surface]`), with cameras (Pro 4/5/6, Book 1/2), speaker EQ and Pro 5 suspend — recommended, never forced |
+| **Graphics** | `sudo frontline-gpu detect \| configure \| status`: NVIDIA open/legacy/nouveau, AMD (+ROCm), Intel (incl. Arc), PRIME offload on hybrid laptops, early KMS, suspend support |
+| **Apps** | Built in: **Frontline Code** (the code editor: VSCodium with Frontline's themes, following Halcyon's colours), **Frontline Write** (MDXL documents, notes, books, EPUB and EPUB-MXL), **OyNIx** (the default browser), Welcome, the installer, the updater and the AI assistant, all in Material 3 Expressive |
+| **Surface** | Microsoft Surface detection with the optional Surface kernel, built from Frontline's [linux-surface fork](https://github.com/trail-b1az3r/linux-surface) (`[frontline-surface]`), with cameras (Pro 4/5/6, Book 1/2), speaker EQ and Pro 5 suspend — recommended, never forced |
 | **AI (optional)** | HyperNix with a PyTorch build matching your GPU; Hermis (Hermes Agent) and/or OpenClaw; Claude Code (`claude` works immediately); a model catalogue with honest size/memory estimates; a local OpenAI-compatible model server (llama.cpp) |
-| **Tools** | `nexora` CLI (system, hardware, gpu, update, install, ai, model, doctor, repair…), graphical Welcome wizard and updater, AI launcher and model manager |
-| **Safety** | `nexora doctor`, `nexora repair`, `nexora reset-desktop`, `nexora repair-gpu`, rescue from the live ISO; every change is explained before it is made |
+| **Tools** | `frontline` CLI (system, hardware, gpu, update, install, ai, model, doctor, repair…), graphical Welcome wizard and updater, AI launcher and model manager |
+| **Safety** | `frontline doctor`, `frontline repair`, `frontline reset-desktop`, `frontline repair-gpu`, rescue from the live ISO; every change is explained before it is made |
 
 Profiles: **Minimal**, **Standard** (default), **Developer**, **AI** — each
 feature can be switched individually in the installer.
@@ -43,7 +45,7 @@ cd distro
 sudo scripts/bootstrap.sh --builder && sudo ./build.sh --profile standard
 ```
 
-Results: `dist/Nexora-26.10.0.1.0-x86_64.iso` (the version is `distro.conf`'s date format and `ISO_RELEASE`), `checksums/`, `metadata/`.
+Results: `dist/Frontline-26.10.0.1.0-x86_64.iso` (the version is `distro.conf`'s date format and `ISO_RELEASE`), `checksums/`, `metadata/`.
 → [docs/iso-building.md](docs/iso-building.md)
 
 **Develop:**
@@ -75,7 +77,7 @@ Start with [docs/README.md](docs/README.md). Highlights:
 distro.conf        name, IDs, colours, URLs: the single source of branding
 build.sh           ISO build front end (see iso/build.env.example)
 installer/         installer configuration schema and unattended-install examples
-cli/               the `nexora` command reference (code: lib/distrokit/cli.py)
+cli/               the `frontline` command reference (code: lib/distrokit/cli.py)
 lib/distrokit/     the Python code: installer, hardware, gpu, ai, desktop, system, gui, build
 iso/               archiso overlay: boot menus, live session, autoinstall, pinned build inputs
 packages/          package lists, generated per-profile manifests, PKGBUILD templates, AUR lock
