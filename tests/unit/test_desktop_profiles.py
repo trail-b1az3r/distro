@@ -405,3 +405,14 @@ def test_hyde_is_installed_from_a_fresh_start_after_a_failed_try():
     assert 'mv -- "$dir" "$dir.old-' in text
     hyde = (Path(__file__).resolve().parents[2] / "packages/lists/desktop-hyde.list").read_text().split()
     assert "uv" in hyde and "python" in hyde
+
+
+def test_iso_desktop_and_shell_defaults_are_exposed():
+    root = Path(__file__).resolve().parents[2]
+    iso = (root / "lib/distrokit/build/iso.py").read_text()
+    build = (root / "build.sh").read_text()
+    workflow = (root / ".github/workflows/iso.yml").read_text()
+    assert "--desktop" in iso and "--shell" in iso
+    assert "ISO_DESKTOP" in build and "ISO_SHELL" in build
+    assert "options: [halcyon, work, hyde, sekaipop, macshell, none, frameshell, paperrice]" in workflow
+    assert "options: [fish, zsh, spire]" in workflow
