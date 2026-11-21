@@ -823,7 +823,7 @@ class Installation:
         if session_source.is_file():
             session_dir = self.t("/usr/share/wayland-sessions")
             session_dir.mkdir(parents=True, exist_ok=True)
-            labels = {"ml4w": "ML4W", "work": "My Linux for Work", "sekaipop": "SekaiPop", "hyde": "HyDE", "macshell": "MacShell", "frameshell": "Frameshell", "paperrice": "PaperRice"}
+            labels = {"ml4w": "ML4W", "work": "My Linux for Work", "sekaipop": "Sikai Pop", "hyde": "HyDE", "macshell": "MacShell", "frameshell": "Frameshell", "paperrice": "PaperRice"}
             for profile in selected:
                 if profile not in labels:
                     continue

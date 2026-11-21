@@ -18,6 +18,8 @@ if [[ ! -d "$home" && ! -d "$PROFILE_ROOT/configs/$profile" ]]; then
     exit 1
 fi
 profile_home_setup "$profile"
+profile_env "$profile"
+cd "$HOME"
 
 # PaperRice ships a legacy hyprland.conf, but Nexora's Hyprland 0.57 session is Lua-only.
 # Keep its Quickshell config and run it on a minimal Lua compositor session instead.
@@ -109,7 +111,6 @@ reset_services() {
 }
 trap reset_services EXIT
 
-profile_env "$profile"
 cd "$HOME"
 # The user's services run in this desktop's home from the start (its settings, not Halcyon's).
 systemctl --user set-environment HOME="$HOME" XDG_CONFIG_HOME="$XDG_CONFIG_HOME" XDG_DATA_HOME="$XDG_DATA_HOME" \
