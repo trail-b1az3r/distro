@@ -8,7 +8,7 @@
 
 pkgname=frontline-rdp-express
 pkgver=1.0.0
-_commit=9310cd84f4711b44beb90dcae78680737aa10669
+_commit=d54d5845258006e9a3c73613acd352a1862b9e24
 pkgrel=1
 pkgdesc="Remote desktop server for Wayland (Hyprland, sway, wlroots), for frontline-msg's viewer"
 arch=(x86_64 aarch64)
@@ -23,7 +23,7 @@ provides=(rdp-express)
 replaces=(nexora-rdp-express)
 conflicts=(nexora-rdp-express)
 source=("distro-$_commit.tar.gz::https://github.com/trail-b1az3r/distro/archive/$_commit.tar.gz")
-sha256sums=('14e55d4a721c303bc3343c1f62a2c2be4524818ef0506bbbc2f11901a88b3bb3')
+sha256sums=('d3c23d9983272bfebe5020ab0d2e6d0d77602f0b37e9510fe07ddedc1198c37a')
 
 _app() { cd "$srcdir/distro-$_commit/apps/rdp-express"; }
 
