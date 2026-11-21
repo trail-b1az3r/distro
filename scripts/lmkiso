@@ -180,7 +180,7 @@ if ((query)); then
  if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
  elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
  eta="$(( (pkgs*1200+9000)*100/(ncpu*gen*ram_factor) ))"
- printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Build workspace: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
  exit 0
 fi
 if (( !no_confirm && !plan )); then
