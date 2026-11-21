@@ -159,9 +159,9 @@ run_installer() {
                 ;;
             hyde) cd "$dir/Scripts" || exit 1; cmd=(./install.sh) ;;
             sekaipop) cd "$dir" || exit 1; cmd=(./install.sh) ;;
-            work) rsync -a --exclude=.git "$dir/dotfiles/" "$HOME/" ;;
+            work) rsync -a --exclude=.git "$dir/dotfiles/" "$HOME/"; cmd=(true) ;;
             macshell) cd "$dir" || exit 1; cmd=(bash install.sh --yes --no-deps --no-services) ;;
-            frameshell) cd "$dir" || exit 1; cmd=(./install.sh --yes --no-login --no-boot --no-services) ;;
+            frameshell) cd "$dir" || exit 1; cmd=(./install.sh --yes --no-login --no-boot) ;;
             paperrice) cd "$dir" || exit 1; cmd=(bash ./setup-paper-theme.sh) ;;
             *) echo "Unknown desktop profile: $id" >&2; exit 2 ;;
         esac

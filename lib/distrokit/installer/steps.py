@@ -772,7 +772,7 @@ class Installation:
         editors = load_editors()
         editor = editors.get(self.branding.get("CODE_EDITOR", "code"))
         primary = str(self.features.get("desktop_environment", "halcyon"))
-        external = [name for name, enabled in (("work", self.features.get("desktop_work")),
+        external = [name for name, enabled in (("ml4w", self.features.get("desktop_ml4w")), ("work", self.features.get("desktop_work")),
                     ("sekaipop", self.features.get("desktop_sekaipop")), ("hyde", self.features.get("desktop_hyde")),
                     ("macshell", self.features.get("desktop_macshell")), ("frameshell", self.features.get("desktop_frameshell")),
                     ("paperrice", self.features.get("desktop_paperrice"))) if enabled]
@@ -788,21 +788,24 @@ class Installation:
         )
         if self.runner.dry_run:
             self.log("desktop profile: " + primary + "; additional profiles: " + (", ".join(external) if external else "none"))
-            self.log("deploy Halcyon dotfiles" if primary == "halcyon" else "deploy Halcyon bootstrap/fallback dotfiles")
+            self.log("deploy Halcyon dotfiles" if primary == "halcyon" else ("skip desktop dotfiles" if primary == "none" else "deploy Halcyon bootstrap/fallback dotfiles"))
             return
         # Install the post-setup profile manager even when no optional desktop
         # was selected in the ISO installer. Users can add profiles later.
         self._schedule_external_desktops(external)
-        if primary != "halcyon":
+        if primary not in ("halcyon", "none"):
             self.log("Desktop: " + primary + " selected; Halcyon is retained as a bootstrap/fallback session")
-        share = self.t(f"/usr/share/{self.branding.id}")
-        dep = desktop_deploy.Deployer(
-            self.t(self.home), self.branding, dots=share / "desktop" / "dots", overlay=share / "desktop" / "overlay",
-            wallpapers=share / "branding" / "generated" / "wallpapers", log=self.log, visible_home=Path(self.home),
-        )
-        report = dep.deploy(settings, first=True)
-        self.log(f"Desktop: {len(report.written)} files")
-        self.chroot(["chown", "-R", f"{self.user}:{self.user}", self.home])
+        if primary == "none":
+            self.log("Desktop: none selected; leaving the user home without pre-deployed desktop dotfiles.")
+        else:
+            share = self.t(f"/usr/share/{self.branding.id}")
+            dep = desktop_deploy.Deployer(
+                self.t(self.home), self.branding, dots=share / "desktop" / "dots", overlay=share / "desktop" / "overlay",
+                wallpapers=share / "branding" / "generated" / "wallpapers", log=self.log, visible_home=Path(self.home),
+            )
+            report = dep.deploy(settings, first=True)
+            self.log(f"Desktop: {len(report.written)} files")
+            self.chroot(["chown", "-R", f"{self.user}:{self.user}", self.home])
 
     def _schedule_external_desktops(self, selected: list[str]) -> None:
         """Run upstream setup interactively at first login, never silently as root."""
@@ -820,7 +823,7 @@ class Installation:
         if session_source.is_file():
             session_dir = self.t("/usr/share/wayland-sessions")
             session_dir.mkdir(parents=True, exist_ok=True)
-            labels = {"work": "My Linux for Work", "sekaipop": "SekaiPop", "hyde": "HyDE", "macshell": "MacShell", "frameshell": "Frameshell", "paperrice": "PaperRice"}
+            labels = {"ml4w": "ML4W", "work": "My Linux for Work", "sekaipop": "SekaiPop", "hyde": "HyDE", "macshell": "MacShell", "frameshell": "Frameshell", "paperrice": "PaperRice"}
             for profile in selected:
                 if profile not in labels:
                     continue
