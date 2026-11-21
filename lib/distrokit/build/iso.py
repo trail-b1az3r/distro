@@ -118,6 +118,8 @@ SQUASHFS = {
 @dataclass
 class Options:
     profile: str = "standard"
+    desktop: str = "halcyon"
+    shell: str = "fish"
     edition: str = "standard"  # standard | nano; independent of install profile
     compression: str = "auto"  # auto | release | nano
     offline: str = "minimal"  # minimal | full
@@ -322,6 +324,8 @@ def build_info(b: Branding, opts: Options, epoch: int) -> dict:
         "codename": b.get("ISO_CODENAME"),
         "label": iso_label(b, epoch),
         "profile": opts.profile,
+        "desktop": opts.desktop,
+        "shell": opts.shell,
         "edition": opts.edition,
         "compression": ("debug" if opts.debug else (opts.compression if opts.compression != "auto" else ("nano" if opts.edition == "nano" else "release"))),
         "offline": opts.offline,
@@ -377,6 +381,29 @@ def assemble(opts: Options, b: Branding | None = None, epoch: int | None = None)
         pkgbuild.build_pacman_conf(b, opts.repo, opts.archive_date, opts.multilib))
 
     air = prof / "airootfs"
+    custom_de = os.environ.get("LMKISO_DE_CONFIG", "").strip()
+    if custom_de:
+        source = Path(custom_de)
+        if not source.is_absolute():
+            source = Path.cwd() / source
+        if not source.exists():
+            raise SystemExit(f"lmkiso: desktop config does not exist: {source}")
+        custom_root = air / "usr" / "share" / b.id / "desktop" / "custom-config"
+        custom_root.mkdir(parents=True, exist_ok=True)
+        if source.is_file():
+            if source.name == "config.kdl":
+                target = custom_root / "niri" / "config.kdl"
+            elif source.name == "hyprland.conf":
+                target = custom_root / "hypr" / "hyprland.conf"
+            else:
+                raise SystemExit("lmkiso: single --de files must be named hyprland.conf or config.kdl; pass a config directory for other desktops")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+        elif (source / ".config").is_dir():
+            shutil.copytree(source / ".config", custom_root, dirs_exist_ok=True)
+        else:
+            # A supplied config directory is accepted for any desktop environment.
+            shutil.copytree(source, custom_root, dirs_exist_ok=True)
     offline_dir = f"/var/cache/{b.id}/repo"
     live_conf = pacmanconf.render("live", b, offline_repo=offline_dir, multilib=opts.multilib)
     (air / "etc").mkdir(parents=True, exist_ok=True)
@@ -796,6 +823,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("action", choices=["build", "profile", "info"], nargs="?", default="build")
     p.add_argument("--profile", default=os.environ.get("ISO_PROFILE"),
                    help="installation profile the ISO offers by default (Nano defaults to minimal)")
+    p.add_argument("--desktop", choices=["halcyon", "ml4w", "work", "hyde", "sekaipop", "macshell", "none", "frameshell", "paperrice"], default=os.environ.get("ISO_DESKTOP", "halcyon"), help="default installed desktop/dotfiles profile")
+    p.add_argument("--shell", choices=["fish", "zsh", "spire"], default=os.environ.get("ISO_SHELL", "fish"), help="default login shell")
     p.add_argument("--edition", choices=["standard", "nano"], default=os.environ.get("ISO_EDITION", "standard"),
                    help="ISO edition: standard (unchanged) or nano (compact live package set)")
     p.add_argument("--compression", choices=["auto", "release", "nano"], default=os.environ.get("ISO_COMPRESSION", "auto"),
@@ -818,7 +847,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--dry-run", action="store_true", help="print the commands instead of running them")
     a = p.parse_args(argv)
     opts = Options(profile=a.profile or ("minimal" if a.edition == "nano" else "standard"),
-                   edition=a.edition, compression=a.compression, offline=a.offline, clean=a.clean, debug=a.debug,
+                   desktop=a.desktop, shell=a.shell, edition=a.edition, compression=a.compression, offline=a.offline, clean=a.clean, debug=a.debug,
                    skip_packages=a.skip_packages, dist=Path(a.dist), build=Path(a.build_dir),
                    releng=Path(a.releng), archive_date=a.archive_date, sign_key=a.sign, multilib=not a.no_multilib,
                    user_packages=Path(a.user_packages).resolve() if a.user_packages else None)

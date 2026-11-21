@@ -258,6 +258,7 @@ class Installation:
         # They are carried in the full offline repository, so this also works with no network.
         pk += ["archlinux-keyring", "endeavouros-keyring"]
         pk += self.cfg.kernels
+        pk += {"zsh": ["zsh"], "spire": ["git", "base-devel"], "fish": ["fish"]}.get(self.cfg.user.shell, [])
         micro = self.hw.cpu.microcode_package
         if micro:
             pk.append(micro)
@@ -333,6 +334,8 @@ class Installation:
 
     # 1 -----------------------------------------------------------------------
     def preflight(self) -> None:
+        if self.cfg.user.shell == "spire" and not self.online:
+            raise InstallError("Spire Shell requires an internet connection; choose Fish or Zsh for an offline installation.")
         if not self.runner.dry_run and os.geteuid() != 0:
             raise InstallError("The installer must run as root.")
         for tool in ("sfdisk", "pacstrap", "arch-chroot", "genfstab"):
@@ -685,7 +688,21 @@ class Installation:
         if self.features.get("containers") == "docker":
             self.chroot(["groupadd", "-f", "docker"])
             groups.append("docker")
-        shell = "/usr/bin/fish" if u.shell == "fish" else "/bin/bash"
+        if u.shell == "spire":
+            if not self.online:
+                raise InstallError("Spire Shell requires an internet connection during installation.")
+            spire_install = (
+                "set -euo pipefail; "
+                "tmp=$(mktemp -d); "
+                "trap 'rm -rf \"$tmp\"' EXIT; "
+                "git clone --depth 1 https://github.com/trail-b1az3r/spire-shell.git \"$tmp/spire-shell\"; "
+                "make -C \"$tmp/spire-shell\"; "
+                "install -D -m 0755 \"$tmp/spire-shell/spire\" /usr/local/bin/spire; "
+                "grep -qxF /usr/local/bin/spire /etc/shells || "
+                "echo /usr/local/bin/spire >> /etc/shells"
+            )
+            self.chroot(["bash", "-lc", spire_install])
+        shell = {"fish": "/usr/bin/fish", "zsh": "/usr/bin/zsh", "spire": "/usr/local/bin/spire"}.get(u.shell, "/bin/bash")
         cmd = ["useradd", "-m", "-U", "-G", ",".join(groups), "-s", shell]
         if u.fullname:
             cmd += ["-c", u.fullname]
@@ -767,9 +784,11 @@ class Installation:
         editors = load_editors()
         editor = editors.get(self.branding.get("CODE_EDITOR", "code"))
         primary = str(self.features.get("desktop_environment", "halcyon"))
-        external = [name for name, enabled in (("ml4w", self.features.get("desktop_ml4w")),
-                    ("sekaipop", self.features.get("desktop_sekaipop")), ("hyde", self.features.get("desktop_hyde"))) if enabled]
-        if primary != "halcyon":
+        external = [name for name, enabled in (("ml4w", self.features.get("desktop_ml4w")), ("work", self.features.get("desktop_work")),
+                    ("sekaipop", self.features.get("desktop_sekaipop")), ("hyde", self.features.get("desktop_hyde")),
+                    ("macshell", self.features.get("desktop_macshell")), ("frameshell", self.features.get("desktop_frameshell")),
+                    ("paperrice", self.features.get("desktop_paperrice"))) if enabled]
+        if primary not in ("halcyon", "none"):
             external.insert(0, primary)
         external = list(dict.fromkeys(external))
         settings = desktop_deploy.UserSettings(
@@ -781,20 +800,37 @@ class Installation:
         )
         if self.runner.dry_run:
             self.log("desktop profile: " + primary + "; additional profiles: " + (", ".join(external) if external else "none"))
-            self.log("deploy Halcyon dotfiles" if primary == "halcyon" else "deploy Halcyon bootstrap/fallback dotfiles")
+            if primary == "halcyon":
+                self.log("deploy Halcyon dotfiles")
+            elif primary == "none":
+                self.log("skip desktop dotfiles")
+            else:
+                self.log("deploy Halcyon bootstrap/fallback dotfiles")
             return
         # Install the post-setup profile manager even when no optional desktop
         # was selected in the ISO installer. Users can add profiles later.
         self._schedule_external_desktops(external)
-        if primary != "halcyon":
+        if primary not in ("halcyon", "none"):
             self.log("Desktop: " + primary + " selected; Halcyon is retained as a bootstrap/fallback session")
-        share = self.t(f"/usr/share/{self.branding.id}")
-        dep = desktop_deploy.Deployer(
-            self.t(self.home), self.branding, dots=share / "desktop" / "dots", overlay=share / "desktop" / "overlay",
-            wallpapers=share / "branding" / "generated" / "wallpapers", log=self.log, visible_home=Path(self.home),
-        )
-        report = dep.deploy(settings, first=True)
-        self.log(f"Desktop: {len(report.written)} files")
+        if primary == "none":
+            self.log("Desktop: none selected; leaving the user home without pre-deployed desktop dotfiles.")
+        else:
+            share = self.t(f"/usr/share/{self.branding.id}")
+            dep = desktop_deploy.Deployer(
+                self.t(self.home), self.branding, dots=share / "desktop" / "dots", overlay=share / "desktop" / "overlay",
+                wallpapers=share / "branding" / "generated" / "wallpapers", log=self.log, visible_home=Path(self.home),
+            )
+            report = dep.deploy(settings, first=True)
+            self.log(f"Desktop: {len(report.written)} files")
+        # lmkiso places custom settings in the live ISO's shared data tree.
+        # Copy them into the target user's home after the distro defaults so
+        # the supplied DE/Hyprland/niri configuration takes precedence.
+        custom_config = Path(f"/usr/share/{self.branding.id}/desktop/custom-config")
+        if custom_config.is_dir():
+            target_config = self.t(f"{self.home}/.config")
+            target_config.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(custom_config, target_config, dirs_exist_ok=True)
+            self.log("Desktop: applied custom lmkiso configuration")
         self.chroot(["chown", "-R", f"{self.user}:{self.user}", self.home])
 
     def _schedule_external_desktops(self, selected: list[str]) -> None:
@@ -813,7 +849,15 @@ class Installation:
         if session_source.is_file():
             session_dir = self.t("/usr/share/wayland-sessions")
             session_dir.mkdir(parents=True, exist_ok=True)
-            labels = {"ml4w": "ML4W", "sekaipop": "SekaiPop", "hyde": "HyDE"}
+            labels = {
+                "ml4w": "ML4W",
+                "work": "My Linux for Work",
+                "sekaipop": "Sikai Pop",
+                "hyde": "HyDE",
+                "macshell": "MacShell",
+                "frameshell": "Frameshell",
+                "paperrice": "PaperRice",
+            }
             for profile in selected:
                 if profile not in labels:
                     continue

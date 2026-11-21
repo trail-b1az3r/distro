@@ -10,8 +10,12 @@ ColumnLayout {
     readonly property var extraMl4w: installer.features.find(f => f.id === "desktop_ml4w")
     readonly property var extraSekai: installer.features.find(f => f.id === "desktop_sekaipop")
     readonly property var extraHyde: installer.features.find(f => f.id === "desktop_hyde")
+    readonly property var extraWork: installer.features.find(f => f.id === "desktop_work")
+    readonly property var extraMacshell: installer.features.find(f => f.id === "desktop_macshell")
+    readonly property var extraFrameshell: installer.features.find(f => f.id === "desktop_frameshell")
+    readonly property var extraPaperrice: installer.features.find(f => f.id === "desktop_paperrice")
 
-    PageHeader { title: qsTr("Desktop"); subtitle: qsTr("Choose Halcyon, ML4W, SekaiPop or HyDE. External profiles are installed during the first Halcyon login, then appear as separate SDDM sessions.") }
+    PageHeader { title: qsTr("Desktop"); subtitle: qsTr("Choose Halcyon, My Linux for Work, HyDE, Sikai Pop, MacShell, Frameshell, PaperRice, no dotfiles, or ML4W. External profiles are installed into isolated homes.") }
 
     Card {
         Layout.fillWidth: true
@@ -68,10 +72,10 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: 12
         Text { text: qsTr("Primary desktop"); color: Theme.fg; font.weight: Font.DemiBold; font.pixelSize: Theme.text }
-        Text { Layout.fillWidth: true; text: qsTr("Choose the primary desktop profile. Halcyon remains installed as a safe first-login and fallback session; external profiles get separate saved configurations and login-screen entries."); color: Theme.muted; wrapMode: Text.WordWrap; font.pixelSize: Theme.textSmall }
+        Text { Layout.fillWidth: true; text: qsTr("Choose the primary desktop or dotfiles. External profiles are installed into separate homes and get their own login-screen entries; None leaves desktop dotfiles unconfigured."); color: Theme.muted; wrapMode: Text.WordWrap; font.pixelSize: Theme.textSmall }
         AppCombo {
             Layout.fillWidth: true
-            options: [{ id: "halcyon", label: "Halcyon" }, { id: "ml4w", label: "ML4W Dotfiles" }, { id: "sekaipop", label: "SekaiPop" }, { id: "hyde", label: "HyDE" }]
+            options: [{ id: "halcyon", label: "Halcyon" }, { id: "work", label: "My Linux for Work" }, { id: "hyde", label: "HyDE" }, { id: "sekaipop", label: "Sikai Pop" }, { id: "macshell", label: "MacShell" }, { id: "none", label: "None" }, { id: "frameshell", label: "Frameshell" }, { id: "paperrice", label: "PaperRice" }, { id: "ml4w", label: "ML4W Dotfiles" }]
             current: page.primaryDesktop ? page.primaryDesktop.value : "halcyon"
             onChosen: (id) => installer.setFeature("desktop_environment", id)
         }
@@ -80,6 +84,10 @@ ColumnLayout {
         ToggleRow { Layout.fillWidth: true; title: "ML4W Dotfiles"; description: "Install as an additional desktop profile."; checked: page.extraMl4w ? page.extraMl4w.value === true : false; onToggled: (v) => installer.setFeature("desktop_ml4w", v) }
         ToggleRow { Layout.fillWidth: true; title: "SekaiPop"; description: "Install as an additional desktop profile."; checked: page.extraSekai ? page.extraSekai.value === true : false; onToggled: (v) => installer.setFeature("desktop_sekaipop", v) }
         ToggleRow { Layout.fillWidth: true; title: "HyDE"; description: "Install as an additional desktop profile."; checked: page.extraHyde ? page.extraHyde.value === true : false; onToggled: (v) => installer.setFeature("desktop_hyde", v) }
+        ToggleRow { Layout.fillWidth: true; title: "My Linux for Work"; description: "Install your personal dotfiles as an additional profile."; checked: page.extraWork ? page.extraWork.value === true : false; onToggled: (v) => installer.setFeature("desktop_work", v) }
+        ToggleRow { Layout.fillWidth: true; title: "MacShell"; description: "Install MacShell as an additional desktop profile."; checked: page.extraMacshell ? page.extraMacshell.value === true : false; onToggled: (v) => installer.setFeature("desktop_macshell", v) }
+        ToggleRow { Layout.fillWidth: true; title: "Frameshell"; description: "Install Frameshell as an additional desktop profile."; checked: page.extraFrameshell ? page.extraFrameshell.value === true : false; onToggled: (v) => installer.setFeature("desktop_frameshell", v) }
+        ToggleRow { Layout.fillWidth: true; title: "PaperRice"; description: "Install PaperRice as an additional desktop profile."; checked: page.extraPaperrice ? page.extraPaperrice.value === true : false; onToggled: (v) => installer.setFeature("desktop_paperrice", v) }
     }
 
     SectionTitle { text: qsTr("Displays") }

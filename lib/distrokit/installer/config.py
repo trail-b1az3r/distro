@@ -55,7 +55,7 @@ class UserConfig:
     fullname: str = ""
     password: str = ""
     root_password: str = ""  # empty: root login disabled (sudo only)
-    shell: str = "bash"  # login shell: bash | fish (terminals open Fish either way)
+    shell: str = "bash"  # login shell: bash | fish | zsh | spire
     autologin: bool = False
 
 
@@ -193,8 +193,8 @@ def validate(cfg: InstallConfig, *, uefi: bool, profiles: set[str], features: di
         err("user.password", "A password is required.")
     elif len(u.password) < 6:
         warn("user.password", "This password is short.")
-    if u.shell not in ("fish", "bash"):
-        err("user.shell", "Choose fish or bash.")
+    if u.shell not in ("fish", "bash", "zsh", "spire"):
+        err("user.shell", "Choose bash, fish, zsh or spire.")
     if ":" in u.fullname or "\n" in u.fullname:
         err("user.fullname", "The name cannot contain ':' or line breaks.")
     if not HOSTNAME_RE.match(cfg.hostname or ""):

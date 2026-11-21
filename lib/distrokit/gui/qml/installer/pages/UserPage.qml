@@ -66,11 +66,11 @@ ColumnLayout {
             ColumnLayout {
                 Layout.fillWidth: true
                 Text { text: qsTr("Login shell"); color: Theme.fg; font.weight: Font.DemiBold; font.pixelSize: Theme.text }
-                Text { text: qsTr("Terminals always open Fish. The login shell is used on the text console and over SSH; Bash is the safe choice for scripts and administration."); color: Theme.muted; font.pixelSize: Theme.textSmall; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                Text { text: qsTr("The login shell is used on the text console and over SSH. Bash remains the most compatible choice; Spire Shell is experimental."); color: Theme.muted; font.pixelSize: Theme.textSmall; wrapMode: Text.WordWrap; Layout.fillWidth: true }
             }
             AppCombo {
                 Layout.preferredWidth: 180
-                options: [{ id: "bash", label: qsTr("Bash (recommended)") }, { id: "fish", label: "Fish" }]
+                options: [{ id: "bash", label: qsTr("Bash") }, { id: "fish", label: "Fish" }, { id: "zsh", label: "Zsh" }, { id: "spire", label: "Spire Shell (experimental)" }]
                 current: page.u.shell
                 onChosen: (id) => installer.set("user.shell", id)
             }

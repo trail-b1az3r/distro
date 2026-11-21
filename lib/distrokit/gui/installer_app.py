@@ -178,6 +178,12 @@ class InstallerBackend(QObject):
         cfg.timezone = _current_timezone()
         iso_profile = self.iso_info.get("profile")
         cfg.profile = iso_profile if iso_profile in self._profiles else default_profile(self._profiles).id
+        default_desktop = self.iso_info.get("desktop", "halcyon")
+        if default_desktop in {"halcyon", "work", "hyde", "sekaipop", "macshell", "none", "frameshell", "paperrice"}:
+            cfg.features["desktop_environment"] = default_desktop
+        default_shell = self.iso_info.get("shell", "fish")
+        if default_shell in {"fish", "zsh", "spire"}:
+            cfg.user.shell = default_shell
         cfg.surface_kernel = self._surface.recommended
         vendor = re.sub(r"[^a-z0-9]", "", (self.report.chassis.sys_vendor or "").lower())[:10]
         cfg.hostname = f"{self.branding.id}-{vendor}" if vendor else self.branding.id

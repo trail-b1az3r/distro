@@ -35,6 +35,14 @@ OTHER = {
     "write": ("{id}-write",),
     "mdxl": ("mdxl",),
     "fonts": ("{id}-fonts-google-sans-flex",),
+    "halcyon-desktop": ("halcyon-desktop",),
+    "ml4w-desktop": ("ml4w-desktop",),
+    "work-desktop": ("work-desktop",),
+    "hyde-desktop": ("hyde-desktop",),
+    "sekaipop-desktop": ("sekaipop-desktop",),
+    "macshell-desktop": ("macshell-desktop",),
+    "frameshell-desktop": ("frameshell-desktop",),
+    "paperrice-desktop": ("paperrice-desktop",),
 }
 COMPONENTS = OWN + tuple(OTHER)
 

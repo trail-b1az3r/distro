@@ -90,3 +90,8 @@ released, installed systems pick it up with the next update.
 |---|---|
 | `90-nexora-os-release.hook` | keeps `/usr/lib/os-release`, `/etc/issue` and `/etc/lsb-release` branded when `filesystem` or `lsb-release` are updated |
 | `95-nexora-boot.hook` | regenerates boot entries after kernel or initramfs changes (removed kernels drop out of the menu; the GRUB theme is copied next to `grub.cfg`) |
+
+
+## Desktop meta-packages and experiments
+
+Every selectable profile has a pacman meta-package: `halcyon-desktop`, `ml4w-desktop`, `work-desktop`, `hyde-desktop`, `sekaipop-desktop`, `macshell-desktop`, `frameshell-desktop` and `paperrice-desktop`. Each depends on `nexora-desktop` plus the package list used by the installer. The same names are published in normal and experimental repositories. For example, `sudo nexora experiments enable ml4w-desktop` enables the latest successful CI build; add `--extra` to select the beta source.

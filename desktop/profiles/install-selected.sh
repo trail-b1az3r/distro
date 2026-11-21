@@ -23,9 +23,9 @@ SOURCES="$PROFILE_ROOT/src"
 # The distribution's data (package lists), found from the packaged lists.
 DATA_ROOT="${DISTRO_DATA_ROOT:-}"
 if [[ -z "$DATA_ROOT" ]]; then
-    for candidate in /usr/share/*/packages/lists/desktop-ml4w.list; do
+    for candidate in /usr/share/*/packages/lists/desktop-ml4w.list /usr/share/*/packages/lists/desktop-work.list; do
         [[ -f "$candidate" ]] || continue
-        DATA_ROOT="${candidate%/packages/lists/desktop-ml4w.list}"
+        DATA_ROOT="${candidate%/packages/lists/desktop-*.list}"
         break
     done
 fi
@@ -67,7 +67,7 @@ fi
 
 valid=()
 for id in "${selected[@]}"; do
-    case "$id" in ml4w|hyde|sekaipop) valid+=("$id") ;;
+    case "$id" in ml4w|hyde|sekaipop|work|macshell|frameshell|paperrice) valid+=("$id") ;;
         *) echo "Ignoring unsupported desktop profile: $id" >&2 ;;
     esac
 done
@@ -159,6 +159,10 @@ run_installer() {
                 ;;
             hyde) cd "$dir/Scripts" || exit 1; cmd=(./install.sh) ;;
             sekaipop) cd "$dir" || exit 1; cmd=(./install.sh) ;;
+            work) rsync -a --exclude=.git "$dir/dotfiles/" "$HOME/"; cmd=(true) ;;
+            macshell) cd "$dir" || exit 1; cmd=(bash install.sh --yes --no-deps --no-services) ;;
+            frameshell) cd "$dir" || exit 1; cmd=(./install.sh --yes --no-login --no-boot --no-nvidia --no-icons) ;;
+            paperrice) cd "$dir" || exit 1; cmd=(bash ./setup-paper-theme.sh) ;;
             *) echo "Unknown desktop profile: $id" >&2; exit 2 ;;
         esac
         if command -v dbus-run-session >/dev/null; then
@@ -256,6 +260,10 @@ failed=0
 for id in "${selected[@]}"; do
     case "$id" in
         ml4w) url=https://github.com/mylinuxforwork/dotfiles.git; name="ML4W" ;;
+        work) url=https://github.com/trail-b1az3r/dotfiles.git; name="My Linux for Work" ;;
+        macshell) url=https://github.com/0-ss/MacShell.git; name="MacShell" ;;
+        frameshell) url=https://github.com/Swapy-y/Frameshell.git; name="Frameshell" ;;
+        paperrice) url=https://github.com/mahaveergurjar/PaperRice.git; name="PaperRice" ;;
         hyde) url=https://github.com/HyDE-Project/HyDE.git; name="HyDE" ;;
         sekaipop) url=https://github.com/Blapples/SekaiPop.git; name="SekaiPop" ;;
     esac

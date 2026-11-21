@@ -28,6 +28,10 @@ def test_components_and_their_packages():
     assert experiments.packages("nmx", B) == ("nmx",)
     assert experiments.packages("touchd", B) == ("touchd-dkms",)
     assert experiments.packages("fonts", B) == ("nexora-fonts-google-sans-flex",)
+    for desktop in ("halcyon", "ml4w", "work", "hyde", "sekaipop", "macshell", "frameshell", "paperrice"):
+        component = f"{desktop}-desktop"
+        assert component in experiments.COMPONENTS
+        assert experiments.packages(component, B) == (component,)
 
 
 def test_sources_go_after_every_repository():
@@ -161,4 +165,4 @@ def test_ci_keeps_the_distributions_own_packages():
     ci = (ROOT / ".github/workflows/ci.yml").read_text()
     save = ci.index("cp -t build/ci-packages -- build/pkgbuild/*/*.pkg.tar.zst")
     assert save < ci.index("scripts/build-packages.sh --plan") < ci.index("scripts/build-packages.sh --only")
-    assert 'for own in "$id-core" "$id-code" nmx hyprland-plus' in ci
+    assert 'for own in "$id-core" "$id-code" nmx hyprland-plus halcyon-desktop ml4w-desktop work-desktop hyde-desktop sekaipop-desktop macshell-desktop frameshell-desktop paperrice-desktop' in ci

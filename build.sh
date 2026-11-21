@@ -10,6 +10,7 @@
 # anywhere with Docker or Podman using --container. See docs/iso-building.md.
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")"
+if [[ ${LMKISO_VERBOSE:-0} == 1 ]]; then set -x; fi
 
 usage() {
     sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
@@ -18,6 +19,8 @@ usage() {
 Options:
   --edition E      ISO edition: standard (default) or nano (compact live environment)
   --profile P      installation profile offered by default (standard by default; Nano defaults to minimal)
+  --desktop D      default desktop: halcyon, ml4w, work, hyde, sekaipop, macshell, none, frameshell, paperrice
+  --shell S        default login shell: fish, zsh or spire
   --compression C  SquashFS preset: auto (default), release or nano
   --offline MODE   minimal: distribution packages on the ISO, the rest is downloaded while installing
                    full:    every package an installation can need (larger ISO, installs with no network)
@@ -27,7 +30,7 @@ Options:
   --skip-packages  reuse the packages already built in build/repo
   --dry-run        print the build commands without running them
   --archive-date D pin Arch packages to the Arch Linux Archive snapshot of day D (YYYY/MM/DD)
-  --config FILE    read settings (ISO_PROFILE, ISO_OFFLINE, ARCHIVE_DATE, ...) from FILE;
+  --config FILE    read settings (ISO_PROFILE, ISO_DESKTOP, ISO_SHELL, ISO_OFFLINE, ARCHIVE_DATE, ...) from FILE;
                    see iso/build.env.example
   --publish        after a successful build, publish the ISO as a GitHub release, tag the
                    commit it was built from and update the package repository
@@ -61,7 +64,7 @@ while (($#)); do
             source "$2"
             set +a
             shift ;;
-        --edition | --profile | --offline | --compression | --archive-date | --sign)
+        --edition | --profile | --desktop | --shell | --offline | --compression | --archive-date | --sign)
             (($# >= 2)) || die "$1 needs a value"
             args+=("$1" "$2"); shift ;;
         --clean | --skip-packages | --no-multilib) args+=("$1") ;;
@@ -137,7 +140,7 @@ if ((container)); then
             "reboot if the container fails to start" >&2
     fi
     envs=()
-    for v in SOURCE_DATE_EPOCH ARCHIVE_DATE GPGKEY ISO_PROFILE ISO_OFFLINE ISO_EDITION ISO_COMPRESSION AUR_GIT_MIRROR; do
+    for v in SOURCE_DATE_EPOCH ARCHIVE_DATE GPGKEY ISO_PROFILE ISO_DESKTOP ISO_SHELL ISO_OFFLINE ISO_EDITION ISO_COMPRESSION AUR_GIT_MIRROR DISTROKIT_DATA LMKISO_SYNC LMKISO_VERBOSE LMKISO_DE_CONFIG LMKISO_DISTRO_NAME MAKEFLAGS; do
         if [[ -v $v ]]; then envs+=(-e "$v=${!v}"); fi
     done
     mounts=()
@@ -146,7 +149,7 @@ if ((container)); then
         envs+=(-e USER_PACKAGES=/user-packages)
     fi
     owner="${HOST_UID:-${SUDO_UID:-$(id -u)}}:${HOST_GID:-${SUDO_GID:-$(id -g)}}"
-    inner="scripts/bootstrap.sh --container && BUILD_USER=builder ./build.sh ${args[*]@Q}"
+    inner="scripts/bootstrap.sh --container && if [[ ${LMKISO_SYNC:-0} == 1 ]]; then pacman -Syu --noconfirm; fi && BUILD_USER=builder ./build.sh ${args[*]@Q}"
     # The package repository's release files need repo-add, which only the container has.
     ((publish)) && inner+=" && scripts/publish-repo.sh build/repo build/repo-assets"
     inner+=" ; status=\$?; chown -R $owner build dist checksums metadata 2>/dev/null; exit \$status"
@@ -191,7 +194,7 @@ PY
 fi
 
 if ((EUID != 0)) && [[ " ${args[*]} " != *" --dry-run "* ]]; then
-    sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,ISO_PROFILE,ISO_OFFLINE,ISO_EDITION,ISO_COMPRESSION,AUR_GIT_MIRROR,BUILD_PYTHON,BUILD_PYTHONPATH,BUILD_PYTHON_CHECKED,USER_PACKAGES "$0" "${args[@]}"
+    sudo --preserve-env=SOURCE_DATE_EPOCH,ARCHIVE_DATE,GPGKEY,BUILD_USER,ISO_PROFILE,ISO_DESKTOP,ISO_SHELL,ISO_OFFLINE,ISO_EDITION,ISO_COMPRESSION,AUR_GIT_MIRROR,BUILD_PYTHON,BUILD_PYTHONPATH,BUILD_PYTHON_CHECKED,USER_PACKAGES,DISTROKIT_DATA,LMKISO_SYNC,LMKISO_VERBOSE,LMKISO_DE_CONFIG,LMKISO_DISTRO_NAME,MAKEFLAGS "$0" "${args[@]}"
     publish_release
     exit
 fi

@@ -1,0 +1,24 @@
+# PaperRice runtime and its own setup script dependencies.
+git
+base-devel
+kitty
+quickshell
+hyprlock
+kvantum
+glib2
+fastfetch
+zenity
+rofi-wayland
+dunst
+starship
+qt6-base
+qt6-declarative
+qt6-wayland
+qt6-shadertools
+qt6-svg
+waybar
+grim
+slurp
+brightnessctl
+playerctl
+xdg-desktop-portal-hyprland

@@ -122,6 +122,7 @@ class Stage:
         self.tree("branding/icons/ui", f"{share}/branding/icons/ui")
 
         self.python_entry(f"/usr/bin/{b.cli}", "distrokit.cli", comment=f"{b.pretty_name} system tool")
+        self.file("scripts/lmkiso", "/usr/bin/lmkiso", 0o755)
         self.link(f"/usr/bin/{b.id}-gpu", b.cli)
         self.link("/usr/bin/distro-gpu", b.cli)
         # `sudo logout`, `sudo logout now`, `sudo logout stop`: `<cli> logout` (bash's own logout builtin still ends a
