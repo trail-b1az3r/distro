@@ -99,7 +99,10 @@ while (($#)); do
     -q) query=1 ;;
     -D) (($# > 1)) || die "-D requires a display name"; distro_name="$2"; shift ;;
     -ocl)
-      printf 'git clone --recursive https://github.com/trail-b1az3r/distro.git nexora-distro && cd nexora-distro && curl -fsSL https://raw.githubusercontent.com/trail-b1az3r/distro/main/scripts/lmkiso | sudo bash -s --'
+      remote_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || printf main)"
+      [[ -n "$remote_branch" && "$remote_branch" != HEAD ]] || remote_branch=main
+      remote_script="https://raw.githubusercontent.com/trail-b1az3r/distro/$remote_branch/scripts/lmkiso"
+      printf 'git clone --recursive --branch %q https://github.com/trail-b1az3r/distro.git nexora-distro && cd nexora-distro && curl -fsSL %q | sudo bash -s --' "$remote_branch" "$remote_script"
       has_container=0
       for x in "${original_args[@]}"; do
         [[ "$x" == "-ocl" ]] && continue
