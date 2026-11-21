@@ -96,7 +96,7 @@ name=str(spec.get("name",chosen)).replace('"','\\"')
 toml=(f'[profile]\nid = "{chosen}"\nname = "{name}"\norder = 999\ninherits = "{base}"\nsummary = "Custom lmkiso profile"\ndescription = "Generated from profiles.json."\napprox_size_gb = 0\ndefault = false\n\n[packages]\nlists = ["{list_id}"]\n')
 (root/"profiles"/(chosen+".toml")).write_text(toml)
 PY
- profile="\${profile:-$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("default",""))' "$custom")}"
+ profile="${profile:-$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("default",""))' "$custom")}"
  [[ -n "$profile" ]] || die "custom profiles.json needs default or -P"
  export DISTROKIT_DATA=build/lmkiso-data
  extra_de="$(python3 - "$custom" "$profile" <<'PY'
@@ -133,11 +133,11 @@ if ((apkg)); then
  mkdir -p build/lmkiso-packages
  if ((apkge)); then
   dirs=(/var/cache/pacman/pkg)
-  if [[ -n "\${SUDO_USER:-}" ]]; then
+  if [[ -n "${SUDO_USER:-}" ]]; then
    home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
    [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
   fi
-  find "\${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
+  find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
   args+=(--offline full)
  else
   declare -A installed=()
@@ -145,7 +145,7 @@ if ((apkg)); then
   for archive in /var/cache/pacman/pkg/*.pkg.tar.*; do
    [[ -f "$archive" ]] || continue
    read -r name version < <(pacman -Qp --print-format '%n %v' "$archive" 2>/dev/null || true)
-   [[ -n "\${installed[$name]:-}" && "\${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
+   [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
   done
  fi
  export USER_PACKAGES="$ROOT/build/lmkiso-packages"
@@ -165,24 +165,24 @@ if ((query)); then
  iso_size="$(du -ch dist/*.iso 2>/dev/null | tail -n1 | cut -f1 || echo 0)"
  gen=4
  if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
-  gen="\${BASH_REMATCH[1]:0:1}"
-  if [[ \${#BASH_REMATCH[1]} -ge 5 ]]; then gen="\${BASH_REMATCH[1]:0:2}"; fi
+  gen="${BASH_REMATCH[1]:0:1}"
+  if [[ ${#BASH_REMATCH[1]} -ge 5 ]]; then gen="${BASH_REMATCH[1]:0:2}"; fi
  elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{4}) ]]; then
-  gen="$((\${BASH_REMATCH[1]:0:1}+2))"
+  gen="$((${BASH_REMATCH[1]:0:1}+2))"
  fi
  ram_factor=100
  if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
  elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
  eta="$(( (pkgs*200+2500)*100/(ncpu*gen*ram_factor) ))"
- printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$iso_size" "$eta" "\${profile:-standard}" "\${DISTROKIT_DATA:-$ROOT}"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
  exit 0
 fi
 if (( !no_confirm && !plan )); then
- printf 'Build ISO (profile=%s, cores=%s, container=%s)? [y/N] ' "\${profile:-standard}" "\${cores:-auto}" "$contain"
+ printf 'Build ISO (profile=%s, cores=%s, container=%s)? [y/N] ' "${profile:-standard}" "${cores:-auto}" "$contain"
  read -r answer
  [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo "Cancelled."; exit 1; }
 fi
-./build.sh "\${args[@]}"
+./build.sh "${args[@]}"
 ((plan)) && exit 0
 if [[ -n "$output" ]]; then
  iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
