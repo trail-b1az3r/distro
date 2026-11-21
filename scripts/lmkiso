@@ -120,6 +120,802 @@ PY
  if [[ -n "$desk" ]]; then export ISO_DESKTOP="$desk"; args+=(--desktop "$desk"); fi
  if [[ -n "$shell_choice" ]]; then export ISO_SHELL="$shell_choice"; args+=(--shell "$shell_choice"); fi
 fi
+de_profile=""
+if [[ -n "$de" && ! -e "$de" && "$de" =~ ^(plasma|gnome|xfce|mate|lxqt|cinnamon|hyprland|niri|sway)$ ]]; then
+ de_profile="$de"
+ de=""
+fi
+if [[ -n "$de_profile" ]]; then
+ if [[ -z "${DISTROKIT_DATA:-}" ]]; then
+  rm -rf build/lmkiso-data
+  mkdir -p build/lmkiso-data/profiles build/lmkiso-data/packages/lists
+  for item in "$ROOT"/*; do
+   base="$(basename "$item")"
+   case "$base" in profiles|packages|build|dist|checksums|metadata) continue ;; esac
+   ln -sfn "../../$base" "build/lmkiso-data/$base"
+  done
+  for item in "$ROOT"/profiles/*.toml; do
+   [[ -f "$item" ]] && ln -sfn "../../../profiles/$(basename "$item")" "build/lmkiso-data/profiles/$(basename "$item")"
+  done
+  for item in "$ROOT"/packages/*; do
+   base="$(basename "$item")"; [[ "$base" == lists ]] && continue
+   ln -sfn "../../../packages/$base" "build/lmkiso-data/packages/$base"
+  done
+  for item in "$ROOT"/packages/lists/*.list; do
+   ln -sfn "../../../../packages/lists/$(basename "$item")" "build/lmkiso-data/packages/lists/$(basename "$item")"
+  done
+  export DISTROKIT_DATA=build/lmkiso-data
+ fi
+ base_profile="${profile:-standard}"
+ custom_id="lmkiso-${base_profile}-${de_profile}"
+ list_id="lmkiso-de-${de_profile}"
+ case "$de_profile" in
+  plasma) de_packages=
+ [[ -e "$de" ]] || die "--de path does not exist: $de"
+ mkdir -p build/lmkiso-input; rm -rf build/lmkiso-input/de-config
+ cp -a "$de" build/lmkiso-input/de-config
+ export LMKISO_DE_CONFIG=build/lmkiso-input/de-config
+fi
+
+if ((apkg)); then
+ mkdir -p build/lmkiso-packages
+ if ((apkge)); then
+  dirs=(/var/cache/pacman/pkg)
+  if [[ -n "${SUDO_USER:-}" ]]; then
+   home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+   [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
+  fi
+  find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
+  args+=(--offline full)
+ else
+  declare -A installed=()
+  while read -r name version; do installed["$name"]="$version"; done < <(pacman -Q 2>/dev/null || true)
+  for archive in /var/cache/pacman/pkg/*.pkg.tar.*; do
+   [[ -f "$archive" ]] || continue
+   read -r name version < <(pacman -Qp --print-format '%n %v' "$archive" 2>/dev/null || true)
+   [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
+  done
+ fi
+ if compgen -G "build/lmkiso-packages/*.pkg.tar.*" >/dev/null; then
+  export USER_PACKAGES="$ROOT/build/lmkiso-packages"
+ else
+  echo "lmkiso: no matching local package archives found; continuing without cached package additions." >&2
+ fi
+fi
+if ((contain)); then args+=(--container); fi
+if ((fold)); then args+=(--compression nano); fi
+if ((plan)); then args+=(--dry-run); fi
+if ((sync)); then export LMKISO_SYNC=1; fi
+if ((sync && !contain)); then die "-sy requires --contain"; fi
+
+if ((query)); then
+ cpu="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+ ncpu="$(nproc 2>/dev/null || echo 1)"
+ ram="$(awk '/MemTotal/ {printf "%.1f",$2/1024/1024}' /proc/meminfo)"
+ data_root="${DISTROKIT_DATA:-$ROOT}"
+ pkgs="$(grep -hEv '^[[:space:]]*(#|$)' "$data_root"/packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
+ repo_size="$(du -sh build/repo 2>/dev/null | cut -f1 || echo 0)"
+ work_size="$(du -sh build 2>/dev/null | cut -f1 || echo 0)"
+ iso_size="$(du -ch dist/*.iso 2>/dev/null | tail -n1 | cut -f1 || echo 0)"
+ gen=4
+ if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
+  gen="${BASH_REMATCH[1]:0:1}"
+  if [[ ${#BASH_REMATCH[1]} -ge 5 ]]; then gen="${BASH_REMATCH[1]:0:2}"; fi
+ elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{4}) ]]; then
+  gen="$((${BASH_REMATCH[1]:0:1}+2))"
+ fi
+ ram_factor=100
+ if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
+ elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
+ eta="$(( (pkgs*1200+9000)*100/(ncpu*gen*ram_factor) ))"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Build workspace: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
+ exit 0
+fi
+if (( !no_confirm && !plan )); then
+ printf 'Build ISO (profile=%s, cores=%s, container=%s)? [y/N] ' "${profile:-standard}" "${cores:-auto}" "$contain"
+ read -r answer
+ [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo "Cancelled."; exit 1; }
+fi
+./build.sh "${args[@]}"
+((plan)) && exit 0
+if [[ -n "$output" ]]; then
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+ [[ -n "$iso" ]] || die "no ISO found in dist/"
+ if [[ -d "$output" || "$output" == */ ]]; then mkdir -p "$output"; dest="$output/$(basename "$iso")"
+ else mkdir -p "$(dirname "$output")"; dest="$output"; fi
+ mv -f "$iso" "$dest"; iso="$dest"
+else
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+fi
+if ((split_iso)); then
+ [[ -f "$iso" ]] || die "cannot find ISO to split"
+ split -b 3900M -d -a 3 "$iso" "$iso.part-"
+ printf 'Join with: cat %q.part-* > %q\n' "$iso" "$iso"
+fi
+plasma-meta\nsddm\nxorg-xwayland' ;;
+  gnome) de_packages=
+ [[ -e "$de" ]] || die "--de path does not exist: $de"
+ mkdir -p build/lmkiso-input; rm -rf build/lmkiso-input/de-config
+ cp -a "$de" build/lmkiso-input/de-config
+ export LMKISO_DE_CONFIG=build/lmkiso-input/de-config
+fi
+
+if ((apkg)); then
+ mkdir -p build/lmkiso-packages
+ if ((apkge)); then
+  dirs=(/var/cache/pacman/pkg)
+  if [[ -n "${SUDO_USER:-}" ]]; then
+   home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+   [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
+  fi
+  find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
+  args+=(--offline full)
+ else
+  declare -A installed=()
+  while read -r name version; do installed["$name"]="$version"; done < <(pacman -Q 2>/dev/null || true)
+  for archive in /var/cache/pacman/pkg/*.pkg.tar.*; do
+   [[ -f "$archive" ]] || continue
+   read -r name version < <(pacman -Qp --print-format '%n %v' "$archive" 2>/dev/null || true)
+   [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
+  done
+ fi
+ if compgen -G "build/lmkiso-packages/*.pkg.tar.*" >/dev/null; then
+  export USER_PACKAGES="$ROOT/build/lmkiso-packages"
+ else
+  echo "lmkiso: no matching local package archives found; continuing without cached package additions." >&2
+ fi
+fi
+if ((contain)); then args+=(--container); fi
+if ((fold)); then args+=(--compression nano); fi
+if ((plan)); then args+=(--dry-run); fi
+if ((sync)); then export LMKISO_SYNC=1; fi
+if ((sync && !contain)); then die "-sy requires --contain"; fi
+
+if ((query)); then
+ cpu="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+ ncpu="$(nproc 2>/dev/null || echo 1)"
+ ram="$(awk '/MemTotal/ {printf "%.1f",$2/1024/1024}' /proc/meminfo)"
+ data_root="${DISTROKIT_DATA:-$ROOT}"
+ pkgs="$(grep -hEv '^[[:space:]]*(#|$)' "$data_root"/packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
+ repo_size="$(du -sh build/repo 2>/dev/null | cut -f1 || echo 0)"
+ work_size="$(du -sh build 2>/dev/null | cut -f1 || echo 0)"
+ iso_size="$(du -ch dist/*.iso 2>/dev/null | tail -n1 | cut -f1 || echo 0)"
+ gen=4
+ if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
+  gen="${BASH_REMATCH[1]:0:1}"
+  if [[ ${#BASH_REMATCH[1]} -ge 5 ]]; then gen="${BASH_REMATCH[1]:0:2}"; fi
+ elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{4}) ]]; then
+  gen="$((${BASH_REMATCH[1]:0:1}+2))"
+ fi
+ ram_factor=100
+ if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
+ elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
+ eta="$(( (pkgs*1200+9000)*100/(ncpu*gen*ram_factor) ))"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Build workspace: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
+ exit 0
+fi
+if (( !no_confirm && !plan )); then
+ printf 'Build ISO (profile=%s, cores=%s, container=%s)? [y/N] ' "${profile:-standard}" "${cores:-auto}" "$contain"
+ read -r answer
+ [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo "Cancelled."; exit 1; }
+fi
+./build.sh "${args[@]}"
+((plan)) && exit 0
+if [[ -n "$output" ]]; then
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+ [[ -n "$iso" ]] || die "no ISO found in dist/"
+ if [[ -d "$output" || "$output" == */ ]]; then mkdir -p "$output"; dest="$output/$(basename "$iso")"
+ else mkdir -p "$(dirname "$output")"; dest="$output"; fi
+ mv -f "$iso" "$dest"; iso="$dest"
+else
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+fi
+if ((split_iso)); then
+ [[ -f "$iso" ]] || die "cannot find ISO to split"
+ split -b 3900M -d -a 3 "$iso" "$iso.part-"
+ printf 'Join with: cat %q.part-* > %q\n' "$iso" "$iso"
+fi
+gnome-shell\ngnome-session\ngnome-control-center\nnautilus\ngdm\ngnome-tweaks\nxdg-desktop-portal-gnome' ;;
+  xfce) de_packages=
+ [[ -e "$de" ]] || die "--de path does not exist: $de"
+ mkdir -p build/lmkiso-input; rm -rf build/lmkiso-input/de-config
+ cp -a "$de" build/lmkiso-input/de-config
+ export LMKISO_DE_CONFIG=build/lmkiso-input/de-config
+fi
+
+if ((apkg)); then
+ mkdir -p build/lmkiso-packages
+ if ((apkge)); then
+  dirs=(/var/cache/pacman/pkg)
+  if [[ -n "${SUDO_USER:-}" ]]; then
+   home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+   [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
+  fi
+  find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
+  args+=(--offline full)
+ else
+  declare -A installed=()
+  while read -r name version; do installed["$name"]="$version"; done < <(pacman -Q 2>/dev/null || true)
+  for archive in /var/cache/pacman/pkg/*.pkg.tar.*; do
+   [[ -f "$archive" ]] || continue
+   read -r name version < <(pacman -Qp --print-format '%n %v' "$archive" 2>/dev/null || true)
+   [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
+  done
+ fi
+ if compgen -G "build/lmkiso-packages/*.pkg.tar.*" >/dev/null; then
+  export USER_PACKAGES="$ROOT/build/lmkiso-packages"
+ else
+  echo "lmkiso: no matching local package archives found; continuing without cached package additions." >&2
+ fi
+fi
+if ((contain)); then args+=(--container); fi
+if ((fold)); then args+=(--compression nano); fi
+if ((plan)); then args+=(--dry-run); fi
+if ((sync)); then export LMKISO_SYNC=1; fi
+if ((sync && !contain)); then die "-sy requires --contain"; fi
+
+if ((query)); then
+ cpu="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+ ncpu="$(nproc 2>/dev/null || echo 1)"
+ ram="$(awk '/MemTotal/ {printf "%.1f",$2/1024/1024}' /proc/meminfo)"
+ data_root="${DISTROKIT_DATA:-$ROOT}"
+ pkgs="$(grep -hEv '^[[:space:]]*(#|$)' "$data_root"/packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
+ repo_size="$(du -sh build/repo 2>/dev/null | cut -f1 || echo 0)"
+ work_size="$(du -sh build 2>/dev/null | cut -f1 || echo 0)"
+ iso_size="$(du -ch dist/*.iso 2>/dev/null | tail -n1 | cut -f1 || echo 0)"
+ gen=4
+ if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
+  gen="${BASH_REMATCH[1]:0:1}"
+  if [[ ${#BASH_REMATCH[1]} -ge 5 ]]; then gen="${BASH_REMATCH[1]:0:2}"; fi
+ elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{4}) ]]; then
+  gen="$((${BASH_REMATCH[1]:0:1}+2))"
+ fi
+ ram_factor=100
+ if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
+ elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
+ eta="$(( (pkgs*1200+9000)*100/(ncpu*gen*ram_factor) ))"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Build workspace: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
+ exit 0
+fi
+if (( !no_confirm && !plan )); then
+ printf 'Build ISO (profile=%s, cores=%s, container=%s)? [y/N] ' "${profile:-standard}" "${cores:-auto}" "$contain"
+ read -r answer
+ [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo "Cancelled."; exit 1; }
+fi
+./build.sh "${args[@]}"
+((plan)) && exit 0
+if [[ -n "$output" ]]; then
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+ [[ -n "$iso" ]] || die "no ISO found in dist/"
+ if [[ -d "$output" || "$output" == */ ]]; then mkdir -p "$output"; dest="$output/$(basename "$iso")"
+ else mkdir -p "$(dirname "$output")"; dest="$output"; fi
+ mv -f "$iso" "$dest"; iso="$dest"
+else
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+fi
+if ((split_iso)); then
+ [[ -f "$iso" ]] || die "cannot find ISO to split"
+ split -b 3900M -d -a 3 "$iso" "$iso.part-"
+ printf 'Join with: cat %q.part-* > %q\n' "$iso" "$iso"
+fi
+xfce4-session\nxfce4-panel\nxfce4-settings\nxfce4-terminal\nthunar\nxfdesktop\nxfwm4\nlightdm\nlightdm-gtk-greeter' ;;
+  mate) de_packages=
+ [[ -e "$de" ]] || die "--de path does not exist: $de"
+ mkdir -p build/lmkiso-input; rm -rf build/lmkiso-input/de-config
+ cp -a "$de" build/lmkiso-input/de-config
+ export LMKISO_DE_CONFIG=build/lmkiso-input/de-config
+fi
+
+if ((apkg)); then
+ mkdir -p build/lmkiso-packages
+ if ((apkge)); then
+  dirs=(/var/cache/pacman/pkg)
+  if [[ -n "${SUDO_USER:-}" ]]; then
+   home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+   [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
+  fi
+  find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
+  args+=(--offline full)
+ else
+  declare -A installed=()
+  while read -r name version; do installed["$name"]="$version"; done < <(pacman -Q 2>/dev/null || true)
+  for archive in /var/cache/pacman/pkg/*.pkg.tar.*; do
+   [[ -f "$archive" ]] || continue
+   read -r name version < <(pacman -Qp --print-format '%n %v' "$archive" 2>/dev/null || true)
+   [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
+  done
+ fi
+ if compgen -G "build/lmkiso-packages/*.pkg.tar.*" >/dev/null; then
+  export USER_PACKAGES="$ROOT/build/lmkiso-packages"
+ else
+  echo "lmkiso: no matching local package archives found; continuing without cached package additions." >&2
+ fi
+fi
+if ((contain)); then args+=(--container); fi
+if ((fold)); then args+=(--compression nano); fi
+if ((plan)); then args+=(--dry-run); fi
+if ((sync)); then export LMKISO_SYNC=1; fi
+if ((sync && !contain)); then die "-sy requires --contain"; fi
+
+if ((query)); then
+ cpu="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+ ncpu="$(nproc 2>/dev/null || echo 1)"
+ ram="$(awk '/MemTotal/ {printf "%.1f",$2/1024/1024}' /proc/meminfo)"
+ data_root="${DISTROKIT_DATA:-$ROOT}"
+ pkgs="$(grep -hEv '^[[:space:]]*(#|$)' "$data_root"/packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
+ repo_size="$(du -sh build/repo 2>/dev/null | cut -f1 || echo 0)"
+ work_size="$(du -sh build 2>/dev/null | cut -f1 || echo 0)"
+ iso_size="$(du -ch dist/*.iso 2>/dev/null | tail -n1 | cut -f1 || echo 0)"
+ gen=4
+ if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
+  gen="${BASH_REMATCH[1]:0:1}"
+  if [[ ${#BASH_REMATCH[1]} -ge 5 ]]; then gen="${BASH_REMATCH[1]:0:2}"; fi
+ elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{4}) ]]; then
+  gen="$((${BASH_REMATCH[1]:0:1}+2))"
+ fi
+ ram_factor=100
+ if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
+ elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
+ eta="$(( (pkgs*1200+9000)*100/(ncpu*gen*ram_factor) ))"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Build workspace: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
+ exit 0
+fi
+if (( !no_confirm && !plan )); then
+ printf 'Build ISO (profile=%s, cores=%s, container=%s)? [y/N] ' "${profile:-standard}" "${cores:-auto}" "$contain"
+ read -r answer
+ [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo "Cancelled."; exit 1; }
+fi
+./build.sh "${args[@]}"
+((plan)) && exit 0
+if [[ -n "$output" ]]; then
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+ [[ -n "$iso" ]] || die "no ISO found in dist/"
+ if [[ -d "$output" || "$output" == */ ]]; then mkdir -p "$output"; dest="$output/$(basename "$iso")"
+ else mkdir -p "$(dirname "$output")"; dest="$output"; fi
+ mv -f "$iso" "$dest"; iso="$dest"
+else
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+fi
+if ((split_iso)); then
+ [[ -f "$iso" ]] || die "cannot find ISO to split"
+ split -b 3900M -d -a 3 "$iso" "$iso.part-"
+ printf 'Join with: cat %q.part-* > %q\n' "$iso" "$iso"
+fi
+mate-session-manager\nmate-panel\nmate-control-center\nmate-terminal\ncaja\nmarco\nlightdm\nlightdm-gtk-greeter' ;;
+  lxqt) de_packages=
+ [[ -e "$de" ]] || die "--de path does not exist: $de"
+ mkdir -p build/lmkiso-input; rm -rf build/lmkiso-input/de-config
+ cp -a "$de" build/lmkiso-input/de-config
+ export LMKISO_DE_CONFIG=build/lmkiso-input/de-config
+fi
+
+if ((apkg)); then
+ mkdir -p build/lmkiso-packages
+ if ((apkge)); then
+  dirs=(/var/cache/pacman/pkg)
+  if [[ -n "${SUDO_USER:-}" ]]; then
+   home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+   [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
+  fi
+  find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
+  args+=(--offline full)
+ else
+  declare -A installed=()
+  while read -r name version; do installed["$name"]="$version"; done < <(pacman -Q 2>/dev/null || true)
+  for archive in /var/cache/pacman/pkg/*.pkg.tar.*; do
+   [[ -f "$archive" ]] || continue
+   read -r name version < <(pacman -Qp --print-format '%n %v' "$archive" 2>/dev/null || true)
+   [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
+  done
+ fi
+ if compgen -G "build/lmkiso-packages/*.pkg.tar.*" >/dev/null; then
+  export USER_PACKAGES="$ROOT/build/lmkiso-packages"
+ else
+  echo "lmkiso: no matching local package archives found; continuing without cached package additions." >&2
+ fi
+fi
+if ((contain)); then args+=(--container); fi
+if ((fold)); then args+=(--compression nano); fi
+if ((plan)); then args+=(--dry-run); fi
+if ((sync)); then export LMKISO_SYNC=1; fi
+if ((sync && !contain)); then die "-sy requires --contain"; fi
+
+if ((query)); then
+ cpu="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+ ncpu="$(nproc 2>/dev/null || echo 1)"
+ ram="$(awk '/MemTotal/ {printf "%.1f",$2/1024/1024}' /proc/meminfo)"
+ data_root="${DISTROKIT_DATA:-$ROOT}"
+ pkgs="$(grep -hEv '^[[:space:]]*(#|$)' "$data_root"/packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
+ repo_size="$(du -sh build/repo 2>/dev/null | cut -f1 || echo 0)"
+ work_size="$(du -sh build 2>/dev/null | cut -f1 || echo 0)"
+ iso_size="$(du -ch dist/*.iso 2>/dev/null | tail -n1 | cut -f1 || echo 0)"
+ gen=4
+ if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
+  gen="${BASH_REMATCH[1]:0:1}"
+  if [[ ${#BASH_REMATCH[1]} -ge 5 ]]; then gen="${BASH_REMATCH[1]:0:2}"; fi
+ elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{4}) ]]; then
+  gen="$((${BASH_REMATCH[1]:0:1}+2))"
+ fi
+ ram_factor=100
+ if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
+ elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
+ eta="$(( (pkgs*1200+9000)*100/(ncpu*gen*ram_factor) ))"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Build workspace: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
+ exit 0
+fi
+if (( !no_confirm && !plan )); then
+ printf 'Build ISO (profile=%s, cores=%s, container=%s)? [y/N] ' "${profile:-standard}" "${cores:-auto}" "$contain"
+ read -r answer
+ [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo "Cancelled."; exit 1; }
+fi
+./build.sh "${args[@]}"
+((plan)) && exit 0
+if [[ -n "$output" ]]; then
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+ [[ -n "$iso" ]] || die "no ISO found in dist/"
+ if [[ -d "$output" || "$output" == */ ]]; then mkdir -p "$output"; dest="$output/$(basename "$iso")"
+ else mkdir -p "$(dirname "$output")"; dest="$output"; fi
+ mv -f "$iso" "$dest"; iso="$dest"
+else
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+fi
+if ((split_iso)); then
+ [[ -f "$iso" ]] || die "cannot find ISO to split"
+ split -b 3900M -d -a 3 "$iso" "$iso.part-"
+ printf 'Join with: cat %q.part-* > %q\n' "$iso" "$iso"
+fi
+lxqt-session\nlxqt-panel\nlxqt-config\npcmanfm-qt\nqterminal\nsddm\nbreeze-icons' ;;
+  cinnamon) de_packages=
+ [[ -e "$de" ]] || die "--de path does not exist: $de"
+ mkdir -p build/lmkiso-input; rm -rf build/lmkiso-input/de-config
+ cp -a "$de" build/lmkiso-input/de-config
+ export LMKISO_DE_CONFIG=build/lmkiso-input/de-config
+fi
+
+if ((apkg)); then
+ mkdir -p build/lmkiso-packages
+ if ((apkge)); then
+  dirs=(/var/cache/pacman/pkg)
+  if [[ -n "${SUDO_USER:-}" ]]; then
+   home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+   [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
+  fi
+  find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
+  args+=(--offline full)
+ else
+  declare -A installed=()
+  while read -r name version; do installed["$name"]="$version"; done < <(pacman -Q 2>/dev/null || true)
+  for archive in /var/cache/pacman/pkg/*.pkg.tar.*; do
+   [[ -f "$archive" ]] || continue
+   read -r name version < <(pacman -Qp --print-format '%n %v' "$archive" 2>/dev/null || true)
+   [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
+  done
+ fi
+ if compgen -G "build/lmkiso-packages/*.pkg.tar.*" >/dev/null; then
+  export USER_PACKAGES="$ROOT/build/lmkiso-packages"
+ else
+  echo "lmkiso: no matching local package archives found; continuing without cached package additions." >&2
+ fi
+fi
+if ((contain)); then args+=(--container); fi
+if ((fold)); then args+=(--compression nano); fi
+if ((plan)); then args+=(--dry-run); fi
+if ((sync)); then export LMKISO_SYNC=1; fi
+if ((sync && !contain)); then die "-sy requires --contain"; fi
+
+if ((query)); then
+ cpu="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+ ncpu="$(nproc 2>/dev/null || echo 1)"
+ ram="$(awk '/MemTotal/ {printf "%.1f",$2/1024/1024}' /proc/meminfo)"
+ data_root="${DISTROKIT_DATA:-$ROOT}"
+ pkgs="$(grep -hEv '^[[:space:]]*(#|$)' "$data_root"/packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
+ repo_size="$(du -sh build/repo 2>/dev/null | cut -f1 || echo 0)"
+ work_size="$(du -sh build 2>/dev/null | cut -f1 || echo 0)"
+ iso_size="$(du -ch dist/*.iso 2>/dev/null | tail -n1 | cut -f1 || echo 0)"
+ gen=4
+ if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
+  gen="${BASH_REMATCH[1]:0:1}"
+  if [[ ${#BASH_REMATCH[1]} -ge 5 ]]; then gen="${BASH_REMATCH[1]:0:2}"; fi
+ elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{4}) ]]; then
+  gen="$((${BASH_REMATCH[1]:0:1}+2))"
+ fi
+ ram_factor=100
+ if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
+ elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
+ eta="$(( (pkgs*1200+9000)*100/(ncpu*gen*ram_factor) ))"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Build workspace: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
+ exit 0
+fi
+if (( !no_confirm && !plan )); then
+ printf 'Build ISO (profile=%s, cores=%s, container=%s)? [y/N] ' "${profile:-standard}" "${cores:-auto}" "$contain"
+ read -r answer
+ [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo "Cancelled."; exit 1; }
+fi
+./build.sh "${args[@]}"
+((plan)) && exit 0
+if [[ -n "$output" ]]; then
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+ [[ -n "$iso" ]] || die "no ISO found in dist/"
+ if [[ -d "$output" || "$output" == */ ]]; then mkdir -p "$output"; dest="$output/$(basename "$iso")"
+ else mkdir -p "$(dirname "$output")"; dest="$output"; fi
+ mv -f "$iso" "$dest"; iso="$dest"
+else
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+fi
+if ((split_iso)); then
+ [[ -f "$iso" ]] || die "cannot find ISO to split"
+ split -b 3900M -d -a 3 "$iso" "$iso.part-"
+ printf 'Join with: cat %q.part-* > %q\n' "$iso" "$iso"
+fi
+cinnamon\ncinnamon-translations\nlightdm\nlightdm-gtk-greeter' ;;
+  hyprland) de_packages=
+ [[ -e "$de" ]] || die "--de path does not exist: $de"
+ mkdir -p build/lmkiso-input; rm -rf build/lmkiso-input/de-config
+ cp -a "$de" build/lmkiso-input/de-config
+ export LMKISO_DE_CONFIG=build/lmkiso-input/de-config
+fi
+
+if ((apkg)); then
+ mkdir -p build/lmkiso-packages
+ if ((apkge)); then
+  dirs=(/var/cache/pacman/pkg)
+  if [[ -n "${SUDO_USER:-}" ]]; then
+   home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+   [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
+  fi
+  find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
+  args+=(--offline full)
+ else
+  declare -A installed=()
+  while read -r name version; do installed["$name"]="$version"; done < <(pacman -Q 2>/dev/null || true)
+  for archive in /var/cache/pacman/pkg/*.pkg.tar.*; do
+   [[ -f "$archive" ]] || continue
+   read -r name version < <(pacman -Qp --print-format '%n %v' "$archive" 2>/dev/null || true)
+   [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
+  done
+ fi
+ if compgen -G "build/lmkiso-packages/*.pkg.tar.*" >/dev/null; then
+  export USER_PACKAGES="$ROOT/build/lmkiso-packages"
+ else
+  echo "lmkiso: no matching local package archives found; continuing without cached package additions." >&2
+ fi
+fi
+if ((contain)); then args+=(--container); fi
+if ((fold)); then args+=(--compression nano); fi
+if ((plan)); then args+=(--dry-run); fi
+if ((sync)); then export LMKISO_SYNC=1; fi
+if ((sync && !contain)); then die "-sy requires --contain"; fi
+
+if ((query)); then
+ cpu="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+ ncpu="$(nproc 2>/dev/null || echo 1)"
+ ram="$(awk '/MemTotal/ {printf "%.1f",$2/1024/1024}' /proc/meminfo)"
+ data_root="${DISTROKIT_DATA:-$ROOT}"
+ pkgs="$(grep -hEv '^[[:space:]]*(#|$)' "$data_root"/packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
+ repo_size="$(du -sh build/repo 2>/dev/null | cut -f1 || echo 0)"
+ work_size="$(du -sh build 2>/dev/null | cut -f1 || echo 0)"
+ iso_size="$(du -ch dist/*.iso 2>/dev/null | tail -n1 | cut -f1 || echo 0)"
+ gen=4
+ if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
+  gen="${BASH_REMATCH[1]:0:1}"
+  if [[ ${#BASH_REMATCH[1]} -ge 5 ]]; then gen="${BASH_REMATCH[1]:0:2}"; fi
+ elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{4}) ]]; then
+  gen="$((${BASH_REMATCH[1]:0:1}+2))"
+ fi
+ ram_factor=100
+ if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
+ elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
+ eta="$(( (pkgs*1200+9000)*100/(ncpu*gen*ram_factor) ))"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Build workspace: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
+ exit 0
+fi
+if (( !no_confirm && !plan )); then
+ printf 'Build ISO (profile=%s, cores=%s, container=%s)? [y/N] ' "${profile:-standard}" "${cores:-auto}" "$contain"
+ read -r answer
+ [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo "Cancelled."; exit 1; }
+fi
+./build.sh "${args[@]}"
+((plan)) && exit 0
+if [[ -n "$output" ]]; then
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+ [[ -n "$iso" ]] || die "no ISO found in dist/"
+ if [[ -d "$output" || "$output" == */ ]]; then mkdir -p "$output"; dest="$output/$(basename "$iso")"
+ else mkdir -p "$(dirname "$output")"; dest="$output"; fi
+ mv -f "$iso" "$dest"; iso="$dest"
+else
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+fi
+if ((split_iso)); then
+ [[ -f "$iso" ]] || die "cannot find ISO to split"
+ split -b 3900M -d -a 3 "$iso" "$iso.part-"
+ printf 'Join with: cat %q.part-* > %q\n' "$iso" "$iso"
+fi
+hyprland\nxdg-desktop-portal-hyprland\nwaybar\nrofi-wayland\nkitty\ngrim\nslurp\nswww' ;;
+  niri) de_packages=
+ [[ -e "$de" ]] || die "--de path does not exist: $de"
+ mkdir -p build/lmkiso-input; rm -rf build/lmkiso-input/de-config
+ cp -a "$de" build/lmkiso-input/de-config
+ export LMKISO_DE_CONFIG=build/lmkiso-input/de-config
+fi
+
+if ((apkg)); then
+ mkdir -p build/lmkiso-packages
+ if ((apkge)); then
+  dirs=(/var/cache/pacman/pkg)
+  if [[ -n "${SUDO_USER:-}" ]]; then
+   home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+   [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
+  fi
+  find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
+  args+=(--offline full)
+ else
+  declare -A installed=()
+  while read -r name version; do installed["$name"]="$version"; done < <(pacman -Q 2>/dev/null || true)
+  for archive in /var/cache/pacman/pkg/*.pkg.tar.*; do
+   [[ -f "$archive" ]] || continue
+   read -r name version < <(pacman -Qp --print-format '%n %v' "$archive" 2>/dev/null || true)
+   [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
+  done
+ fi
+ if compgen -G "build/lmkiso-packages/*.pkg.tar.*" >/dev/null; then
+  export USER_PACKAGES="$ROOT/build/lmkiso-packages"
+ else
+  echo "lmkiso: no matching local package archives found; continuing without cached package additions." >&2
+ fi
+fi
+if ((contain)); then args+=(--container); fi
+if ((fold)); then args+=(--compression nano); fi
+if ((plan)); then args+=(--dry-run); fi
+if ((sync)); then export LMKISO_SYNC=1; fi
+if ((sync && !contain)); then die "-sy requires --contain"; fi
+
+if ((query)); then
+ cpu="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+ ncpu="$(nproc 2>/dev/null || echo 1)"
+ ram="$(awk '/MemTotal/ {printf "%.1f",$2/1024/1024}' /proc/meminfo)"
+ data_root="${DISTROKIT_DATA:-$ROOT}"
+ pkgs="$(grep -hEv '^[[:space:]]*(#|$)' "$data_root"/packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
+ repo_size="$(du -sh build/repo 2>/dev/null | cut -f1 || echo 0)"
+ work_size="$(du -sh build 2>/dev/null | cut -f1 || echo 0)"
+ iso_size="$(du -ch dist/*.iso 2>/dev/null | tail -n1 | cut -f1 || echo 0)"
+ gen=4
+ if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
+  gen="${BASH_REMATCH[1]:0:1}"
+  if [[ ${#BASH_REMATCH[1]} -ge 5 ]]; then gen="${BASH_REMATCH[1]:0:2}"; fi
+ elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{4}) ]]; then
+  gen="$((${BASH_REMATCH[1]:0:1}+2))"
+ fi
+ ram_factor=100
+ if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
+ elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
+ eta="$(( (pkgs*1200+9000)*100/(ncpu*gen*ram_factor) ))"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Build workspace: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
+ exit 0
+fi
+if (( !no_confirm && !plan )); then
+ printf 'Build ISO (profile=%s, cores=%s, container=%s)? [y/N] ' "${profile:-standard}" "${cores:-auto}" "$contain"
+ read -r answer
+ [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo "Cancelled."; exit 1; }
+fi
+./build.sh "${args[@]}"
+((plan)) && exit 0
+if [[ -n "$output" ]]; then
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+ [[ -n "$iso" ]] || die "no ISO found in dist/"
+ if [[ -d "$output" || "$output" == */ ]]; then mkdir -p "$output"; dest="$output/$(basename "$iso")"
+ else mkdir -p "$(dirname "$output")"; dest="$output"; fi
+ mv -f "$iso" "$dest"; iso="$dest"
+else
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+fi
+if ((split_iso)); then
+ [[ -f "$iso" ]] || die "cannot find ISO to split"
+ split -b 3900M -d -a 3 "$iso" "$iso.part-"
+ printf 'Join with: cat %q.part-* > %q\n' "$iso" "$iso"
+fi
+niri\nwaybar\nmako\nfuzzel\nxdg-desktop-portal-gnome\nswaybg\nswaylock\nswayidle\nfoot' ;;
+  sway) de_packages=
+ [[ -e "$de" ]] || die "--de path does not exist: $de"
+ mkdir -p build/lmkiso-input; rm -rf build/lmkiso-input/de-config
+ cp -a "$de" build/lmkiso-input/de-config
+ export LMKISO_DE_CONFIG=build/lmkiso-input/de-config
+fi
+
+if ((apkg)); then
+ mkdir -p build/lmkiso-packages
+ if ((apkge)); then
+  dirs=(/var/cache/pacman/pkg)
+  if [[ -n "${SUDO_USER:-}" ]]; then
+   home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+   [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
+  fi
+  find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
+  args+=(--offline full)
+ else
+  declare -A installed=()
+  while read -r name version; do installed["$name"]="$version"; done < <(pacman -Q 2>/dev/null || true)
+  for archive in /var/cache/pacman/pkg/*.pkg.tar.*; do
+   [[ -f "$archive" ]] || continue
+   read -r name version < <(pacman -Qp --print-format '%n %v' "$archive" 2>/dev/null || true)
+   [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
+  done
+ fi
+ if compgen -G "build/lmkiso-packages/*.pkg.tar.*" >/dev/null; then
+  export USER_PACKAGES="$ROOT/build/lmkiso-packages"
+ else
+  echo "lmkiso: no matching local package archives found; continuing without cached package additions." >&2
+ fi
+fi
+if ((contain)); then args+=(--container); fi
+if ((fold)); then args+=(--compression nano); fi
+if ((plan)); then args+=(--dry-run); fi
+if ((sync)); then export LMKISO_SYNC=1; fi
+if ((sync && !contain)); then die "-sy requires --contain"; fi
+
+if ((query)); then
+ cpu="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')"
+ ncpu="$(nproc 2>/dev/null || echo 1)"
+ ram="$(awk '/MemTotal/ {printf "%.1f",$2/1024/1024}' /proc/meminfo)"
+ data_root="${DISTROKIT_DATA:-$ROOT}"
+ pkgs="$(grep -hEv '^[[:space:]]*(#|$)' "$data_root"/packages/lists/*.list 2>/dev/null | sort -u | wc -l)"
+ repo_size="$(du -sh build/repo 2>/dev/null | cut -f1 || echo 0)"
+ work_size="$(du -sh build 2>/dev/null | cut -f1 || echo 0)"
+ iso_size="$(du -ch dist/*.iso 2>/dev/null | tail -n1 | cut -f1 || echo 0)"
+ gen=4
+ if [[ "$cpu" =~ Intel && "$cpu" =~ i[3579]-([0-9]{4,5}) ]]; then
+  gen="${BASH_REMATCH[1]:0:1}"
+  if [[ ${#BASH_REMATCH[1]} -ge 5 ]]; then gen="${BASH_REMATCH[1]:0:2}"; fi
+ elif [[ "$cpu" =~ AMD|Ryzen && "$cpu" =~ ([0-9]{4}) ]]; then
+  gen="$((${BASH_REMATCH[1]:0:1}+2))"
+ fi
+ ram_factor=100
+ if awk -v r="$ram" 'BEGIN{exit !(r>=32)}'; then ram_factor=140
+ elif awk -v r="$ram" 'BEGIN{exit !(r>=16)}'; then ram_factor=115; fi
+ eta="$(( (pkgs*1200+9000)*100/(ncpu*gen*ram_factor) ))"
+ printf '%sBuild estimate%s\n  CPU: %s\n  Cores: %s\n  CPU generation factor: %s\n  RAM: %s GiB\n  Packages: %s\n  Build repository: %s\n  Build workspace: %s\n  Existing ISO: %s\n  Estimated time: about %s minutes\n  Profile: %s\n  Config root: %s\n' "$C2" "$C0" "$cpu" "$ncpu" "$gen" "$ram" "$pkgs" "$repo_size" "$work_size" "$iso_size" "$eta" "${profile:-standard}" "${DISTROKIT_DATA:-$ROOT}"
+ exit 0
+fi
+if (( !no_confirm && !plan )); then
+ printf 'Build ISO (profile=%s, cores=%s, container=%s)? [y/N] ' "${profile:-standard}" "${cores:-auto}" "$contain"
+ read -r answer
+ [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo "Cancelled."; exit 1; }
+fi
+./build.sh "${args[@]}"
+((plan)) && exit 0
+if [[ -n "$output" ]]; then
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+ [[ -n "$iso" ]] || die "no ISO found in dist/"
+ if [[ -d "$output" || "$output" == */ ]]; then mkdir -p "$output"; dest="$output/$(basename "$iso")"
+ else mkdir -p "$(dirname "$output")"; dest="$output"; fi
+ mv -f "$iso" "$dest"; iso="$dest"
+else
+ iso="$(find dist -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+fi
+if ((split_iso)); then
+ [[ -f "$iso" ]] || die "cannot find ISO to split"
+ split -b 3900M -d -a 3 "$iso" "$iso.part-"
+ printf 'Join with: cat %q.part-* > %q\n' "$iso" "$iso"
+fi
+sway\nwaybar\nmako\nfuzzel\nswaybg\nswaylock\nswayidle\nfoot\nxdg-desktop-portal-wlr' ;;
+ esac
+ printf '%s\n' "$de_packages" > "build/lmkiso-data/packages/lists/$list_id.list"
+ cat > "build/lmkiso-data/profiles/$custom_id.toml" <<EOF
+[profile]
+id = "$custom_id"
+name = "Local $de_profile desktop"
+order = 998
+inherits = "$base_profile"
+summary = "Local Make ISO desktop preset"
+description = "Generated by lmkiso."
+approx_size_gb = 0
+default = false
+
+[packages]
+lists = ["$list_id"]
+EOF
+ profile="$custom_id"
+fi
+
 if [[ -n "$profile" ]]; then export ISO_PROFILE="$profile"; args+=(--profile "$profile"); fi
 
 if [[ -n "$de" ]]; then
