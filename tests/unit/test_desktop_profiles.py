@@ -414,5 +414,5 @@ def test_iso_desktop_and_shell_defaults_are_exposed():
     workflow = (root / ".github/workflows/iso.yml").read_text()
     assert "--desktop" in iso and "--shell" in iso
     assert "ISO_DESKTOP" in build and "ISO_SHELL" in build
-    assert "options: [halcyon, work, hyde, sekaipop, macshell, none, frameshell, paperrice]" in workflow
+    assert "options: [halcyon, ml4w, work, hyde, sekaipop, macshell, none, frameshell, paperrice]" in workflow
     assert "options: [fish, zsh, spire]" in workflow
