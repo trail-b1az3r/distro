@@ -691,7 +691,17 @@ class Installation:
         if u.shell == "spire":
             if not self.online:
                 raise InstallError("Spire Shell requires an internet connection during installation.")
-            self.chroot(["bash", "-lc", "set -euo pipefail; tmp=$(mktemp -d); git clone --depth 1 https://github.com/trail-b1az3r/spire-shell.git \"$tmp/spire-shell\"; make -C \"$tmp/spire-shell\"; install -D -m 0755 \"$tmp/spire-shell/spire\" /usr/local/bin/spire; grep -qxF /usr/local/bin/spire /etc/shells || echo /usr/local/bin/spire >> /etc/shells; rm -rf \"$tmp\""])
+            spire_install = (
+                "set -euo pipefail; "
+                "tmp=$(mktemp -d); "
+                "trap 'rm -rf \"$tmp\"' EXIT; "
+                "git clone --depth 1 https://github.com/trail-b1az3r/spire-shell.git \"$tmp/spire-shell\"; "
+                "make -C \"$tmp/spire-shell\"; "
+                "install -D -m 0755 \"$tmp/spire-shell/spire\" /usr/local/bin/spire; "
+                "grep -qxF /usr/local/bin/spire /etc/shells || "
+                "echo /usr/local/bin/spire >> /etc/shells"
+            )
+            self.chroot(["bash", "-lc", spire_install])
         shell = {"fish": "/usr/bin/fish", "zsh": "/usr/bin/zsh", "spire": "/usr/local/bin/spire"}.get(u.shell, "/bin/bash")
         cmd = ["useradd", "-m", "-U", "-G", ",".join(groups), "-s", shell]
         if u.fullname:
@@ -790,7 +800,12 @@ class Installation:
         )
         if self.runner.dry_run:
             self.log("desktop profile: " + primary + "; additional profiles: " + (", ".join(external) if external else "none"))
-            self.log("deploy Halcyon dotfiles" if primary == "halcyon" else ("skip desktop dotfiles" if primary == "none" else "deploy Halcyon bootstrap/fallback dotfiles"))
+            if primary == "halcyon":
+                self.log("deploy Halcyon dotfiles")
+            elif primary == "none":
+                self.log("skip desktop dotfiles")
+            else:
+                self.log("deploy Halcyon bootstrap/fallback dotfiles")
             return
         # Install the post-setup profile manager even when no optional desktop
         # was selected in the ISO installer. Users can add profiles later.
@@ -825,7 +840,15 @@ class Installation:
         if session_source.is_file():
             session_dir = self.t("/usr/share/wayland-sessions")
             session_dir.mkdir(parents=True, exist_ok=True)
-            labels = {"ml4w": "ML4W", "work": "My Linux for Work", "sekaipop": "Sikai Pop", "hyde": "HyDE", "macshell": "MacShell", "frameshell": "Frameshell", "paperrice": "PaperRice"}
+            labels = {
+                "ml4w": "ML4W",
+                "work": "My Linux for Work",
+                "sekaipop": "Sikai Pop",
+                "hyde": "HyDE",
+                "macshell": "MacShell",
+                "frameshell": "Frameshell",
+                "paperrice": "PaperRice",
+            }
             for profile in selected:
                 if profile not in labels:
                     continue
