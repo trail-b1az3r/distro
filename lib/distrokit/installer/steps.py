@@ -334,6 +334,8 @@ class Installation:
 
     # 1 -----------------------------------------------------------------------
     def preflight(self) -> None:
+        if self.cfg.user.shell == "spire" and not self.online:
+            raise InstallError("Spire Shell requires an internet connection; choose Fish or Zsh for an offline installation.")
         if not self.runner.dry_run and os.geteuid() != 0:
             raise InstallError("The installer must run as root.")
         for tool in ("sfdisk", "pacstrap", "arch-chroot", "genfstab"):
