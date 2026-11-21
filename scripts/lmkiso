@@ -152,9 +152,15 @@ if [[ -n "$de_profile" ]]; then
  case "$de_profile" in
   plasma) de_packages=
  [[ -e "$de" ]] || die "--de path does not exist: $de"
- mkdir -p build/lmkiso-input; rm -rf build/lmkiso-input/de-config
- cp -a "$de" build/lmkiso-input/de-config
- export LMKISO_DE_CONFIG=build/lmkiso-input/de-config
+ mkdir -p build/lmkiso-input; rm -rf build/lmkiso-input/de-config build/lmkiso-input/de-config-file
+ if [[ -f "$de" ]]; then
+  de_target="build/lmkiso-input/$(basename "$de")"
+  cp -a "$de" "$de_target"
+  export LMKISO_DE_CONFIG="$de_target"
+ else
+  cp -a "$de" build/lmkiso-input/de-config
+  export LMKISO_DE_CONFIG=build/lmkiso-input/de-config
+ fi
 fi
 
 if ((apkg)); then
