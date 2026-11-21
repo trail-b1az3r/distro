@@ -10,7 +10,7 @@ die(){ printf '%slmkiso: %s%s\n' "$C4" "$*" "$C0" >&2; exit 2; }
 help(){
  printf '%sLocal Make ISO (lmkiso) %s%s\n\n' "$C2" "$VERSION" "$C0"
  printf 'Usage: sudo lmkiso [options]\n\n%sOptions%s\n' "$C3" "$C0"
- printf '  -v             verbose build output\n  -apkg          include installed pacman package archives from cache\n  -apkge         include pacman + AUR helper caches and full offline package closure\n'
+ printf '  -v             verbose build output\n  -apkg          include all cached pacman package archives\n  -apkge         include pacman + AUR helper caches and full offline package closure\n'
  printf '  --contain      build in Docker/Podman\n  --de PATH      seed the new user config from Hyprland, niri or generic .config\n'
  printf '  -V             show lmkiso version\n  -f             stronger xz SquashFS compression\n  -s             split finished ISO into numbered parts\n  -sy            update container packages before building (implies --contain)\n'
  printf '  --no-confirm   skip confirmation\n  -p             plan/dry run\n  -h             colored help\n  -c N           parallel build jobs\n  -o PATH        final ISO path or directory\n  -P ID          install profile\n  -Pc FILE       custom profiles.json\n  -q             file/ISO sizes, package count and ETA estimate\n  -D NAME        override display name\n  -ocl           print curl command to run on another PC\n'
@@ -201,28 +201,18 @@ fi
 
 if ((apkg)); then
  mkdir -p build/lmkiso-packages
- if ((apkge)); then
-  dirs=(/var/cache/pacman/pkg)
-  if [[ -n "${SUDO_USER:-}" ]]; then
-   home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
-   [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
-  fi
-  find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
-  args+=(--offline full)
- else
-  declare -A installed=()
-  while read -r name version; do installed["$name"]="$version"; done < <(pacman -Q 2>/dev/null || true)
-  for archive in /var/cache/pacman/pkg/*.pkg.tar.*; do
-   [[ -f "$archive" ]] || continue
-   read -r name version < <(pacman -Qp --print-format '%n %v' "$archive" 2>/dev/null || true)
-   [[ -n "${installed[$name]:-}" && "${installed[$name]}" == "$version" ]] && cp -n "$archive" build/lmkiso-packages/
-  done
+ dirs=(/var/cache/pacman/pkg)
+ if ((apkge)) && [[ -n "${SUDO_USER:-}" ]]; then
+  home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+  [[ -z "$home" ]] || dirs+=("$home/.cache/yay" "$home/.cache/paru/clone")
  fi
+ find "${dirs[@]}" -type f -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -n -t build/lmkiso-packages -- {} + 2>/dev/null || true
  if compgen -G "build/lmkiso-packages/*.pkg.tar.*" >/dev/null; then
   export USER_PACKAGES="$ROOT/build/lmkiso-packages"
  else
-  echo "lmkiso: no matching local package archives found; continuing without cached package additions." >&2
+  echo "lmkiso: no local package archives found; continuing without cache additions." >&2
  fi
+ if ((apkge)); then args+=(--offline full); fi
 fi
 if ((contain)); then args+=(--container); fi
 if ((fold)); then args+=(--compression nano); fi
