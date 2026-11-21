@@ -290,3 +290,6 @@ jobs:
             gh release edit "$REPO" --notes "$notes"
           fi
           gh release upload "$REPO" build/experiments-assets/* --clobber
+          # Systems installed as Nexora still read [nexora-experiments(-extra)]: the same packages under that name,
+          # so their pacman -Syu offers the renamed ones (DISTRO_LEGACY_IDS).
+          bash scripts/publish-legacy.sh build/experiments-assets "$REPO"

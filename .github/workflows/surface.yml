@@ -80,3 +80,5 @@ jobs:
           gh release view "$REPO" --json assets --jq '.assets[].name' | while read -r asset; do
             if ! printf '%s\n' "$keep" | grep -qxF -- "$asset"; then gh release delete-asset "$REPO" "$asset" --yes; fi
           done
+          # Systems installed as Nexora still read [nexora-surface]: the same packages under that name.
+          bash scripts/publish-legacy.sh build/surface-assets "$REPO" --prune
