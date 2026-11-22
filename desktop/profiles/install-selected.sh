@@ -193,7 +193,7 @@ sys_snapshot() {
     return 0
 }
 ours() {
-    case "$(basename "$1")" in "$DISTRO_ID"-*.desktop|"99-$DISTRO_ID-theme.conf") return 0 ;; esac
+    case "$(basename "$1")" in "$DISTRO_ID"-*.desktop|"99-$DISTRO_ID-theme.conf"|"zz-$DISTRO_ID-theme.conf") return 0 ;; esac
     return 1
 }
 sys_restore() {
@@ -243,10 +243,13 @@ restore_shared() {
         echo "The installer changed your login shell to $shell_now; putting back $LOGIN_SHELL."
         sudo chsh -s "$LOGIN_SHELL" "$(id -un)" || echo "Could not put back your login shell (chsh -s $LOGIN_SHELL)."
     fi
-    # The login screen stays the distribution's (its desktop switcher lists every desktop); a later file in
-    # sddm.conf.d wins over an installer's.
+    # The login screen stays the distribution's (its desktop switcher lists every desktop). SDDM reads sddm.conf.d in
+    # name order and the last Current= wins: zz- sorts after any installer's (HyDE's the_hyde_project.conf sorted
+    # after the old 99- file, and took the login screen). The core package ships the same file; this puts it back if
+    # an installer removed it.
     if [[ -d "$SYSROOT/usr/share/sddm/themes/$DISTRO_ID" ]]; then
-        printf '[Theme]\nCurrent=%s\n' "$DISTRO_ID" | sudo tee "$SYSROOT/etc/sddm.conf.d/99-$DISTRO_ID-theme.conf" >/dev/null || true
+        printf '[Theme]\nCurrent=%s\n' "$DISTRO_ID" | sudo tee "$SYSROOT/etc/sddm.conf.d/zz-$DISTRO_ID-theme.conf" >/dev/null || true
+        sudo rm -f "$SYSROOT/etc/sddm.conf.d/99-$DISTRO_ID-theme.conf"
     fi
 }
 

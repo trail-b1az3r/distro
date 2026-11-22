@@ -1,6 +1,7 @@
 ; @DISTRO_PRETTY_NAME@'s login screen: SilentSDDM (https://github.com/uiriansan/SilentSDDM, GPL-3.0-or-later; see
-; ../UPSTREAM) with the distribution's colours from distro.conf and its own background (backgrounds/default.jpg and login.jpg,
-; drawn by distrokit.build.branding from the logo). Every option: https://github.com/uiriansan/SilentSDDM/wiki/Customizing
+; ../UPSTREAM), exactly as it ships (its configs/default.conf), with one change: the picture is
+; backgrounds/default.jpg, Carol M. Highsmith's photograph of the Tetons (public domain), in place of its smoky.jpg.
+; https://github.com/uiriansan/SilentSDDM/wiki/Customizing
 
 [General]
 scale = 1.0
@@ -17,8 +18,8 @@ padding-left = 0
 background = "default.jpg"
 use-background-color = false
 background-color = "#000000"
-blur = 0
-brightness = -0.05
+blur = 32
+brightness = 0.0
 saturation = 0.0
 input-keystroke = false
 ignore-shift-key = false
@@ -31,7 +32,7 @@ format = "hh:mm"
 font-family = "RedHatDisplay"
 font-size = 70
 font-weight = 900
-color = "@BRAND_FG@"
+color = "#FFFFFF"
 
 [LockScreen.Date]
 display = true
@@ -40,7 +41,7 @@ locale = "en_US"
 font-family = "RedHatDisplay"
 font-size = 14
 font-weight = 600
-color = "@BRAND_FG@"
+color = "#FFFFFF"
 margin-top = -15
 
 [LockScreen.Message]
@@ -54,12 +55,12 @@ font-weight = 400
 display-icon = true
 icon = "enter.svg"
 icon-size = 16
-color = "@BRAND_FG@"
+color = "#FFFFFF"
 paint-icon = true
 spacing = 0
 
 [LoginScreen]
-background = "login.jpg"
+background = "default.jpg"
 use-background-color = false
 background-color = "#000000"
 blur = 0
@@ -78,15 +79,15 @@ inactive-size = 80
 inactive-opacity = 0.35
 active-border-size = 0
 inactive-border-size = 0
-active-border-color = "@BRAND_FG@"
-inactive-border-color = "@BRAND_FG@"
+active-border-color = "#FFFFFF"
+inactive-border-color = "#FFFFFF"
 always-active = false
 
 [LoginScreen.LoginArea.Username]
 font-family = "RedHatDisplay"
 font-size = 16
 font-weight = 700
-color = "@BRAND_FG@"
+color = "#FFFFFF"
 margin = 10
 
 [LoginScreen.LoginArea.PasswordInput]
@@ -97,27 +98,27 @@ font-family = "RedHatDisplay"
 font-size = 12
 icon = "password.svg"
 icon-size = 16
-content-color = "@BRAND_FG@"
-background-color = "@BRAND_FG@"
-background-opacity = 0.14
+content-color = "#FFFFFF"
+background-color = "#FFFFFF"
+background-opacity = 0.15
 border-size = 0
-border-color = "@BRAND_FG@"
+border-color = "#FFFFFF"
 border-radius-left = 10
 border-radius-right = 10
 margin-top = 10
 masked-character = "●"
 
 [LoginScreen.LoginArea.LoginButton]
-background-color = "@BRAND_FG@"
-background-opacity = 0.14
-active-background-color = "@BRAND_ACCENT@"
-active-background-opacity = 0.95
+background-color = "#FFFFFF"
+background-opacity = 0.15
+active-background-color = "#FFFFFF"
+active-background-opacity = 0.30
 icon = "arrow-right.svg"
 icon-size = 18
-content-color = "@BRAND_FG@"
-active-content-color = "@BRAND_FG@"
+content-color = "#FFFFFF"
+active-content-color = "#FFFFFF"
 border-size = 0
-border-color = "@BRAND_FG@"
+border-color = "#FFFFFF"
 border-radius-left = 10
 border-radius-right = 10
 margin-left = 5
@@ -135,16 +136,16 @@ font-weight = 600
 font-size = 14
 icon-size = 30
 icon = "spinner.svg"
-color = "@BRAND_ACCENT_2@"
+color = "#FFFFFF"
 spacing = 5
 
 [LoginScreen.LoginArea.WarningMessage]
 font-family = "RedHatDisplay"
 font-size = 11
 font-weight = 400
-normal-color = "@BRAND_FG@"
-warning-color = "@BRAND_WARNING@"
-error-color = "@BRAND_DANGER@"
+normal-color = "#FFFFFF"
+warning-color = "#FFFFFF"
+error-color = "#FFFFFF"
 margin-top = 10
 
 [LoginScreen.MenuArea.Buttons]
@@ -164,15 +165,15 @@ item-spacing = 2
 padding = 5
 display-scrollbar = true
 margin = 5
-background-color = "@BRAND_SURFACE@"
-background-opacity = 0.85
-active-option-background-color = "@BRAND_ACCENT@"
-active-option-background-opacity = 0.80
-content-color = "@BRAND_FG@"
-active-content-color = "@BRAND_FG@"
+background-color = "#FFFFFF"
+background-opacity = 0.15
+active-option-background-color = "#FFFFFF"
+active-option-background-opacity = 0.30
+content-color = "#FFFFFF"
+active-content-color = "#FFFFFF"
 font-family = "RedHatDisplay"
 border-size = 0
-border-color = "@BRAND_FG@"
+border-color = "#FFFFFF"
 font-size = 11
 icon-size = 16
 
@@ -188,8 +189,8 @@ popup-width = 200
 background-color = "#FFFFFF"
 background-opacity = 0.0
 active-background-opacity = 0.30
-content-color = "@BRAND_FG@"
-active-content-color = "@BRAND_FG@"
+content-color = "#FFFFFF"
+active-content-color = "#FFFFFF"
 border-size = 0
 font-size = 10
 icon-size = 16
@@ -205,8 +206,8 @@ display-layout-name = true
 background-color = "#FFFFFF"
 background-opacity = 0.0
 active-background-opacity = 0.30
-content-color = "@BRAND_FG@"
-active-content-color = "@BRAND_FG@"
+content-color = "#FFFFFF"
+active-content-color = "#FFFFFF"
 border-size = 0
 font-size = 10
 icon = "language.svg"
@@ -219,8 +220,8 @@ index = 0
 background-color = "#FFFFFF"
 background-opacity = 0.0
 active-background-opacity = 0.30
-content-color = "@BRAND_FG@"
-active-content-color = "@BRAND_FG@"
+content-color = "#FFFFFF"
+active-content-color = "#FFFFFF"
 border-size = 0
 icon = "keyboard.svg"
 icon-size = 16
@@ -235,8 +236,8 @@ popup-width = 100
 background-color = "#FFFFFF"
 background-opacity = 0.0
 active-background-opacity = 0.30
-content-color = "@BRAND_FG@"
-active-content-color = "@BRAND_FG@"
+content-color = "#FFFFFF"
+active-content-color = "#FFFFFF"
 border-size = 0
 icon = "power.svg"
 icon-size = 16
@@ -245,16 +246,16 @@ icon-size = 16
 scale = 1.0
 position = "login"
 start-hidden = true
-background-color = "@BRAND_SURFACE@"
-background-opacity = 0.85
-key-content-color = "@BRAND_FG@"
-key-color = "@BRAND_FG@"
+background-color = "#FFFFFF"
+background-opacity = 0.15
+key-content-color = "#FFFFFF"
+key-color = "#FFFFFF"
 key-opacity = 0.15
-key-active-background-color = "@BRAND_ACCENT@"
+key-active-background-color = "#FFFFFF"
 key-active-opacity = 0.30
-selection-background-color = "@BRAND_ACCENT@"
-selection-content-color = "@BRAND_FG@"
-primary-color = "@BRAND_FG@"
+selection-background-color = "#CCCCCC"
+selection-content-color = "#FFFFFF"
+primary-color = "#FFF"
 border-size = 0
 border-color = "#000000"
 restrict-input = "none"
@@ -263,9 +264,9 @@ restrict-input = "none"
 enable = true
 font-family = "RedHatDisplay"
 font-size = 11
-content-color = "@BRAND_FG@"
-background-color = "@BRAND_SURFACE@"
-background-opacity = 0.85
+content-color = "#FFFFFF"
+background-color = "#FFFFFF"
+background-opacity = 0.15
 border-radius = 5
 disable-user = false
 disable-login-button = false

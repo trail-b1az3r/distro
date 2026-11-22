@@ -311,6 +311,12 @@ class Stage:
         for font in sorted((self.src / "branding" / "sddm" / "fonts").glob("*.ttf")):
             self.file(font, f"/usr/share/fonts/{b.id}-redhat/{font.name}")
         self.tree(gen / "sddm-classic", f"{theme}-classic")
+        # The login screen stays this one whatever a desktop's installer drops in sddm.conf.d (HyDE writes
+        # the_hyde_project.conf, which sorted after our 99- file and won): SDDM reads that folder in name order, so
+        # this file comes last. /etc/sddm.conf, read after the folder, still lets you choose another theme.
+        self.text(f"/etc/sddm.conf.d/zz-{b.id}-theme.conf",
+                  f"# {b.name}'s login screen. Choose another in /etc/sddm.conf ([Theme] Current=...), which wins.\n"
+                  f"[Theme]\nCurrent={b.id}\n")
         self.file(gen / "fastfetch" / "config.jsonc", f"{share}/fastfetch.jsonc")
         self.file(gen / "fastfetch" / "logo.ansi", f"{share}/fastfetch-logo.ansi")
         # Plain `fastfetch` would otherwise show the ID_LIKE distribution's logo.

@@ -5,8 +5,10 @@ Taken unchanged: Main.qml, qmldir, components/, icons/ (without the catppuccin.p
 the Red Hat Display variable fonts from fonts/redhat-vf (SIL Open Font License, fonts/OFL.txt). Left out: its
 backgrounds, videos, demo configs, docs and install scripts.
 
-Ours: configs/theme.conf.in (its default.conf with the distribution's colours and background), metadata.desktop.in,
-and backgrounds/default.jpg, which distrokit.build.branding draws at build time.
+Ours: configs/theme.conf.in (its default.conf unchanged but for the picture's name), metadata.desktop.in, and
+backgrounds/default.jpg: Carol M. Highsmith's photograph "Craggy peaks of Grand Teton National Park, Jackson,
+Wyoming" (Library of Congress, LCCN 2011633676, public domain), cropped and scaled to 1920x1080, in place of its
+smoky.jpg (a Pexels photograph, which is not ours to redistribute).
 
 To take a newer SilentSDDM: copy those files from the new commit over these, update the commit above, and check
 configs/theme.conf.in against its configs/default.conf for new or renamed options.

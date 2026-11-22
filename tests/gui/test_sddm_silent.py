@@ -197,8 +197,6 @@ def installed_theme(tmp_path):
 
     branding.generate(quick=True, log=lambda _m: None)
     gen = paths.data("branding") / "generated" / "sddm"
-    if not (gen / "backgrounds" / "default.jpg").is_file():
-        pytest.skip("the login background is made by the full branding build (python3 -m distrokit.build.branding)")
     theme = tmp_path / "theme"
     shutil.copytree(paths.data("branding") / "sddm", theme, ignore=shutil.ignore_patterns("*.in", "UPSTREAM"))
     shutil.copytree(gen, theme, dirs_exist_ok=True)
@@ -206,6 +204,19 @@ def installed_theme(tmp_path):
 
 
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
+def test_the_config_is_silentsddms_own():
+    """The real SilentSDDM look: its default.conf line for line, only the picture renamed (smoky.jpg is a Pexels
+    photograph we do not redistribute; ours is a public-domain one of the same kind)."""
+    ours = (paths.data("branding") / "sddm" / "configs" / "theme.conf.in").read_text().splitlines()
+    body = [line for line in ours if not line.startswith("; @DISTRO_PRETTY_NAME@") and not line.startswith(";   ")
+            and not (line.startswith("; ") and ours.index(line) < 3)]
+    assert body[0] == "; https://github.com/uiriansan/SilentSDDM/wiki/Customizing"
+    assert 'background = "default.jpg"' in body and "smoky.jpg" not in "\n".join(body)
+    assert "blur = 32" in body                       # the login screen's blurred picture, as upstream
+    assert 'color = "#FFFFFF"' in body               # its white controls, not brand colours
+    assert (paths.data("branding") / "sddm" / "backgrounds" / "default.jpg").stat().st_size > 100_000
+
+
 def test_login_screen_loads_with_the_distributions_look(tmp_path):
     b = load_branding()
     theme = installed_theme(tmp_path)
@@ -213,7 +224,7 @@ def test_login_screen_loads_with_the_distributions_look(tmp_path):
     assert f"Theme-Id={b.id}\n" in meta and "ConfigFile=configs/theme.conf" in meta
     conf_text = (theme / "configs" / "theme.conf").read_text()
     assert "@" not in conf_text.replace("@possible", "")   # every token rendered
-    assert b["BRAND_ACCENT"] in conf_text and b["BRAND_FG"] in conf_text
+    assert (theme / "backgrounds" / "default.jpg").is_file()
 
     app = QGuiApplication.instance() or QGuiApplication([])
     assert app

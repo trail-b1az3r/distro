@@ -93,7 +93,20 @@ def check_packages(branding: Branding | None = None) -> Source:
             and not pacmanconf.distro_repo_enabled(conf.read_text())
             and pacmanconf.distro_repo_published(branding, timeout=4) is True):
         src.items.append(Item("Frontline repository", "disabled", "enable"))
+    if old_spire():
+        src.items.append(Item("spire", "main-branch build in /usr/local/bin", "spire-shell (Zsharpend edition)"))
     return src
+
+
+def old_spire(root: Path = Path("/"), installed: set[str] | None = None) -> bool:
+    """A system installed before spire was packaged: the installer compiled spire-shell's main branch into
+    /usr/local/bin/spire, and nothing has replaced it with the packaged Zsharpend edition yet. Installing
+    spire-shell moves it aside and points the path (and login shells) at the package's (spire-shell.install)."""
+    old = root / "usr/local/bin/spire"
+    if not old.is_file() or old.is_symlink():
+        return False
+    installed = pkg.installed_packages() if installed is None else installed
+    return "spire-shell" not in installed
 
 
 def check_aur() -> Source:
@@ -302,6 +315,11 @@ def apply_packages(runner: util.Runner, interactive: bool = True) -> None:
     if os.geteuid() != 0:
         cmd = ["sudo", *cmd]
     runner.run(cmd, terminal=interactive)
+    if old_spire():
+        # The old main-branch spire: replaced by the packaged Zsharpend edition (its install script moves the old one
+        # aside and switches login shells over).
+        cmd = ["pacman", "-S", "--needed", "spire-shell"] + ([] if interactive else ["--noconfirm"])
+        runner.run(["sudo", *cmd] if os.geteuid() != 0 else cmd, terminal=interactive)
 
 
 def apply_aur(runner: util.Runner, interactive: bool = True) -> None:

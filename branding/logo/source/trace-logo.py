@@ -85,10 +85,19 @@ pg, pd = trace(pencil, "pencil", turd=45, alpha=1.0)
 corners = [(984 - X0, 413 - Y0), (1831 - X0, 941 - Y0), (965 - X0, 1503 - Y0), (332 - X0, 893 - Y0)]
 pts = " ".join(f"{x},{y}" for x, y in corners)
 
-svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 {W} {W}">',
-       f'<g transform="translate(0,{(W - H) / 2:.0f})">',
+# Square: the sheet was drawn at an angle, so it is clipped away a little inside its edges (its edge lines go with
+# it) and the drawing stands upright on a square tile of the sheet's grey, centred on what is drawn.
+cx, cy = sum(x for x, _ in corners) / 4, sum(y for _, y in corners) / 4
+inner = " ".join(f"{cx + (x - cx) * 0.93:.0f},{cy + (y - cy) * 0.93:.0f}" for x, y in corners)
+SIDE, TILE_X, TILE_Y = 1180, 137, -59          # around the drawing (946 x 692 of it), in the group's coordinates
+shift = (W - H) / 2
+svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" '
+       f'viewBox="{TILE_X} {TILE_Y + shift:.0f} {SIDE} {SIDE}">',
+       f'<g transform="translate(0,{shift:.0f})">',
        '<defs><filter id="wet" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="5"/></filter></defs>',
-       f'<polygon points="{pts}" fill="#8F8F8F"/>',
+       f'<clipPath id="sheet"><polygon points="{inner}"/></clipPath>',
+       f'<rect x="{TILE_X}" y="{TILE_Y}" width="{SIDE}" height="{SIDE}" rx="72" fill="#8F8F8F"/>',
+       '<g clip-path="url(#sheet)">',
        '<g filter="url(#wet)">']
 for name, col, g, d in out:
     svg.append(f'<g transform="{g}"><path fill="{col}" d="{d}"/></g>')
@@ -97,6 +106,6 @@ for name, col, g, d in tints:
 svg.append('</g>')
 svg.append(f'<g transform="{pg}" opacity="0.8"><path fill="#4B4B50" d="{pd}"/></g>')
 svg.append(f'<g transform="{ig}"><path fill="#141414" d="{idd}"/></g>')
-svg.append('</g></svg>')
+svg.append('</g></g></svg>')
 open("mark.svg", "w").write("\n".join(svg) + "\n")
 print(W, H, [(n, c) for n, c, *_ in out], [(n, c) for n, c, *_ in tints])

@@ -185,21 +185,6 @@ def bootmenu_background(b: Branding, width: int, height: int):
     return Image.fromarray(out.astype(np.uint8), "RGB")
 
 
-def login_background(b: Branding, width: int, height: int, logo_mark: Path):
-    """The login screen's background: the boot menu's backdrop with the logo mark large, a little below the middle
-    (the lock screen's clock sits above it)."""
-    from PIL import Image
-
-    img = bootmenu_background(b, width, height).convert("RGBA")
-    size = int(height * 0.8)
-    mark_png = logo_mark.with_name(f".login-mark-{size}.png")
-    rasterise(logo_mark, mark_png, size)
-    mark = Image.open(mark_png).convert("RGBA")
-    img.alpha_composite(mark, ((width - size) // 2, int(height * 0.58) - size // 2))
-    mark_png.unlink()
-    return img.convert("RGB")
-
-
 # Boot menu icons by GRUB menu entry class (the first class with an icon is
 # shown): the ISO's entries, GRUB's own and os-prober's. "LOGO" is the logo mark.
 GRUB_ICONS = {
@@ -466,11 +451,10 @@ def generate(quick: bool = False, b: Branding | None = None, log=print) -> None:
     classic.mkdir(parents=True, exist_ok=True)
     bg.save(classic / "background.png")
     rasterise(logo_mark, classic / "logo.png", 192)
-    # The login screen (SilentSDDM): its lock screen shows the mark on the boot menu's backdrop (default.jpg, also
-    # what it falls back to), its login screen the backdrop alone (login.jpg), so the login box sits on calm ground.
-    (gen / "sddm" / "backgrounds").mkdir(parents=True, exist_ok=True)
-    login_background(b, 2560, 1440, logo_mark).save(gen / "sddm" / "backgrounds" / "default.jpg", quality=92)
-    bootmenu_background(b, 2560, 1440).save(gen / "sddm" / "backgrounds" / "login.jpg", quality=92)
+    # The login screen is SilentSDDM as it ships, with a photograph (branding/sddm/backgrounds/default.jpg): nothing
+    # to draw for it here. Pictures an older build drew there are cleared, so they never cover the photograph.
+    for old in ("default.jpg", "login.jpg"):
+        (gen / "sddm" / "backgrounds" / old).unlink(missing_ok=True)
     rasterise(logo_mark, grub_dir / "logo.png", 192)
     grub_slices(b, grub_dir)
     if not grub_fonts(grub_dir):

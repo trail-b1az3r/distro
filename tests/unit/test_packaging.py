@@ -555,3 +555,22 @@ def test_core_ships_no_host_pacman_hooks(tmp_path):
     b = load_branding()
     stage.Stage(tmp_path, b).run("core")
     assert not (tmp_path / "etc/pacman.d/hooks").exists()
+
+
+def test_the_build_chroot_has_a_hostname(tmp_path):
+    """pacstrap leaves /etc/hostname out; packages' own tests (spire's) expect it, as on any installed system."""
+
+    class Recorder(util.Runner):
+        def run(self, cmd, **_kw):      # nothing runs: the chroot is faked below
+            self.recorded.append(cmd)
+
+    runner = Recorder(dry_run=False)
+    runner.recorded = []
+    builder = _builder(tmp_path, runner)
+    (builder.root / "etc" / "pacman.d").mkdir(parents=True)
+    (builder.root / "etc" / "arch-release").touch()
+    builder.prepare()
+    assert (builder.root / "etc" / "hostname").read_text() == "buildhost\n"
+    (builder.root / "etc" / "hostname").write_text("kept\n")
+    builder.prepare()
+    assert (builder.root / "etc" / "hostname").read_text() == "kept\n"

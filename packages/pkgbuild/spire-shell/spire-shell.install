@@ -1,6 +1,30 @@
 # spire as a login shell: listed in /etc/shells while it is installed (chsh accepts only those).
+#
+# Systems installed before spire was packaged have a build of spire-shell's main branch in /usr/local/bin/spire
+# (the installer compiled it there), and it is their users' login shell. /usr/local/bin comes first in PATH, so
+# it would keep winning over this package's Zsharpend edition. Here it is moved aside (to
+# /usr/local/lib/spire-main/, nothing is deleted), /usr/local/bin/spire becomes a link to /usr/bin/spire, and login
+# shells set to /usr/local/bin/spire are set to /usr/bin/spire.
+_move_old_spire() {
+  old=usr/local/bin/spire
+  if [ -e "$old" ] && [ ! -L "$old" ]; then
+    mkdir -p usr/local/lib/spire-main
+    mv -f "$old" usr/local/lib/spire-main/spire
+    echo ":: spire: the old main-branch build is now in /usr/local/lib/spire-main/spire"
+  fi
+  if [ ! -e "$old" ] || [ -L "$old" ]; then
+    mkdir -p usr/local/bin
+    ln -sfn /usr/bin/spire "$old"
+  fi
+  # Login shells: /usr/local/bin/spire -> /usr/bin/spire.
+  for user in $(awk -F: '$7 == "/usr/local/bin/spire" { print $1 }' etc/passwd 2>/dev/null); do
+    usermod -s /usr/bin/spire "$user" >/dev/null 2>&1 && echo ":: spire: $user's login shell is /usr/bin/spire now"
+  done
+}
+
 post_install() {
   grep -qxF /usr/bin/spire etc/shells 2>/dev/null || echo /usr/bin/spire >> etc/shells
+  _move_old_spire
 }
 
 post_upgrade() {
@@ -9,4 +33,8 @@ post_upgrade() {
 
 pre_remove() {
   sed -i '\|^/usr/bin/spire$|d' etc/shells
+  # The link to this package's spire goes with it.
+  if [ -L usr/local/bin/spire ] && [ "$(readlink usr/local/bin/spire)" = /usr/bin/spire ]; then
+    rm -f usr/local/bin/spire
+  fi
 }

@@ -755,6 +755,11 @@ class Builder:
         if self.runner.dry_run:
             return
         shutil.copyfile(self.chroot_conf, self.root / "etc" / "pacman.conf")
+        # pacstrap leaves out /etc/hostname, which every installed system has (the installer writes it), and which
+        # packages' own tests can rely on: spire's look for it.
+        hostname = self.root / "etc" / "hostname"
+        if not hostname.exists():
+            hostname.write_text("buildhost\n")
         for name in ("mirrorlist", "endeavouros-mirrorlist"):
             if (Path("/etc/pacman.d") / name).is_file():
                 shutil.copyfile(Path("/etc/pacman.d") / name, self.root / "etc" / "pacman.d" / name)

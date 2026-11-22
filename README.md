@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/logo.svg" width="220" alt="Frontline Linux: a drawn sheet with a snow-capped peak"></p>
+<p align="center"><img src="docs/logo.svg" width="220" alt="Frontline Linux: a drawn snow-capped peak on a square"></p>
 
 # Frontline Linux
 
