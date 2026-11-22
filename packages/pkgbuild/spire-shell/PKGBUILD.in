@@ -36,8 +36,17 @@ build() {
 }
 
 check() {
-  # spire's own scripts and their expected output, through the Whetstone just built.
+  # /etc/hostname is absent in the package chroot. Use a temporary fixture so
+  # the shell test remains deterministic and still exercises redirection/input.
   cd spire
+  local fixture=/tmp/spire-ci-hostname
+  cleanup_spire_test_fixture() {
+    rm -f "$fixture"
+    git checkout -- tests/basics.fish tests/basics.expected
+  }
+  trap cleanup_spire_test_fixture EXIT
+  printf 'spire-ci\\n' > "$fixture"
+  sed -i 's|/etc/hostname|/tmp/spire-ci-hostname|g' tests/basics.fish tests/basics.expected
   WHETSTONE="$srcdir/z-nd/target/release/whetstone" sh tests/run.sh
 }
 
