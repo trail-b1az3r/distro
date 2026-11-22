@@ -69,3 +69,13 @@ def test_the_install_script_moves_the_old_one_aside(tmp_path):
     assert (root / "usr/local/lib/spire-main/spire").read_text() == "old main-branch build\n"
     assert "/usr/bin/spire" in (root / "etc/shells").read_text().splitlines()
     assert "-s /usr/bin/spire me" in (tmp_path / "usermod.log").read_text()
+
+
+def test_check_sets_no_trap(tmp_path):
+    """A trap set in check() replaces makepkg's own EXIT trap and failed the build after the package was made."""
+    b = load_branding()
+    out = packages.render(tmp_path, b)
+    check = (next(d for d in out if d.name == "spire-shell") / "PKGBUILD").read_text().split("check() {")[1]
+    check = check.split("\n}\n")[0]
+    assert "trap" not in check.replace("No trap here", "").replace("an EXIT trap", "")
+    assert "tests/run.sh" in check

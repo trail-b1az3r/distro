@@ -36,17 +36,11 @@ build() {
 }
 
 check() {
-  # /etc/hostname is absent in the package chroot. Use a temporary fixture so
-  # the shell test remains deterministic and still exercises redirection/input.
+  # spire's own scripts and their expected output, through the Whetstone just built. One reads /etc/hostname,
+  # which every installed system has; the distribution's build chroot gets one too (distrokit.build.packages).
+  # No trap here: an EXIT trap set in a makepkg function replaces makepkg's own and fires when makepkg exits,
+  # outside this checkout, which failed the build after the package was made.
   cd spire
-  local fixture=/tmp/spire-ci-hostname
-  cleanup_spire_test_fixture() {
-    rm -f "$fixture"
-    git checkout -- tests/basics.fish tests/basics.expected
-  }
-  trap cleanup_spire_test_fixture EXIT
-  printf 'spire-ci\\n' > "$fixture"
-  sed -i 's|/etc/hostname|/tmp/spire-ci-hostname|g' tests/basics.fish tests/basics.expected
   WHETSTONE="$srcdir/z-nd/target/release/whetstone" sh tests/run.sh
 }
 
