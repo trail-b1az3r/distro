@@ -11,9 +11,9 @@
 # Generated from packages/pkgbuild/hyprland-plus/PKGBUILD.in.
 
 pkgname=hyprland-plus
-_commit=89377a04631f456fc8a3f69f1b40f38d9136d6f5
+_commit=832cb04a2798d3488f06332126bb112ae09f9e34
 _udis86=5336633af70f3917760a6d441ff02d93477b0c86
-pkgver=0.57.2.p2
+pkgver=0.57.2.p3
 pkgrel=1
 pkgdesc="Hyprland with Halcyon windows, renderer effects, app-scoped pen pressure curves and touchD support"
 arch=(x86_64)
