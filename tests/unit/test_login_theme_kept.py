@@ -8,7 +8,10 @@ B = load_branding()
 
 
 def test_the_branding_package_sets_it_last(tmp_path):
-    branding.generate(quick=True, log=lambda _m: None)
+    # Stage.branding() packages the complete generated artwork, not just the
+    # rendered templates. quick=True deliberately skips wallpapers, icons,
+    # boot artwork, and other raster assets, so it cannot be used here.
+    branding.generate(log=lambda _m: None)
     st = stage.Stage(tmp_path, B)
     st.branding()
     conf = tmp_path / f"etc/sddm.conf.d/zz-{B.id}-theme.conf"
