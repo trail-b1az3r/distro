@@ -287,13 +287,28 @@ def test_nano_offline_repository_keeps_only_live_and_profile_dependencies(tmp_pa
     monkeypatch.setattr(iso, "package_metadata", lambda path: metadata[path.name])
     monkeypatch.setattr(iso, "live_packages", lambda _b, _edition: ["frontline-installer"])
     monkeypatch.setattr(iso, "select_packages",
-                        lambda _profile, branding=None: SimpleNamespace(packages=["frontline-desktop"]))
+                        lambda _profile, overrides=None, branding=None: SimpleNamespace(packages=["frontline-desktop"]))
 
     out = iso.offline_repository(opts, b, iso.util.Runner(dry_run=True), tmp_path / "pacman.conf")
     included = {p.name for p in out.glob("*.pkg.tar.*")}
     assert included == set(names[:5])
     assert "frontline-ai-1-1-any.pkg.tar.zst" not in included
     assert "llama.cpp-vulkan-1-1-x86_64.pkg.tar.zst" not in included
+
+
+def test_build_info_preserves_desktop_selection_and_shell():
+    b = load_branding()
+    info = iso.build_info(b, iso.Options(desktop="noctalia", shell="fish"), epoch=1790393700)
+    assert info["desktop"] == "noctalia"
+    assert info["desktop_version"] == iso.stage.desktop_version(iso.paths.DATA_ROOT)
+    assert info["shell"] == "fish"
+
+
+def test_offline_sets_include_the_selected_noctalia_desktop():
+    b = load_branding()
+    selected = set(iso.offline_sets(b, "minimal", desktop="noctalia")[0])
+    assert "noctalia" in selected
+    assert "illogical-impulse-quickshell-git" in selected
 
 
 def test_offline_sets_keep_conflicting_stacks_apart():

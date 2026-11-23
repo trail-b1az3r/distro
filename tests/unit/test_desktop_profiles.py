@@ -35,6 +35,13 @@ def test_primary_external_desktop_is_selected_with_halcyon_fallback():
     assert "illogical-impulse-hyprland" in selected
 
 
+def test_noctalia_is_a_shell_choice_with_halcyon_fallback():
+    selected = packages({"desktop_environment": "noctalia"})
+    assert "noctalia" in selected
+    assert "illogical-impulse-hyprland" in selected
+    assert "illogical-impulse-quickshell-git" in selected
+
+
 def test_additional_desktops_can_be_installed_together():
     selected = packages({"desktop_ml4w": True, "desktop_sekaipop": True, "desktop_hyde": True})
     assert "illogical-impulse-hyprland" in selected
@@ -53,7 +60,8 @@ def test_networkmanager_assist_is_optional_and_does_not_replace_nmx():
 def test_external_desktop_setup_script_has_valid_shell_syntax():
     script = Path(__file__).resolve().parents[2] / "desktop" / "profiles" / "install-selected.sh"
     wrapper = script.with_name("run-session.sh")
-    for path in (script, wrapper):
+    noctalia_wrapper = script.with_name("run-noctalia-session.sh")
+    for path in (script, wrapper, noctalia_wrapper):
         result = subprocess.run(["bash", "-n", str(path)], capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stderr
     wrapper_text = wrapper.read_text()
@@ -66,7 +74,7 @@ def test_profile_sessions_can_start_from_sddm(tmp_path):
     # mode), both commands are in /usr/bin, and the entries say Hyprland, which the portals are configured for.
     root = Path(__file__).resolve().parents[2]
     # On the files themselves: the packages' check() runs these tests from the source tarball, with no git.
-    for name in ("install-selected.sh", "run-session.sh"):
+    for name in ("install-selected.sh", "run-session.sh", "run-noctalia-session.sh"):
         assert os.access(root / "desktop/profiles" / name, os.X_OK), name
     from distrokit.branding import load as load_branding
     from distrokit.build import stage
@@ -82,7 +90,12 @@ def test_profile_sessions_can_start_from_sddm(tmp_path):
     assert "DesktopNames=Hyprland" in installer and "/usr/bin/distro-desktop-session" in installer
     session = (root / "desktop/profiles/run-session.sh").read_text()
     assert "start-hyprland -- \"$@\"" in session and "session-previews" in session
+    noctalia = root / "desktop/profiles/run-noctalia-session.sh"
+    assert "hl.exec_cmd(\"noctalia\")" in noctalia.read_text()
+    staged = tmp_path / "usr/bin/distro-noctalia-session"
+    assert staged.is_file() and staged.stat().st_mode & 0o111
     steps = (root / "lib/distrokit/installer/steps.py").read_text()
+    assert 'primary == "noctalia"' in steps and "distro-noctalia-session" in steps
     assert "/usr/local/bin/distro" not in steps
 
 
@@ -414,5 +427,5 @@ def test_iso_desktop_and_shell_defaults_are_exposed():
     workflow = (root / ".github/workflows/iso.yml").read_text()
     assert "--desktop" in iso and "--shell" in iso
     assert "ISO_DESKTOP" in build and "ISO_SHELL" in build
-    assert "options: [halcyon, ml4w, work, hyde, sekaipop, macshell, none, frameshell, paperrice]" in workflow
+    assert "options: [halcyon, noctalia, ml4w, work, hyde, sekaipop, macshell, none, frameshell, paperrice]" in workflow
     assert "options: [fish, zsh, spire]" in workflow
