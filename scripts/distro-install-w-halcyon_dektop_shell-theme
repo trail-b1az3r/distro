@@ -33,7 +33,16 @@ FISH
   mkdir -p "$(dirname "$cfg")"
   [[ -f "$cfg" ]] || touch "$cfg"
   cfg_tmp="$(mktemp)"
-  awk '!/^[[:space:]]*(fish_config|prompt\.use_fish_prompt)[[:space:]]*=|^# Halcyon theme: load Fish prompt functions in Spire$/' "$cfg" > "$cfg_tmp"
+  awk '
+    !/^[[:space:]]*(fish_config|prompt\\.use_fish_prompt)[[:space:]]*=/ &&
+    !/^# Halcyon theme: load Fish prompt functions in Spire$/ {
+        lines[++n] = $0
+    }
+    END {
+        while (n > 0 && lines[n] == "") n--
+        for (i = 1; i <= n; i++) print lines[i]
+    }
+  ' "$cfg" > "$cfg_tmp"
   printf '\n# Halcyon theme: load Fish prompt functions in Spire.\nfish_config = yes\nprompt.use_fish_prompt = yes\n' >> "$cfg_tmp"
   if ! cmp -s "$cfg_tmp" "$cfg"; then backup_once "$cfg"; mv -f -- "$cfg_tmp" "$cfg"; else rm -f -- "$cfg_tmp"; fi
   echo "Halcyon prompt installed for Spire Shell. Restart shell."

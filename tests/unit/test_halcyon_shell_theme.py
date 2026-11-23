@@ -28,7 +28,17 @@ def test_theme_installer_is_idempotent_and_preserves_existing_prompt(tmp_path, s
         theme.write_text("# existing theme\n")
 
     subprocess.run(["bash", str(installer), shell], env=env, check=True, capture_output=True, text=True)
+    snapshot = {}
+    if shell in ("fish", "spire"):
+        snapshot[prompt] = prompt.read_text()
+        if shell == "spire":
+            cfg = home / ".config/spire/spire.conf"
+            snapshot[cfg] = cfg.read_text()
+    else:
+        snapshot[zshrc] = zshrc.read_text()
+        snapshot[theme] = theme.read_text()
     subprocess.run(["bash", str(installer), shell], env=env, check=True, capture_output=True, text=True)
+    assert all(path.read_text() == contents for path, contents in snapshot.items())
 
     if shell in ("fish", "spire"):
         assert prompt.read_text().startswith("# Halcyon prompt")
