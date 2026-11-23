@@ -325,6 +325,9 @@ class Stage:
 
     def desktop(self) -> None:
         b, share, lib = self.b, self.share, self.lib
+        # User command to apply the Halcyon prompt to Fish, Spire, or Zsh.
+        self.file("scripts/distro-install-w-halcyon_dektop_shell-theme", "/usr/bin/distro-install-w-halcyon_dektop_shell-theme", 0o755)
+        self.link("/usr/bin/distro-install-w-halcyon_desktop_shell-theme", "/usr/bin/distro-install-w-halcyon_dektop_shell-theme")
         self.tree("desktop/dots", f"{share}/desktop/dots")
         self.tree("desktop/overlay", f"{share}/desktop/overlay")
         self.text(f"{share}/desktop/VERSION", desktop_version(self.src) + "\n")
