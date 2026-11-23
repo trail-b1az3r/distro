@@ -20,6 +20,10 @@ def test_theme_installer_is_idempotent_and_preserves_existing_prompt(tmp_path, s
         prompt = home / ".config/fish/functions/fish_prompt.fish"
         prompt.parent.mkdir(parents=True)
         prompt.write_text("# existing prompt\n")
+        if shell == "spire":
+            cfg = home / ".config/spire/spire.conf"
+            cfg.parent.mkdir(parents=True)
+            cfg.write_text("colorscheme = default\nfish_config = no\nprompt.use_fish_prompt = no\n")
     else:
         zshrc = home / ".zshrc"
         zshrc.write_text("# existing zshrc\n")
@@ -47,7 +51,8 @@ def test_theme_installer_is_idempotent_and_preserves_existing_prompt(tmp_path, s
             cfg = home / ".config/spire/spire.conf"
             assert "fish_config = yes" in cfg.read_text()
             assert "prompt.use_fish_prompt = yes" in cfg.read_text()
-            assert (cfg.with_name(cfg.name + ".bak")).is_file()
+            assert "colorscheme = default" in cfg.read_text()
+            assert (cfg.with_name(cfg.name + ".bak")).read_text() == "colorscheme = default\nfish_config = no\nprompt.use_fish_prompt = no\n
     else:
         assert zshrc.read_text().count("halcyon-shell/zsh-theme.zsh") == 1
         assert zshrc.with_name(zshrc.name + ".bak").read_text() == "# existing zshrc\n"

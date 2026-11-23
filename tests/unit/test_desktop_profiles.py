@@ -40,6 +40,11 @@ def test_noctalia_is_a_shell_choice_with_halcyon_fallback():
     assert "noctalia" in selected
     assert "illogical-impulse-hyprland" in selected
     assert "illogical-impulse-quickshell-git" in selected
+    root = Path(__file__).resolve().parents[2]
+    page = (root / "lib/distrokit/gui/qml/installer/pages/DesktopPage.qml").read_text()
+    app = (root / "lib/distrokit/gui/installer_app.py").read_text()
+    assert 'id: "noctalia", label: "Noctalia Shell"' in page
+    assert 'default_desktop in {"halcyon", "noctalia"' in app
 
 
 def test_additional_desktops_can_be_installed_together():
@@ -429,3 +434,5 @@ def test_iso_desktop_and_shell_defaults_are_exposed():
     assert "ISO_DESKTOP" in build and "ISO_SHELL" in build
     assert "options: [halcyon, noctalia, ml4w, work, hyde, sekaipop, macshell, none, frameshell, paperrice]" in workflow
     assert "options: [fish, zsh, spire]" in workflow
+    assert "default: fish" in workflow
+    assert 'default=os.environ.get("ISO_SHELL", "fish")' in iso
