@@ -12,7 +12,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("noctalia")
 end)
 hl.bind("SUPER + Space", hl.dsp.exec_cmd("noctalia msg panel-toggle launcher"))
-hl.bind("SUPER + Enter", hl.dsp.exec_cmd("konsole"))
+hl.bind("SUPER + Return", hl.dsp.exec_cmd("alacritty"))
 hl.bind("SUPER + Comma", hl.dsp.exec_cmd("noctalia msg settings-toggle"))
 hl.bind("SUPER + Q", hl.dsp.exec_cmd("hyprctl dispatch exit"))
 LUA
