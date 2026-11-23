@@ -34,8 +34,8 @@ FISH
   [[ -f "$cfg" ]] || touch "$cfg"
   cfg_tmp="$(mktemp)"
   awk '
-    !/^[[:space:]]*(fish_config|prompt\\.use_fish_prompt)[[:space:]]*=/ &&
-    !/^# Halcyon theme: load Fish prompt functions in Spire\\.$/ {
+    !/^[[:space:]]*(fish_config|prompt\.use_fish_prompt)[[:space:]]*=/ &&
+    !/^# Halcyon theme: load Fish prompt functions in Spire\.$/ {
         lines[++n] = $0
     }
     END {

@@ -52,7 +52,7 @@ def test_theme_installer_is_idempotent_and_preserves_existing_prompt(tmp_path, s
             assert "fish_config = yes" in cfg.read_text()
             assert "prompt.use_fish_prompt = yes" in cfg.read_text()
             assert "colorscheme = default" in cfg.read_text()
-            assert (cfg.with_name(cfg.name + ".bak")).read_text() == "colorscheme = default\nfish_config = no\nprompt.use_fish_prompt = no\n
+            assert (cfg.with_name(cfg.name + ".bak")).read_text() == "colorscheme = default\nfish_config = no\nprompt.use_fish_prompt = no\n"
     else:
         assert zshrc.read_text().count("halcyon-shell/zsh-theme.zsh") == 1
         assert zshrc.with_name(zshrc.name + ".bak").read_text() == "# existing zshrc\n"
