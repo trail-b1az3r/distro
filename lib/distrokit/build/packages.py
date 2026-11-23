@@ -702,7 +702,7 @@ class Builder:
         self.root = self.workdir / "chroot"
         self.chroot_conf = self.workdir / "pacman-chroot.conf"
         self.gnupg = self.workdir / "gnupg"
-        self.shared = [self.workdir / d for d in ("src", "out", "sources", "makepkg", "gnupg", "tools")] + [self.repo]
+        self.shared = [self.workdir / d for d in ("src", "out", "sources", "makepkg", "gnupg")] + [self.workdir.parent / "tools", self.repo]
         if Path("/var/cache/pacman/pkg").is_dir():  # the host's package cache, shared
             self.shared.append(Path("/var/cache/pacman/pkg"))
         pw = pwd.getpwnam(user) if user else None
@@ -746,7 +746,7 @@ class Builder:
         # relative to its package workdir. Stage it and bind-mount it into the
         # build chroot instead of assuming the host checkout is visible there.
         forecast_source = paths.DATA_ROOT / "desktop" / "dots" / "tools" / "halcyon-forecast"
-        forecast_target = self.workdir / "tools" / "halcyon-forecast"
+        forecast_target = self.workdir.parent / "tools" / "halcyon-forecast"
         if not forecast_source.is_dir():
             raise FileNotFoundError(f"Required local source is missing: {forecast_source}")
         if forecast_target.exists():
