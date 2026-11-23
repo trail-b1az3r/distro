@@ -9,7 +9,7 @@ import pytest
 @pytest.mark.parametrize("shell", ["fish", "spire", "zsh"])
 def test_theme_installer_is_idempotent_and_preserves_existing_prompt(tmp_path, shell):
     root = Path(__file__).resolve().parents[2]
-    installer = root / "scripts/distro-install-w-halcyon_dektop_shell-theme"
+    installer = root / "scripts/distro-install-w-halcyon_desktop_shell-theme"
     home = tmp_path / "home"
     home.mkdir()
     env = os.environ.copy()
@@ -32,6 +32,9 @@ def test_theme_installer_is_idempotent_and_preserves_existing_prompt(tmp_path, s
         theme.write_text("# existing theme\n")
 
     subprocess.run(["bash", str(installer), shell], env=env, check=True, capture_output=True, text=True)
+    # The legacy misspelling remains a supported entry point.
+    legacy = root / "scripts/distro-install-w-halcyon_dektop_shell-theme"
+    subprocess.run(["bash", str(legacy), shell], env=env, check=True, capture_output=True, text=True)
     snapshot = {}
     if shell in ("fish", "spire"):
         snapshot[prompt] = prompt.read_text()
@@ -58,3 +61,16 @@ def test_theme_installer_is_idempotent_and_preserves_existing_prompt(tmp_path, s
         assert zshrc.with_name(zshrc.name + ".bak").read_text() == "# existing zshrc\n"
         assert theme.read_text().startswith("# Halcyon Zsh prompt")
         assert theme.with_name(theme.name + ".bak").read_text() == "# existing theme\n"
+
+
+def test_theme_installer_stages_correct_command_and_legacy_alias(tmp_path):
+    from distrokit.branding import load as load_branding
+    from distrokit.build import stage
+
+    b = load_branding()
+    stage.Stage(tmp_path, b).run("desktop")
+    canonical = tmp_path / "usr/bin/distro-install-w-halcyon_desktop_shell-theme"
+    legacy = tmp_path / "usr/bin/distro-install-w-halcyon_dektop_shell-theme"
+    assert canonical.is_file() and canonical.stat().st_mode & 0o111
+    assert legacy.is_symlink()
+    assert legacy.resolve() == canonical.resolve()
