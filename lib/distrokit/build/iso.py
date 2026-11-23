@@ -525,8 +525,9 @@ def nano_offline_packages(opts: Options, b: Branding) -> set[str]:
     profile = load_profiles()[opts.profile]
     overrides = {"desktop_environment": opts.desktop} if opts.desktop else None
     required.update(select_packages(profile, overrides=overrides, branding=b).packages)
-    if opts.shell == "spire":
-        required.add("spire-shell")   # the ISO's default login shell (iso.json "shell")
+    # Nano carries the selected login shell in its offline package closure too.
+    # Fish is in the minimal profile, but Zsh/Spire are selectable ISO defaults.
+    required.add({"fish": "fish", "zsh": "zsh", "spire": "spire-shell"}.get(opts.shell, "fish"))
 
     archives = [p for p in sorted(opts.repo.glob("*.pkg.tar.*"))
                 if not p.name.endswith(".sig") and not DEBUG_PACKAGE.search(p.name)]
