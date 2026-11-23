@@ -36,13 +36,13 @@ def test_primary_external_desktop_is_selected_with_halcyon_fallback():
 
 
 def test_noctalia_is_a_shell_choice_with_halcyon_fallback():
+    root = Path(__file__).resolve().parents[2]
     selected = packages({"desktop_environment": "noctalia"})
     assert "noctalia" in selected
     noctalia_list = (root / "packages/lists/desktop-noctalia.list").read_text().split()
     assert "noctalia" in noctalia_list and "octalia" not in noctalia_list
     assert "illogical-impulse-hyprland" in selected
     assert "illogical-impulse-quickshell-git" in selected
-    root = Path(__file__).resolve().parents[2]
     page = (root / "lib/distrokit/gui/qml/installer/pages/DesktopPage.qml").read_text()
     app = (root / "lib/distrokit/gui/installer_app.py").read_text()
     assert 'id: "noctalia", label: "Noctalia Shell"' in page
