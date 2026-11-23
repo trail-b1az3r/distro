@@ -212,7 +212,7 @@ def offline_sets(b: Branding, profile_id: str, multilib: bool = True, desktop: s
     root = paths.DATA_ROOT
     profile = load_profiles()[profile_id]
     overrides = {"desktop_environment": desktop} if desktop else None
-    base = list(select_packages(profile, overrides=overrides, branding=b).packages
+    base = list(select_packages(profile, overrides=overrides, branding=b).packages)
     # These keys are the bootstrap trust roots for the installed system. They
     # must be carried even if a custom profile omits the common base list:
     # the installer requests them unconditionally and an offline install has
@@ -524,7 +524,7 @@ def nano_offline_packages(opts: Options, b: Branding) -> set[str]:
     required = set(live_packages(b, "nano"))
     profile = load_profiles()[opts.profile]
     overrides = {"desktop_environment": opts.desktop} if opts.desktop else None
-    required.update(select_packages(profile, overrides=overrides, branding=b).packages
+    required.update(select_packages(profile, overrides=overrides, branding=b).packages)
     if opts.shell == "spire":
         required.add("spire-shell")   # the ISO's default login shell (iso.json "shell")
 
