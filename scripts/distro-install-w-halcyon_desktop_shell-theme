@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 shell="${1:-}"
-case "$shell" in fish|spire|zsh) ;; *) echo "Usage: distro-install-w-halcyon_dektop_shell-theme <fish|zsh|spire>" >&2; exit 2;; esac
+case "$shell" in fish|spire|zsh) ;; *) echo "Usage: distro-install-w-halcyon_desktop_shell-theme <fish|zsh|spire>" >&2; exit 2;; esac
 home="${HOME:?HOME is not set}"
 backup_once() {
     local file="$1"
