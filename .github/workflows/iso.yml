@@ -13,7 +13,7 @@ on:
       desktop:
         description: Default installed desktop / dotfiles
         type: choice
-        options: [halcyon, ml4w, work, hyde, sekaipop, macshell, none, frameshell, paperrice]
+        options: [halcyon, noctalia, ml4w, work, hyde, sekaipop, macshell, none, frameshell, paperrice]
         default: halcyon
       shell:
         description: Default login shell
