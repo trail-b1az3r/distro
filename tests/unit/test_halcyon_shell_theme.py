@@ -74,3 +74,13 @@ def test_theme_installer_stages_correct_command_and_legacy_alias(tmp_path):
     assert canonical.is_file() and canonical.stat().st_mode & 0o111
     assert legacy.is_symlink()
     assert legacy.resolve() == canonical.resolve()
+
+
+def test_theme_installer_reports_correct_command_name(tmp_path):
+    root = Path(__file__).resolve().parents[2]
+    env = os.environ.copy()
+    env["HOME"] = str(tmp_path)
+    result = subprocess.run(["bash", str(root / "scripts/distro-install-w-halcyon_desktop_shell-theme"), "invalid"],
+                           env=env, capture_output=True, text=True, check=False)
+    assert result.returncode == 2
+    assert "distro-install-w-halcyon_desktop_shell-theme" in result.stderr
