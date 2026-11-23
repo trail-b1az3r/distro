@@ -316,6 +316,7 @@ def test_offline_sets_keep_conflicting_stacks_apart():
     for profile in ("minimal", "standard", "developer", "ai"):
         base = set(iso.offline_sets(b, profile)[0])
         assert {"archlinux-keyring", "endeavouros-keyring"} <= base
+        assert {"fish", "zsh", "spire-shell"} <= base
     sets = iso.offline_sets(b, "standard")
     base = set(sets[0])
     assert {"linux", "linux-headers", "grub", "sbctl", "llama.cpp-vulkan",
