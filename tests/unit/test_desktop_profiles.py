@@ -437,5 +437,7 @@ def test_iso_desktop_and_shell_defaults_are_exposed():
     assert "options: [halcyon, noctalia, ml4w, work, hyde, sekaipop, macshell, none, frameshell, paperrice]" in workflow
     assert "options: [fish, zsh, spire]" in workflow
     assert "default: fish" in workflow
+    assert "LOGIN_SHELL: ${{ inputs.shell || 'fish' }}" in workflow
+    assert '--shell "$LOGIN_SHELL"' in workflow and '--shell "$SHELL"' not in workflow
     assert 'default=os.environ.get("ISO_SHELL", "fish")' in iso
     assert iso.Options().shell == "fish"
