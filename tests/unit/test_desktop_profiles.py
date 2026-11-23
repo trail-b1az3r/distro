@@ -38,6 +38,8 @@ def test_primary_external_desktop_is_selected_with_halcyon_fallback():
 def test_noctalia_is_a_shell_choice_with_halcyon_fallback():
     selected = packages({"desktop_environment": "noctalia"})
     assert "noctalia" in selected
+    noctalia_list = (root / "packages/lists/desktop-noctalia.list").read_text().split()
+    assert "noctalia" in noctalia_list and "octalia" not in noctalia_list
     assert "illogical-impulse-hyprland" in selected
     assert "illogical-impulse-quickshell-git" in selected
     root = Path(__file__).resolve().parents[2]
@@ -436,3 +438,4 @@ def test_iso_desktop_and_shell_defaults_are_exposed():
     assert "options: [fish, zsh, spire]" in workflow
     assert "default: fish" in workflow
     assert 'default=os.environ.get("ISO_SHELL", "fish")' in iso
+    assert iso.Options().shell == "fish"
