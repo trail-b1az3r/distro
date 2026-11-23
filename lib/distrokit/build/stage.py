@@ -327,7 +327,7 @@ class Stage:
         b, share, lib = self.b, self.share, self.lib
         # Canonical command spelling; retain the original typo as a compatibility alias.
         self.file("scripts/distro-install-w-halcyon_desktop_shell-theme", "/usr/bin/distro-install-w-halcyon_desktop_shell-theme", 0o755)
-        self.link("/usr/bin/distro-install-w-halcyon_dektop_shell-theme", "/usr/bin/distro-install-w-halcyon_desktop_shell-theme")
+        self.link("/usr/bin/distro-install-w-halcyon_dektop_shell-theme", "distro-install-w-halcyon_desktop_shell-theme")
         self.file("desktop/profiles/run-noctalia-session.sh", "/usr/bin/distro-noctalia-session", 0o755)
         self.tree("desktop/dots", f"{share}/desktop/dots")
         self.tree("desktop/overlay", f"{share}/desktop/overlay")
