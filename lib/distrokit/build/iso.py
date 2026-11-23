@@ -827,7 +827,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("action", choices=["build", "profile", "info"], nargs="?", default="build")
     p.add_argument("--profile", default=os.environ.get("ISO_PROFILE"),
                    help="installation profile the ISO offers by default (Nano defaults to minimal)")
-    p.add_argument("--desktop", choices=["halcyon", "ml4w", "work", "hyde", "sekaipop", "macshell", "none", "frameshell", "paperrice"], default=os.environ.get("ISO_DESKTOP", "halcyon"), help="default installed desktop/dotfiles profile")
+    p.add_argument("--desktop", choices=["halcyon", "noctalia", "ml4w", "work", "hyde", "sekaipop", "macshell", "none", "frameshell", "paperrice"], default=os.environ.get("ISO_DESKTOP", "halcyon"), help="default installed desktop/dotfiles profile")
     p.add_argument("--shell", choices=["fish", "zsh", "spire"], default=os.environ.get("ISO_SHELL", "fish"), help="default login shell")
     p.add_argument("--edition", choices=["standard", "nano"], default=os.environ.get("ISO_EDITION", "standard"),
                    help="ISO edition: standard (unchanged) or nano (compact live package set)")
