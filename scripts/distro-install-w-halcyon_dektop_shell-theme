@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+shell="${1:-}"
+case "$shell" in fish|spire|zsh) ;; *) echo "Usage: distro-install-w-halcyon_dektop_shell-theme <fish|zsh|spire>" >&2; exit 2;; esac
+home="${HOME:?HOME is not set}"
+case "$shell" in
+fish|spire)
+ mkdir -p "$home/.config/fish/functions"
+ cat > "$home/.config/fish/functions/fish_prompt.fish" <<'FISH'
+function fish_prompt
+ set_color --bold brcyan; printf '╭─ '
+ set_color brblue; printf '%s' (prompt_pwd); set_color normal
+ if command -q git
+  set branch (git branch --show-current 2>/dev/null)
+  if test -n "$branch"; set_color brmagenta; printf '   %s' "$branch"; end
+ end
+ printf '\n╰─ '; set_color --bold brgreen; printf '❯ '; set_color normal
+end
+FISH
+ echo "Halcyon prompt installed for $shell. Restart shell."
+ ;;
+zsh)
+ mkdir -p "$home/.config/halcyon-shell"
+ cat > "$home/.config/halcyon-shell/zsh-theme.zsh" <<'ZSH'
+autoload -Uz vcs_info
+precmd() { vcs_info }
+zstyle ':vcs_info:git:*' formats ' %F{magenta} %b%f'
+setopt PROMPT_SUBST
+PROMPT='%F{cyan}%B╭─%b %F{blue}%~%f${vcs_info_msg_0_}\n%F{cyan}%B╰─%b %F{green}%B❯%b%f '
+ZSH
+ touch "$home/.zshrc"
+ if ! grep -Fq 'halcyon-shell/zsh-theme.zsh' "$home/.zshrc"; then
+  printf '\n# Halcyon shell theme\nsource "$HOME/.config/halcyon-shell/zsh-theme.zsh"\n' >> "$home/.zshrc"
+ fi
+ echo "Halcyon prompt installed for Zsh. Restart shell."
+ ;;
+esac
