@@ -39,8 +39,10 @@ FISH
         lines[++n] = $0
     }
     END {
-        while (n > 0 && lines[n] == "") n--
-        for (i = 1; i <= n; i++) print lines[i]
+        start = 1
+        while (start <= n && lines[start] == "") start++
+        while (n >= start && lines[n] == "") n--
+        for (i = start; i <= n; i++) print lines[i]
     }
   ' "$cfg" > "$cfg_tmp"
   printf '\n# Halcyon theme: load Fish prompt functions in Spire.\nfish_config = yes\nprompt.use_fish_prompt = yes\n' >> "$cfg_tmp"
