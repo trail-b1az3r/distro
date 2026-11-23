@@ -702,7 +702,7 @@ class Builder:
         self.root = self.workdir / "chroot"
         self.chroot_conf = self.workdir / "pacman-chroot.conf"
         self.gnupg = self.workdir / "gnupg"
-        self.shared = [self.workdir / d for d in ("src", "out", "sources", "makepkg", "gnupg")] + [self.repo]
+        self.shared = [self.workdir / d for d in ("src", "out", "sources", "makepkg", "gnupg", "tools")] + [self.repo]
         if Path("/var/cache/pacman/pkg").is_dir():  # the host's package cache, shared
             self.shared.append(Path("/var/cache/pacman/pkg"))
         pw = pwd.getpwnam(user) if user else None
@@ -738,10 +738,24 @@ class Builder:
         self.repo.mkdir(parents=True, exist_ok=True)
         if not self.db.exists():
             self.runner.run(["repo-add", str(self.db)])
-        for d in self.shared[:5]:
+        for d in self.shared:
             d.mkdir(parents=True, exist_ok=True)
             if os.geteuid() == 0:
                 os.chown(d, self.uid, self.gid)
+        # Summit's PKGBUILD expects the forecast app at ../../../tools/halcyon-forecast
+        # relative to its package workdir. Stage it and bind-mount it into the
+        # build chroot instead of assuming the host checkout is visible there.
+        forecast_source = paths.DATA_ROOT / "desktop" / "dots" / "tools" / "halcyon-forecast"
+        forecast_target = self.workdir / "tools" / "halcyon-forecast"
+        if not forecast_source.is_dir():
+            raise FileNotFoundError(f"Required local source is missing: {forecast_source}")
+        if forecast_target.exists():
+            shutil.rmtree(forecast_target)
+        shutil.copytree(forecast_source, forecast_target)
+        if os.geteuid() == 0:
+            for item in [forecast_target, *forecast_target.rglob("*")]:
+                if not item.is_symlink():
+                    os.chown(item, self.uid, self.gid)
         self.gnupg.chmod(0o700)
         # The chroot's pacman.conf: the build configuration, with the chroot's own databases.
         text = "".join(ln for ln in self.conf.read_text().splitlines(keepends=True) if not ln.startswith("DBPath"))
