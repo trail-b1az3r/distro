@@ -66,7 +66,7 @@ ColumnLayout {
             ColumnLayout {
                 Layout.fillWidth: true
                 Text { text: qsTr("Login shell"); color: Theme.fg; font.weight: Font.DemiBold; font.pixelSize: Theme.text }
-                Text { text: qsTr("The login shell is used on the text console and over SSH. Bash remains the most compatible choice; Spire Shell (fish and bash syntax in one shell, and your fish config as it is) is experimental."); color: Theme.muted; font.pixelSize: Theme.textSmall; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                Text { text: qsTr("Fish is the default login shell. Bash remains the most compatible choice; Spire Shell (fish and bash syntax in one shell, and your fish config as it is) is experimental."); color: Theme.muted; font.pixelSize: Theme.textSmall; wrapMode: Text.WordWrap; Layout.fillWidth: true }
             }
             AppCombo {
                 Layout.preferredWidth: 180

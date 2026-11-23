@@ -145,9 +145,11 @@
           "type": "string",
           "enum": [
             "bash",
-            "fish"
+            "fish",
+            "zsh",
+            "spire"
           ],
-          "default": "bash"
+          "default": "fish"
         },
         "autologin": {
           "type": "boolean",

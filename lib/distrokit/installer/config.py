@@ -55,7 +55,7 @@ class UserConfig:
     fullname: str = ""
     password: str = ""
     root_password: str = ""  # empty: root login disabled (sudo only)
-    shell: str = "bash"  # login shell: bash | fish | zsh | spire
+    shell: str = "fish"  # login shell: fish (default) | bash | zsh | spire
     autologin: bool = False
 
 

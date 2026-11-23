@@ -37,6 +37,8 @@ mostly compiling AUR packages; later builds reuse `build/repo`.
 | Option | Meaning |
 |---|---|
 | `--profile minimal\|standard\|developer\|ai` | the profile the installer preselects (and, with `--offline full`, carries) |
+| `--desktop halcyon\|noctalia\|ml4w\|work\|hyde\|sekaipop\|macshell\|none\|frameshell\|paperrice` | the installed desktop/shell choice; Noctalia gets a separate Hyprland session |
+| `--shell fish\|zsh\|spire` | the installed login shell (Fish by default) |
 | `--offline minimal` (default) | the ISO carries the distribution repository (our packages + AUR builds); everything else is downloaded while installing |
 | `--offline full` | the ISO carries every package any installation needs (all GPU stacks, kernels, the profile's software): installs without a network; about twice the size |
 | `--clean` | start from clean work directories |

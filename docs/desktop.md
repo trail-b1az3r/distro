@@ -10,9 +10,13 @@ on-screen keyboard, Material You colours taken from the wallpaper and
 Wayland-first apps. The dots are pinned to a commit (the `desktop/dots`
 submodule) and deployed unchanged, so upstream's documentation applies.
 
+## Noctalia session
+
+Select **Noctalia Shell** in the ISO installer's primary desktop choice. It installs the Arch `noctalia` package and registers a separate SDDM session. The session starts Hyprland with a dedicated `~/.config/hypr/frontline-noctalia.lua` (created only if absent), autostarts Noctalia, and leaves the Halcyon config as the fallback.
+
 ## First steps
 
-* **Super** opens the search/launcher; **Super + /** shows every keybind.
+* **Super** opens the search/launcher; **Super + /** shows every keybind
 * **Super + Enter** terminal (Alacritty), **Super + E** files (Dolphin),
   **Super + W** browser, **Super + Q** close a window.
 * The Welcome wizard: **Super + F1**. The updater: **Super + Shift + U**.

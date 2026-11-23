@@ -23,7 +23,7 @@ ENUMS: dict[tuple[str, str], list[str]] = {
     ("DiskConfig", "swap"): ["zram", "partition", "file", "none"],
     ("MountSpec", "mountpoint"): ["/", "/home", "/boot", "/efi", "swap"],
     ("MountSpec", "filesystem"): ["", "btrfs", "ext4", "xfs", "vfat", "swap"],
-    ("UserConfig", "shell"): ["bash", "fish"],
+    ("UserConfig", "shell"): ["bash", "fish", "zsh", "spire"],
     ("AiConfig", "download"): ["now", "first-boot"],
     ("AiConfig", "backend"): ["", "cuda", "cuda_legacy", "rocm", "xpu", "vulkan", "cpu"],
     ("InstallConfig", "bootloader"): ["auto", "systemd-boot", "grub"],

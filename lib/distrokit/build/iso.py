@@ -207,14 +207,12 @@ def live_packages(b: Branding, edition: str = "standard") -> list[str]:
     return list(dict.fromkeys(pk + LIVE_EXTRA))
 
 
-def offline_sets(b: Branding, profile_id: str, multilib: bool = True) -> list[list[str]]:
-    """Package sets for a complete offline repository. Each set installs
-    together; separate sets hold alternatives that conflict (driver stacks,
-    prebuilt vs DKMS modules). GPU compute toolkits (CUDA, ROCm: many GB) and
-    non-redistributable software stay online-only."""
+def offline_sets(b: Branding, profile_id: str, multilib: bool = True, desktop: str = "halcyon") -> list[list[str]]:
+    """Package sets for a complete offline repository, including the chosen desktop."""
     root = paths.DATA_ROOT
     profile = load_profiles()[profile_id]
-    base = list(select_packages(profile, branding=b).packages)
+    overrides = {"desktop_environment": desktop} if desktop else None
+    base = list(select_packages(profile, overrides=overrides, branding=b).packages
     # These keys are the bootstrap trust roots for the installed system. They
     # must be carried even if a custom profile omits the common base list:
     # the installer requests them unconditionally and an offline install has
@@ -334,7 +332,7 @@ def build_info(b: Branding, opts: Options, epoch: int) -> dict:
         "source_date_epoch": epoch,
         "built": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(epoch)),
         "source_commit": git_commit(src),
-        "desktop": stage.desktop_version(src),
+        "desktop_version": stage.desktop_version(src),
         "distrokit": __version__,
         "archive_date": opts.archive_date,
         "debug": opts.debug,
@@ -525,7 +523,8 @@ def nano_offline_packages(opts: Options, b: Branding) -> set[str]:
     """
     required = set(live_packages(b, "nano"))
     profile = load_profiles()[opts.profile]
-    required.update(select_packages(profile, branding=b).packages)
+    overrides = {"desktop_environment": opts.desktop} if opts.desktop else None
+    required.update(select_packages(profile, overrides=overrides, branding=b).packages
     if opts.shell == "spire":
         required.add("spire-shell")   # the ISO's default login shell (iso.json "shell")
 
@@ -574,7 +573,7 @@ def offline_repository(opts: Options, b: Branding, runner: util.Runner, conf: Pa
         _remove(db)
         db.mkdir(parents=True)
         runner.run(["pacman", "--config", str(conf), "--dbpath", str(db), "-Sy"])
-        for pkset in offline_sets(b, opts.profile, opts.multilib):
+        for pkset in offline_sets(b, opts.profile, opts.multilib, opts.desktop):
             runner.run(["pacman", "--config", str(conf), "--dbpath", str(db), "--cachedir", str(out),
                         "--noconfirm", "-Sw", *pkset])
         _remove(db)
