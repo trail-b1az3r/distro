@@ -6,61 +6,45 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.parametrize("shell", ["fish", "spire", "zsh"])
-def test_theme_installer_is_idempotent_and_preserves_existing_prompt(tmp_path, shell):
+def _fake_halcyon(home: Path) -> Path:
+    """A stand-in halcyon-theme that records how it was called."""
+    tool = home / ".config/hypr/hyprland/halcyon/halcyon-theme"
+    tool.parent.mkdir(parents=True)
+    tool.write_text('#!/usr/bin/env bash\nprintf "%s\\n" "$@" > "$HOME/called"\n')
+    tool.chmod(0o755)
+    return home / "called"
+
+
+@pytest.mark.parametrize("shell", ["halcyon", "glass", "summit", "macshell", "noctalia", "auto"])
+def test_it_picks_the_hyprland_shell_halcyon_runs(tmp_path, shell):
     root = Path(__file__).resolve().parents[2]
-    installer = root / "scripts/distro-install-w-halcyon_desktop_shell-theme"
     home = tmp_path / "home"
-    home.mkdir()
-    env = os.environ.copy()
-    env["HOME"] = str(home)
-    env["ZDOTDIR"] = str(home)
+    called = _fake_halcyon(home)
+    env = dict(os.environ, HOME=str(home), XDG_CONFIG_HOME=str(home / ".config"), DISTRO_ALLOW_ROOT="1")
+    for command in ("distro-install-w-halcyon_desktop_shell-theme", "distro-install-w-halcyon_dektop_shell-theme"):
+        subprocess.run(["bash", str(root / "scripts" / command), shell, "--no-install"], env=env, check=True,
+                       capture_output=True, text=True)
+        assert called.read_text().split() == ["shell", shell]
 
-    if shell in ("fish", "spire"):
-        prompt = home / ".config/fish/functions/fish_prompt.fish"
-        prompt.parent.mkdir(parents=True)
-        prompt.write_text("# existing prompt\n")
-        if shell == "spire":
-            cfg = home / ".config/spire/spire.conf"
-            cfg.parent.mkdir(parents=True)
-            cfg.write_text("colorscheme = default\nfish_config = no\nprompt.use_fish_prompt = no\n")
-    else:
-        zshrc = home / ".zshrc"
-        zshrc.write_text("# existing zshrc\n")
-        theme = home / ".config/halcyon-shell/zsh-theme.zsh"
-        theme.parent.mkdir(parents=True)
-        theme.write_text("# existing theme\n")
 
-    subprocess.run(["bash", str(installer), shell], env=env, check=True, capture_output=True, text=True)
-    # The legacy misspelling remains a supported entry point.
-    legacy = root / "scripts/distro-install-w-halcyon_dektop_shell-theme"
-    subprocess.run(["bash", str(legacy), shell], env=env, check=True, capture_output=True, text=True)
-    snapshot = {}
-    if shell in ("fish", "spire"):
-        snapshot[prompt] = prompt.read_text()
-        if shell == "spire":
-            cfg = home / ".config/spire/spire.conf"
-            snapshot[cfg] = cfg.read_text()
-    else:
-        snapshot[zshrc] = zshrc.read_text()
-        snapshot[theme] = theme.read_text()
-    subprocess.run(["bash", str(installer), shell], env=env, check=True, capture_output=True, text=True)
-    assert all(path.read_text() == contents for path, contents in snapshot.items())
+def test_login_shells_are_not_its_business(tmp_path):
+    root = Path(__file__).resolve().parents[2]
+    home = tmp_path / "home"
+    _fake_halcyon(home)
+    env = dict(os.environ, HOME=str(home), DISTRO_ALLOW_ROOT="1")
+    for login_shell in ("fish", "zsh", "spire"):
+        result = subprocess.run(["bash", str(root / "scripts/distro-install-w-halcyon_desktop_shell-theme"), login_shell],
+                                env=env, capture_output=True, text=True, check=False)
+        assert result.returncode == 2
+    assert not (home / ".config/fish").exists() and not (home / ".zshrc").exists()
 
-    if shell in ("fish", "spire"):
-        assert prompt.read_text().startswith("# Halcyon prompt")
-        assert (prompt.with_name(prompt.name + ".bak")).read_text() == "# existing prompt\n"
-        if shell == "spire":
-            cfg = home / ".config/spire/spire.conf"
-            assert "fish_config = yes" in cfg.read_text()
-            assert "prompt.use_fish_prompt = yes" in cfg.read_text()
-            assert "colorscheme = default" in cfg.read_text()
-            assert (cfg.with_name(cfg.name + ".bak")).read_text() == "colorscheme = default\nfish_config = no\nprompt.use_fish_prompt = no\n"
-    else:
-        assert zshrc.read_text().count("halcyon-shell/zsh-theme.zsh") == 1
-        assert zshrc.with_name(zshrc.name + ".bak").read_text() == "# existing zshrc\n"
-        assert theme.read_text().startswith("# Halcyon Zsh prompt")
-        assert theme.with_name(theme.name + ".bak").read_text() == "# existing theme\n"
+
+def test_it_needs_halcyon(tmp_path):
+    root = Path(__file__).resolve().parents[2]
+    env = dict(os.environ, HOME=str(tmp_path), XDG_CONFIG_HOME=str(tmp_path / ".config"), DISTRO_ALLOW_ROOT="1")
+    result = subprocess.run(["bash", str(root / "scripts/distro-install-w-halcyon_desktop_shell-theme"), "glass",
+                             "--no-install"], env=env, capture_output=True, text=True, check=False)
+    assert result.returncode == 1 and "Halcyon is not set up" in result.stderr
 
 
 def test_theme_installer_stages_correct_command_and_legacy_alias(tmp_path):

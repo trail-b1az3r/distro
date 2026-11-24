@@ -136,6 +136,9 @@ def is_online(host: str = "geo.mirror.pkgbuild.com", port: int = 443, timeout: f
         return False
 
 
+# The desktop shells Halcyon can run (halcyon shell NAME).
+HALCYON_SHELLS = ("halcyon", "glass", "summit", "macshell", "noctalia")
+
 class Installation:
     def __init__(self, cfg: InstallConfig, report: HardwareReport, *, runner: util.Runner | None = None,
                  branding: Branding | None = None, target: Path | None = None, emit: Event | None = None,
@@ -784,12 +787,11 @@ class Installation:
                       for d in self.hw.displays if d.recommended_scale != 1.0],
             apps=desktop_deploy.default_apps(installed, editor.command if editor and self.features.get("code_editor") else ""),
         )
-        if primary == "noctalia":
-            self._register_noctalia_session()
         if self.runner.dry_run:
             self.log("desktop profile: " + primary + "; additional profiles: " + (", ".join(external) if external else "none"))
-            if primary == "halcyon":
+            if primary in ("halcyon", "noctalia"):
                 self.log("deploy Halcyon dotfiles")
+                self._halcyon_shell(primary)
             elif primary == "none":
                 self.log("skip desktop dotfiles")
             else:
@@ -820,29 +822,29 @@ class Installation:
             shutil.copytree(custom_config, target_config, dirs_exist_ok=True)
             self.log("Desktop: applied custom lmkiso configuration")
         self.chroot(["chown", "-R", f"{self.user}:{self.user}", self.home])
+        if primary != "none":
+            self._halcyon_shell(primary)
 
-    def _register_noctalia_session(self) -> None:
-        """Register Noctalia as a separate Hyprland session without touching Halcyon."""
-        if self.runner.dry_run:
-            self.log("register Noctalia Wayland session")
+    def _halcyon_shell(self, primary: str) -> None:
+        """The desktop shell Halcyon runs (its bar, dock, launcher and lock screen): the installer's Halcyon shell
+        choice, or Noctalia when Noctalia was chosen as the desktop. Halcyon's Hyprland config, keys and themes stay;
+        the choice is the user's own (`halcyon shell`, Settings > Halcyon > Desktop shell) from then on."""
+        shell = "noctalia" if primary == "noctalia" else str(self.features.get("halcyon_shell", "halcyon"))
+        if shell not in HALCYON_SHELLS or shell == "halcyon":
             return
-        session_dir = self.t("/usr/share/wayland-sessions")
-        session_dir.mkdir(parents=True, exist_ok=True)
-        entry = "\n".join((
-            "[Desktop Entry]",
-            "Name=Noctalia Shell",
-            "Comment=Start Hyprland with the Noctalia Wayland shell",
-            "Exec=/usr/bin/distro-noctalia-session",
-            "TryExec=Hyprland",
-            "DesktopNames=Hyprland",
-            "X-Frontline-Profile=noctalia",
-            "Type=Application",
-            "",
-        ))
-        (session_dir / f"{self.branding.id}-noctalia.desktop").write_text(entry, encoding="utf-8")
-        self.log("Registered Noctalia Shell login session")
+        if self.runner.dry_run:
+            self.log("Halcyon shell: " + shell)
+            return
+        # As the user, in the new system: the packages are in already, so nothing is installed here.
+        result = self.chroot(["runuser", "-u", self.user, "--", "env", f"HOME={self.home}",
+                              "/usr/bin/distro-install-w-halcyon_desktop_shell-theme", shell, "--no-install"],
+                             check=False)
+        if getattr(result, "returncode", 0) != 0:
+            self.warnings.append(f"Halcyon's {shell} shell was not set: run `halcyon shell {shell}` after logging in.")
+        else:
+            self.log("Halcyon shell: " + shell)
 
-    def _schedule_external_desktops(self, selected: list[str]) -> None
+    def _schedule_external_desktops(self, selected: list[str]) -> None:
         """Run upstream setup interactively at first login, never silently as root."""
         config = self.t("/etc/distro-desktop-profiles.conf")
         config.parent.mkdir(parents=True, exist_ok=True)

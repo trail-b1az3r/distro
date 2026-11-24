@@ -7,6 +7,7 @@ ColumnLayout {
     spacing: 24
     readonly property var plasma: installer.features.find(f => f.id === "plasma_fallback")
     readonly property var primaryDesktop: installer.features.find(f => f.id === "desktop_environment")
+    readonly property var halcyonShell: installer.features.find(f => f.id === "halcyon_shell")
     readonly property var extraMl4w: installer.features.find(f => f.id === "desktop_ml4w")
     readonly property var extraSekai: installer.features.find(f => f.id === "desktop_sekaipop")
     readonly property var extraHyde: installer.features.find(f => f.id === "desktop_hyde")
@@ -78,6 +79,15 @@ ColumnLayout {
             options: [{ id: "halcyon", label: "Halcyon" }, { id: "noctalia", label: "Noctalia Shell" }, { id: "work", label: "My Linux for Work" }, { id: "hyde", label: "HyDE" }, { id: "sekaipop", label: "Sikai Pop" }, { id: "macshell", label: "MacShell" }, { id: "none", label: "None" }, { id: "frameshell", label: "Frameshell" }, { id: "paperrice", label: "PaperRice" }, { id: "ml4w", label: "ML4W Dotfiles" }]
             current: page.primaryDesktop ? page.primaryDesktop.value : "halcyon"
             onChosen: (id) => installer.setFeature("desktop_environment", id)
+        }
+        Text { text: qsTr("Halcyon shell"); color: Theme.fg; font.weight: Font.DemiBold; font.pixelSize: Theme.text }
+        Text { Layout.fillWidth: true; text: qsTr("The desktop shell Halcyon runs: the bar, dock, launcher and lock screen. Halcyon's keys, themes and apps stay the same, and Settings > Halcyon > Desktop shell changes it later. Choosing Noctalia Shell above runs Noctalia here."); color: Theme.muted; wrapMode: Text.WordWrap; font.pixelSize: Theme.textSmall }
+        AppCombo {
+            Layout.fillWidth: true
+            enabled: !page.primaryDesktop || ["halcyon", "noctalia"].includes(page.primaryDesktop.value)
+            options: [{ id: "halcyon", label: "Halcyon" }, { id: "glass", label: "Halcyon Glass (liquid glass)" }, { id: "summit", label: "Summit" }, { id: "macshell", label: "MacShell" }, { id: "noctalia", label: "Noctalia Shell" }]
+            current: page.primaryDesktop && page.primaryDesktop.value === "noctalia" ? "noctalia" : (page.halcyonShell ? page.halcyonShell.value : "halcyon")
+            onChosen: (id) => installer.setFeature("halcyon_shell", id)
         }
         SectionTitle { text: qsTr("Additional desktops") }
         Text { Layout.fillWidth: true; text: qsTr("Each external profile gets its own saved ~/.config snapshot and SDDM session. Upstream installers still install shared packages and may change global GTK, SDDM, portal or theme settings."); color: Theme.muted; wrapMode: Text.WordWrap; font.pixelSize: Theme.textSmall }

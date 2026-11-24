@@ -1,6 +1,6 @@
 # Frontline Linux: live ISO (packages.x86_64; generated, do not edit)
 # lists: base, desktop, desktop-halcyon, browser, live + linux, amd-ucode, intel-ucode
-# 159 packages
+# 161 packages
 
 7zip
 alacritty
@@ -59,11 +59,13 @@ illogical-impulse-bibata-modern-classic-bin
 illogical-impulse-fonts-themes
 illogical-impulse-hyprland
 illogical-impulse-kde
+illogical-impulse-macshell
 illogical-impulse-microtex-git
 illogical-impulse-portal
 illogical-impulse-python
 illogical-impulse-quickshell-git
 illogical-impulse-screencapture
+illogical-impulse-summit
 illogical-impulse-toolkit
 illogical-impulse-widgets
 intel-ucode

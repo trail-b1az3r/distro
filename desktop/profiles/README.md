@@ -1,8 +1,8 @@
 # Additional desktop profiles
 
-Halcyon is the default desktop. Noctalia Shell is an optional primary shell with
-its own Hyprland login session; Halcyon's configuration remains available as a
-fallback. ML4W, HyDE and SekaiPop are optional Hyprland-based profiles
+Halcyon is the default desktop. Noctalia Shell is one of the desktop shells
+Halcyon can run (its bar, launcher, panels and lock screen, with Halcyon's
+Hyprland config, keys and themes). ML4W, HyDE and SekaiPop are optional Hyprland-based profiles
 installed as additional SDDM sessions; installing one does not replace Halcyon.
 
 ## Install after the OS is already set up
@@ -57,14 +57,17 @@ themes and portal settings. Each desktop's own files stay in its home; system pa
 If an installer changes your login shell it is put back, and the login screen stays Frontline's; system-wide changes
 outside those (a bootloader theme, pacman.conf) are the installer's own and are not undone.
 
-## Halcyon shell prompt
+## Halcyon with another Hyprland shell
 
-Install the prompt theme for your selected login shell as your normal user:
+Halcyon runs its own desktop shell unless you pick another, as your normal user:
 
 ```bash
-distro-install-w-halcyon_desktop_shell-theme fish
-# or: zsh, spire
+distro-install-w-halcyon_desktop_shell-theme noctalia
+# or: halcyon, glass, summit, macshell, auto
 ```
 
-The installer makes a backup of the previous prompt/config once and can be run
-again. The older misspelled `dektop` command remains available for compatibility.
+It installs what that shell needs (`noctalia`, `illogical-impulse-summit`, `illogical-impulse-macshell`, or
+hyprland-plus 0.57.2.p4 for Halcyon Glass's liquid glass) and switches with `halcyon shell`, which is also in
+Settings > Halcyon > Desktop shell and on Ctrl+Super+Shift+G. `auto` lets each Halcyon theme bring its own shell
+again. Login shells (fish, zsh, Spire) are chosen in the installer's user page, not here. The older misspelled
+`dektop` command remains available for compatibility.

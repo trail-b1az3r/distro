@@ -10,9 +10,11 @@ on-screen keyboard, Material You colours taken from the wallpaper and
 Wayland-first apps. The dots are pinned to a commit (the `desktop/dots`
 submodule) and deployed unchanged, so upstream's documentation applies.
 
-## Noctalia session
+## Noctalia and the other Halcyon shells
 
-Select **Noctalia Shell** in the ISO installer's primary desktop choice. It installs the Arch `noctalia` package and registers a separate SDDM session. The session starts Hyprland with a dedicated `~/.config/hypr/frontline-noctalia.lua` (created only if absent), autostarts Noctalia, and leaves the Halcyon config as the fallback.
+Select **Noctalia Shell** as the primary desktop, or any shell in the installer's **Halcyon shell** choice: Halcyon,
+Halcyon Glass, Summit, MacShell or Noctalia. Halcyon is installed either way and runs the chosen shell (`halcyon shell`
+changes it; `distro-install-w-halcyon_desktop_shell-theme SHELL` installs its packages too).
 
 ## First steps
 

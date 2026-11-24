@@ -6,10 +6,13 @@ illogical-impulse-bibata-modern-classic-bin
 illogical-impulse-fonts-themes
 illogical-impulse-hyprland
 illogical-impulse-kde
+# The shells of Halcyon's built-in themes: MacShell (Liquid Glass) and Summit (HyperNeo v2).
+illogical-impulse-macshell
 illogical-impulse-microtex-git
 illogical-impulse-portal
 illogical-impulse-python
 illogical-impulse-quickshell-git
 illogical-impulse-screencapture
+illogical-impulse-summit
 illogical-impulse-toolkit
 illogical-impulse-widgets

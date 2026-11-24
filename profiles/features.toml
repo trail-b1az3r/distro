@@ -24,6 +24,20 @@ none = ["desktop-halcyon"]
 frameshell = ["desktop-halcyon", "desktop-frameshell"]
 paperrice = ["desktop-halcyon", "desktop-paperrice"]
 
+[halcyon_shell]
+kind = "choice"
+group = "Desktop"
+order = 2
+label = "Halcyon shell"
+description = "The desktop shell Halcyon runs: its own, Halcyon Glass (see-through panels over liquid glass), Summit, MacShell or Noctalia. Halcyon's keys, themes and apps stay; Settings > Halcyon > Desktop shell changes it later."
+default = "halcyon"
+[halcyon_shell.choices]
+halcyon = []
+glass = []
+summit = []
+macshell = []
+noctalia = ["desktop-noctalia"]
+
 [desktop_ml4w]
 kind = "bool"
 group = "Desktop"

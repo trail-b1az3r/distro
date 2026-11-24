@@ -3,46 +3,15 @@
 The ISO installer offers Halcyon, Noctalia Shell, ML4W Dotfiles, SekaiPop, HyDE, MacShell, Frameshell, PaperRice and no dotfiles.
 
 - Halcyon is retained as the bootstrap and fallback session.
-- Noctalia is a native Wayland shell, installed from Arch's `noctalia` package. It gets a dedicated Hyprland session; its launcher creates a separate minimal Lua config and starts Noctalia, leaving Halcyon's config untouched.
+- Noctalia is a native Wayland shell, installed from Arch's `noctalia` package. Halcyon runs it in place of its own shell, with Halcyon's Hyprland config, keys and themes.
 
-## Noctalia Shell session
+## Noctalia and the other Halcyon shells
 
-Select Noctalia Shell in the ISO installer's primary desktop choice. It registers a separate SDDM session using `/usr/bin/distro-noctalia-session`. On first login the wrapper creates `~/.config/hypr/frontline-noctalia.lua` only if absent and autostarts Noctalia from Hyprland. It does not overwrite the existing Halcyon config.
-- Select one external profile as the primary profile, then optionally select any of the others as additional profiles.
-- External installers run on the first Halcyon login in a visible terminal and require the user to confirm before any upstream script runs.
-- **Each extra desktop has a home of its own**, `~/.local/share/distro-desktop-profiles/homes/<profile>/`. Its upstream
-  installer runs with `HOME` (and the XDG directories) there, and so does its login session, so nothing it writes
-  (`~/.config`, `~/.local`, `~/.themes`, `~/.icons`, `~/.zshrc`, `~/.mydotfiles`...) touches Halcyon's home. What every
-  desktop should share is linked in from your real home: Desktop, Documents, Downloads, Music, Pictures, Videos,
-  Projects, and `.ssh`, `.gnupg`, browser and mail profiles, keyrings, `.var` (Flatpak app data), your Git config.
-- Each installed desktop gets a login entry (`/usr/share/wayland-sessions/frontline-<profile>.desktop`, started by
-  `/usr/bin/distro-desktop-session`).
-- **Installing one changes no other desktop.** Every upstream installer is guarded:
-  - Before it runs, Halcyon's desktop configuration in your real home is copied: the Hyprland, bar, launcher,
-    terminal, shell and theme folders in `~/.config`, the dotfiles in your home, `~/.local/bin`, and your themes,
-    icons, fonts and login entries (with reflinks on btrfs, so it costs nothing). Afterwards, anything the installer
-    wrote there anyway (by a full path, `getent passwd` or a helper that resets `HOME`) is moved into the desktop's
-    own home, and Halcyon's files are put back. If the desktop already has its own copy, the installer's is set aside
-    in `~/.local/state/distro-desktop-profiles/set-aside/<profile>/`. What other programs keep in your home (browsers,
-    editors, games) is not touched. `desktop/profiles/guard-home.py` does this.
-  - It cannot replace hyprland-plus with the stock `hyprland` package: its `pacman` and `sudo pacman` leave `hyprland`
-    out (hyprland-plus provides it) and a query for it answers for hyprland-plus (`desktop/profiles/guard-bin/`). If
-    hyprland-plus is replaced all the same, it is installed again.
-  - It runs in a D-Bus session of its own, so the gsettings it sets (GTK theme, icons, cursor, dark mode) go to its
-    own home, and without the running Halcyon session's address, so it cannot reload or restyle Halcyon or start its
-    bars there. Each desktop's session starts the user's services (dconf among them) in its own home, and Halcyon's
-    login starts them in yours.
-  - Login entries it adds are set aside in `/var/lib/frontline/set-aside/` (they would start with Halcyon's home), and
-    any it changes, Halcyon's among them, are put back, as are the login screen's settings (`/etc/sddm.conf`,
-    `/etc/sddm.conf.d/`). Your login shell is put back if it changes it.
-- **A desktop counts as installed only with a Hyprland configuration of its own.** Hyprland 0.57 reads only
-  `~/.config/hypr/hyprland.lua`; a desktop whose installer left none (or only the old `hyprland.conf`, or a link to
-  nothing) is not registered, and one marked installed whose session opened Hyprland's generated example is installed
-  again on the next run. Choosing such a desktop at the login screen opens a small repair session instead of plain
-  Hyprland: a terminal that says what is wrong and installs the desktop again, in its own home.
-- Packages are installed system-wide, once for every desktop.
-- Desktops installed by the older helper (which installed over Halcyon's home and kept only a copy of `~/.config`)
-  are installed again, in their own home, the next time the helper runs; their saved configuration is carried over.
+Halcyon can run another desktop shell: Halcyon Glass (its own shell over hyprland-plus's liquid glass), Summit,
+MacShell or Noctalia Shell. Pick it in the installer's **Halcyon shell** choice (Noctalia Shell as the primary desktop
+picks Noctalia), later in Settings > Halcyon > Desktop shell, or with
+`distro-install-w-halcyon_desktop_shell-theme SHELL`, which installs its packages first. There is no separate login
+session: the Halcyon session starts the chosen shell.
 
 ## Selecting multiple profiles from Welcome
 
