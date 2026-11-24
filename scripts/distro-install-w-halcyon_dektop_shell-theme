@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Backwards-compatible misspelled entry point. Prefer distro-install-w-halcyon_desktop_shell-theme.
+set -euo pipefail
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+exec "$script_dir/distro-install-w-halcyon_desktop_shell-theme" "$@"

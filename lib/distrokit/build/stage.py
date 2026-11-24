@@ -325,6 +325,10 @@ class Stage:
 
     def desktop(self) -> None:
         b, share, lib = self.b, self.share, self.lib
+        # Canonical command spelling; retain the original typo as a compatibility alias.
+        self.file("scripts/distro-install-w-halcyon_desktop_shell-theme", "/usr/bin/distro-install-w-halcyon_desktop_shell-theme", 0o755)
+        self.link("/usr/bin/distro-install-w-halcyon_dektop_shell-theme", "distro-install-w-halcyon_desktop_shell-theme")
+        self.file("desktop/profiles/run-noctalia-session.sh", "/usr/bin/distro-noctalia-session", 0o755)
         self.tree("desktop/dots", f"{share}/desktop/dots")
         self.tree("desktop/overlay", f"{share}/desktop/overlay")
         self.text(f"{share}/desktop/VERSION", desktop_version(self.src) + "\n")

@@ -774,7 +774,7 @@ class Installation:
                     ("sekaipop", self.features.get("desktop_sekaipop")), ("hyde", self.features.get("desktop_hyde")),
                     ("macshell", self.features.get("desktop_macshell")), ("frameshell", self.features.get("desktop_frameshell")),
                     ("paperrice", self.features.get("desktop_paperrice"))) if enabled]
-        if primary not in ("halcyon", "none"):
+        if primary not in ("halcyon", "none", "noctalia"):
             external.insert(0, primary)
         external = list(dict.fromkeys(external))
         settings = desktop_deploy.UserSettings(
@@ -784,6 +784,8 @@ class Installation:
                       for d in self.hw.displays if d.recommended_scale != 1.0],
             apps=desktop_deploy.default_apps(installed, editor.command if editor and self.features.get("code_editor") else ""),
         )
+        if primary == "noctalia":
+            self._register_noctalia_session()
         if self.runner.dry_run:
             self.log("desktop profile: " + primary + "; additional profiles: " + (", ".join(external) if external else "none"))
             if primary == "halcyon":
@@ -819,7 +821,28 @@ class Installation:
             self.log("Desktop: applied custom lmkiso configuration")
         self.chroot(["chown", "-R", f"{self.user}:{self.user}", self.home])
 
-    def _schedule_external_desktops(self, selected: list[str]) -> None:
+    def _register_noctalia_session(self) -> None:
+        """Register Noctalia as a separate Hyprland session without touching Halcyon."""
+        if self.runner.dry_run:
+            self.log("register Noctalia Wayland session")
+            return
+        session_dir = self.t("/usr/share/wayland-sessions")
+        session_dir.mkdir(parents=True, exist_ok=True)
+        entry = "\n".join((
+            "[Desktop Entry]",
+            "Name=Noctalia Shell",
+            "Comment=Start Hyprland with the Noctalia Wayland shell",
+            "Exec=/usr/bin/distro-noctalia-session",
+            "TryExec=Hyprland",
+            "DesktopNames=Hyprland",
+            "X-Frontline-Profile=noctalia",
+            "Type=Application",
+            "",
+        ))
+        (session_dir / f"{self.branding.id}-noctalia.desktop").write_text(entry, encoding="utf-8")
+        self.log("Registered Noctalia Shell login session")
+
+    def _schedule_external_desktops(self, selected: list[str]) -> None
         """Run upstream setup interactively at first login, never silently as root."""
         config = self.t("/etc/distro-desktop-profiles.conf")
         config.parent.mkdir(parents=True, exist_ok=True)

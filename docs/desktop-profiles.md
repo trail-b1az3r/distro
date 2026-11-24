@@ -1,8 +1,13 @@
 # Desktop profile installation
 
-The ISO installer offers Halcyon, ML4W Dotfiles, SekaiPop and HyDE.
+The ISO installer offers Halcyon, Noctalia Shell, ML4W Dotfiles, SekaiPop, HyDE, MacShell, Frameshell, PaperRice and no dotfiles.
 
 - Halcyon is retained as the bootstrap and fallback session.
+- Noctalia is a native Wayland shell, installed from Arch's `noctalia` package. It gets a dedicated Hyprland session; its launcher creates a separate minimal Lua config and starts Noctalia, leaving Halcyon's config untouched.
+
+## Noctalia Shell session
+
+Select Noctalia Shell in the ISO installer's primary desktop choice. It registers a separate SDDM session using `/usr/bin/distro-noctalia-session`. On first login the wrapper creates `~/.config/hypr/frontline-noctalia.lua` only if absent and autostarts Noctalia from Hyprland. It does not overwrite the existing Halcyon config.
 - Select one external profile as the primary profile, then optionally select any of the others as additional profiles.
 - External installers run on the first Halcyon login in a visible terminal and require the user to confirm before any upstream script runs.
 - **Each extra desktop has a home of its own**, `~/.local/share/distro-desktop-profiles/homes/<profile>/`. Its upstream

@@ -14,6 +14,7 @@ description = "Choose the primary desktop/dotfiles profile. Halcyon remains avai
 default = "halcyon"
 [desktop_environment.choices]
 halcyon = ["desktop-halcyon"]
+noctalia = ["desktop-halcyon", "desktop-noctalia"]
 ml4w = ["desktop-halcyon", "desktop-ml4w"]
 work = ["desktop-halcyon", "desktop-work"]
 hyde = ["desktop-halcyon", "desktop-hyde"]

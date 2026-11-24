@@ -15,7 +15,7 @@ ColumnLayout {
     readonly property var extraFrameshell: installer.features.find(f => f.id === "desktop_frameshell")
     readonly property var extraPaperrice: installer.features.find(f => f.id === "desktop_paperrice")
 
-    PageHeader { title: qsTr("Desktop"); subtitle: qsTr("Choose Halcyon, My Linux for Work, HyDE, Sikai Pop, MacShell, Frameshell, PaperRice, no dotfiles, or ML4W. External profiles are installed into isolated homes.") }
+    PageHeader { title: qsTr("Desktop"); subtitle: qsTr("Choose Halcyon, Noctalia Shell, My Linux for Work, HyDE, Sikai Pop, MacShell, Frameshell, PaperRice, no dotfiles, or ML4W. External profiles are installed into isolated homes; Noctalia gets a dedicated Hyprland session.") }
 
     Card {
         Layout.fillWidth: true
@@ -75,7 +75,7 @@ ColumnLayout {
         Text { Layout.fillWidth: true; text: qsTr("Choose the primary desktop or dotfiles. External profiles are installed into separate homes and get their own login-screen entries; None leaves desktop dotfiles unconfigured."); color: Theme.muted; wrapMode: Text.WordWrap; font.pixelSize: Theme.textSmall }
         AppCombo {
             Layout.fillWidth: true
-            options: [{ id: "halcyon", label: "Halcyon" }, { id: "work", label: "My Linux for Work" }, { id: "hyde", label: "HyDE" }, { id: "sekaipop", label: "Sikai Pop" }, { id: "macshell", label: "MacShell" }, { id: "none", label: "None" }, { id: "frameshell", label: "Frameshell" }, { id: "paperrice", label: "PaperRice" }, { id: "ml4w", label: "ML4W Dotfiles" }]
+            options: [{ id: "halcyon", label: "Halcyon" }, { id: "noctalia", label: "Noctalia Shell" }, { id: "work", label: "My Linux for Work" }, { id: "hyde", label: "HyDE" }, { id: "sekaipop", label: "Sikai Pop" }, { id: "macshell", label: "MacShell" }, { id: "none", label: "None" }, { id: "frameshell", label: "Frameshell" }, { id: "paperrice", label: "PaperRice" }, { id: "ml4w", label: "ML4W Dotfiles" }]
             current: page.primaryDesktop ? page.primaryDesktop.value : "halcyon"
             onChosen: (id) => installer.setFeature("desktop_environment", id)
         }

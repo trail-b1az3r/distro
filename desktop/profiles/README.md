@@ -1,8 +1,9 @@
 # Additional desktop profiles
 
-Halcyon remains installed as the default desktop. ML4W, HyDE and SekaiPop are
-optional Hyprland-based profiles. They are installed as additional SDDM
-sessions; installing one does not replace Halcyon.
+Halcyon is the default desktop. Noctalia Shell is an optional primary shell with
+its own Hyprland login session; Halcyon's configuration remains available as a
+fallback. ML4W, HyDE and SekaiPop are optional Hyprland-based profiles
+installed as additional SDDM sessions; installing one does not replace Halcyon.
 
 ## Install after the OS is already set up
 
@@ -55,3 +56,15 @@ The upstream desktop installers are third-party scripts and may install addition
 themes and portal settings. Each desktop's own files stay in its home; system packages are shared by all of them.
 If an installer changes your login shell it is put back, and the login screen stays Frontline's; system-wide changes
 outside those (a bootloader theme, pacman.conf) are the installer's own and are not undone.
+
+## Halcyon shell prompt
+
+Install the prompt theme for your selected login shell as your normal user:
+
+```bash
+distro-install-w-halcyon_desktop_shell-theme fish
+# or: zsh, spire
+```
+
+The installer makes a backup of the previous prompt/config once and can be run
+again. The older misspelled `dektop` command remains available for compatibility.

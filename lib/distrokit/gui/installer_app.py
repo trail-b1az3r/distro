@@ -179,7 +179,7 @@ class InstallerBackend(QObject):
         iso_profile = self.iso_info.get("profile")
         cfg.profile = iso_profile if iso_profile in self._profiles else default_profile(self._profiles).id
         default_desktop = self.iso_info.get("desktop", "halcyon")
-        if default_desktop in {"halcyon", "work", "hyde", "sekaipop", "macshell", "none", "frameshell", "paperrice"}:
+        if default_desktop in {"halcyon", "noctalia", "work", "hyde", "sekaipop", "macshell", "none", "frameshell", "paperrice"}:
             cfg.features["desktop_environment"] = default_desktop
         default_shell = self.iso_info.get("shell", "fish")
         if default_shell in {"fish", "zsh", "spire"}:

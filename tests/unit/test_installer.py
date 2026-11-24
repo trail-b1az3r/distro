@@ -40,6 +40,14 @@ def issues(cfg, uefi=True):
     return {i.field for i in cfgmod.errors(found)}
 
 
+def test_fish_is_default_login_shell_and_schema_lists_all_supported_shells():
+    assert cfgmod.UserConfig().shell == "fish"
+    from distrokit.installer import schema as schema_mod
+    shell = schema_mod.schema()["$defs"]["UserConfig"]["properties"]["shell"]
+    assert shell["default"] == "fish"
+    assert shell["enum"] == ["bash", "fish", "zsh", "spire"]
+
+
 def test_roundtrip_and_redaction():
     cfg = make_cfg(disk={"encrypt": True, "passphrase": "sesame-sesame"}, kernel_params=["console=ttyS0,115200"])
     again = cfgmod.InstallConfig.from_dict(cfg.to_dict())

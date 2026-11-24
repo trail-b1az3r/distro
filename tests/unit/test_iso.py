@@ -287,7 +287,7 @@ def test_nano_offline_repository_keeps_only_live_and_profile_dependencies(tmp_pa
     monkeypatch.setattr(iso, "package_metadata", lambda path: metadata[path.name])
     monkeypatch.setattr(iso, "live_packages", lambda _b, _edition: ["frontline-installer"])
     monkeypatch.setattr(iso, "select_packages",
-                        lambda _profile, branding=None: SimpleNamespace(packages=["frontline-desktop"]))
+                        lambda _profile, overrides=None, branding=None: SimpleNamespace(packages=["frontline-desktop"]))
 
     out = iso.offline_repository(opts, b, iso.util.Runner(dry_run=True), tmp_path / "pacman.conf")
     included = {p.name for p in out.glob("*.pkg.tar.*")}
@@ -296,11 +296,42 @@ def test_nano_offline_repository_keeps_only_live_and_profile_dependencies(tmp_pa
     assert "llama.cpp-vulkan-1-1-x86_64.pkg.tar.zst" not in included
 
 
+@pytest.mark.parametrize(("shell", "package"), [("fish", "fish"), ("zsh", "zsh"), ("spire", "spire-shell")])
+def test_nano_offline_package_set_contains_selected_shell(tmp_path, monkeypatch, shell, package):
+    from types import SimpleNamespace
+
+    b = load_branding()
+    opts = iso.Options(edition="nano", profile="minimal", shell=shell, build=tmp_path / "build")
+    opts.repo.mkdir(parents=True)
+    archive = opts.repo / f"{package}-1-1-any.pkg.tar.zst"
+    archive.write_bytes(b"package")
+    monkeypatch.setattr(iso, "live_packages", lambda _b, _edition: [])
+    monkeypatch.setattr(iso, "select_packages", lambda _profile, overrides=None, branding=None: SimpleNamespace(packages=[]))
+    monkeypatch.setattr(iso, "package_metadata", lambda _path: (package, []))
+    assert package in iso.nano_offline_packages(opts, b)
+
+
+def test_build_info_preserves_desktop_selection_and_shell():
+    b = load_branding()
+    info = iso.build_info(b, iso.Options(desktop="noctalia", shell="fish"), epoch=1790393700)
+    assert info["desktop"] == "noctalia"
+    assert info["desktop_version"] == iso.stage.desktop_version(iso.paths.DATA_ROOT)
+    assert info["shell"] == "fish"
+
+
+def test_offline_sets_include_the_selected_noctalia_desktop():
+    b = load_branding()
+    selected = set(iso.offline_sets(b, "minimal", desktop="noctalia")[0])
+    assert "noctalia" in selected
+    assert "illogical-impulse-quickshell-git" in selected
+
+
 def test_offline_sets_keep_conflicting_stacks_apart():
     b = load_branding()
     for profile in ("minimal", "standard", "developer", "ai"):
         base = set(iso.offline_sets(b, profile)[0])
         assert {"archlinux-keyring", "endeavouros-keyring"} <= base
+        assert {"fish", "zsh", "spire-shell"} <= base
     sets = iso.offline_sets(b, "standard")
     base = set(sets[0])
     assert {"linux", "linux-headers", "grub", "sbctl", "llama.cpp-vulkan",
