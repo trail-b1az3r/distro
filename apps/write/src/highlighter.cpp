@@ -16,7 +16,8 @@ using namespace KSyntaxHighlighting;
 namespace {
 
 // KDE's syntax colours, then misspelled words underlined on top of them: a document has one highlighter, so the
-// spelling is drawn by the same one. Inline code, links and indented code are not checked.
+// spelling is drawn by the same one. Inline code, links, indented code, MDXL's markers (/bdg//, /grad#…#…//, …) and
+// ruby annotations are not checked.
 class SpellingHighlighter : public SyntaxHighlighter
 {
 public:
@@ -30,7 +31,9 @@ protected:
         if (!spelling->enabled() || !spelling->available() || text.startsWith(QLatin1String("    "))
             || text.startsWith(QLatin1Char('\t')))
             return;
-        static const QRegularExpression skip(QStringLiteral("`[^`]*`|\\b[a-z][a-z0-9+.-]*://\\S+|\\]\\([^)]*\\)|<[^>]*>"));
+        static const QRegularExpression skip(QStringLiteral(
+            "`[^`]*`|\\b[a-z][a-z0-9+.-]*://\\S+|\\]\\([^)]*\\)|<[^>]*>"
+            "|/rb//.*?/rb//|/[a-z]{1,5}(?:#[0-9A-Fa-f]{6}){0,2}//"));
         static const QRegularExpression word(QStringLiteral("\\p{L}[\\p{L}'\\x{2019}]*"));
         QList<QPair<qsizetype, qsizetype>> skipped;
         for (auto it = skip.globalMatch(text); it.hasNext();) {

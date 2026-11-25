@@ -161,6 +161,20 @@ Item {
         area.forceActiveFocus()
     }
 
+    // An MDXL block (::: kind … :::) on lines of its own around the selection, or around `fallback` when nothing is
+    // selected; the inner text is selected afterwards, ready to type over.
+    function insertBlock(head, fallback, tail) {
+        const start = area.selectionStart >= 0 ? area.selectionStart : area.cursorPosition
+        const end = area.selectionStart >= 0 ? area.selectionEnd : start
+        const inner = end > start ? area.getText(start, end) : fallback
+        const before = start === 0 || area.text.charAt(start - 1) === "\n" ? "" : "\n"
+        const lead = before + head + "\n"
+        area.remove(start, end)
+        area.insert(start, lead + inner + "\n" + tail + "\n")
+        area.select(start + lead.length, start + lead.length + inner.length)
+        area.forceActiveFocus()
+    }
+
     function insertAtCursor(value) {
         area.insert(area.cursorPosition, value)
         area.forceActiveFocus()
@@ -323,6 +337,13 @@ Item {
                + ".write-sheet-body{flex:1 1 auto;min-height:0;overflow:hidden}.write-sheet-body>:first-child{margin-top:0}"
                + ".write-page-number{position:absolute;left:0;right:0;bottom:30px;text-align:center;font-size:11px;color:#80868b}"
                + ".write-page-break{height:0;margin:0;border:0}body a{color:#315fba!important}"
+               // MDXL's cards, chats, badges and timelines on white paper, whatever the app's theme; nothing moves.
+               + "body .mdxl-card{background:#f6f7f4;border-color:#d9ddd4}body .mdxl-card-title{color:#202124}"
+               + "body .mdxl-msg{background:#eef0ec}body .mdxl-msg-right{background:#e1ecd8}body .mdxl-who,body .mdxl-small{color:#5f6368}"
+               + "body .mdxl-badge{background:#eef0ec;color:#202124;border-color:#c9cfc2}body .mdxl-glow{color:#202124}"
+               + "body .mdxl-timeline{margin-left:.45rem;border-left-color:#c9cfc2}body .mdxl-timeline li::before{background:#5f8f2e;box-shadow:0 0 0 3px #fff}"
+               + "body .mdxl-when{color:#315fba}body .mdxl-tip{border-bottom-color:#315fba}body .mdxl-wave span{animation:none!important}body th{background:#f1f3f4;color:#202124}"
+               + "body .mdxl-card,body .mdxl-msg,body .mdxl-timeline li{break-inside:avoid}"
                + "@media print{html,body.write-paged{padding:0!important;margin:0!important;background:#fff!important}"
                + ".write-sheet{margin:0;height:1122px;box-shadow:none;break-after:page;page-break-after:always}.write-sheet:last-child{break-after:auto;page-break-after:auto}"
                + "*{box-shadow:none!important;text-shadow:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}"
@@ -404,6 +425,40 @@ Item {
                 ToolButton { text: qsTr("Link"); onClicked: root.wrapSelection("[", "](https://)") }
                 ToolButton { text: qsTr("Image"); enabled: root.path !== ""; onClicked: imageDialog.open() }
                 ToolButton { text: qsTr("Color"); onClicked: root.insertAtCursor("/col//Colored text /col#B7F77A//") }
+                ToolButton {
+                    id: styleButton
+                    text: qsTr("Style \u25BE")
+                    onClicked: styleMenu.popup(styleButton, 0, styleButton.height)
+                    // MDXL's text styles, around the selection.
+                    Menu {
+                        id: styleMenu
+                        MenuItem { text: qsTr("Underline"); onTriggered: root.wrapSelection("/u//", "/u//") }
+                        MenuItem { text: qsTr("Bigger"); onTriggered: root.wrapSelection("/big//", "/big//") }
+                        MenuItem { text: qsTr("Smaller"); onTriggered: root.wrapSelection("/sml//", "/sml//") }
+                        MenuItem { text: qsTr("Badge"); onTriggered: root.wrapSelection("/bdg//", "/bdg//") }
+                        MenuItem { text: qsTr("Coloured badge"); onTriggered: root.wrapSelection("/bdg#2E8BF2//", "/bdg//") }
+                        MenuItem { text: qsTr("Gradient"); onTriggered: root.wrapSelection("/grad#FF5F57#4DB6FF//", "/grad//") }
+                        MenuItem { text: qsTr("Wave"); onTriggered: root.wrapSelection("/wave//", "/wave//") }
+                        MenuItem { text: qsTr("Glow"); onTriggered: root.wrapSelection("/glow//", "/glow//") }
+                        MenuItem { text: qsTr("Tooltip"); onTriggered: root.wrapSelection("/tip//", "//" + qsTr("Tooltip text") + "/tip//") }
+                        MenuItem { text: qsTr("Ruby (reading above)"); onTriggered: root.wrapSelection("/rb//", "//" + qsTr("reading") + "/rb//") }
+                        MenuSeparator {}
+                        MenuItem { text: qsTr("Centre line"); onTriggered: root.wrapSelection("->", "<-") }
+                    }
+                }
+                ToolButton {
+                    id: blocksButton
+                    text: qsTr("Blocks \u25BE")
+                    onClicked: blocksMenu.popup(blocksButton, 0, blocksButton.height)
+                    // MDXL's ::: blocks, around the selection (or with sample text to type over).
+                    Menu {
+                        id: blocksMenu
+                        MenuItem { text: qsTr("Columns"); onTriggered: root.insertBlock("::: columns", qsTr("Left column") + "\n:::|\n" + qsTr("Right column"), ":::") }
+                        MenuItem { text: qsTr("Card"); onTriggered: root.insertBlock("::: card " + qsTr("Title"), qsTr("Card text"), ":::") }
+                        MenuItem { text: qsTr("Timeline"); onTriggered: root.insertBlock("::: timeline", "2025 :: " + qsTr("First event") + "\n2026 :: " + qsTr("Next event"), ":::") }
+                        MenuItem { text: qsTr("Chat"); onTriggered: root.insertBlock("::: chat", qsTr("Ana") + ": " + qsTr("Hello!") + "\n" + qsTr("Ben") + ": " + qsTr("Hi, how are you?"), ":::") }
+                    }
+                }
                 ToolButton { text: qsTr("Quote"); onClicked: root.prefixLine("> ") }
                 ToolButton { text: qsTr("Bullets"); onClicked: root.prefixLine("- ") }
                 ToolButton { text: qsTr("Numbered"); onClicked: root.prefixLine("1. ") }

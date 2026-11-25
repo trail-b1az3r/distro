@@ -1,4 +1,5 @@
 #include "files.h"
+#include "mdxlword.h"
 #include "rustbackend.h"
 
 #include <QDir>
@@ -194,14 +195,6 @@ QVariantList Files::recentBooks() const
     return out;
 }
 
-static QString escapeXml(QString s)
-{
-    s.replace("&", "&amp;");
-    s.replace("<", "&lt;");
-    s.replace(">", "&gt;");
-    return s;
-}
-
 QString Files::importDocx(const QString &path) const
 {
     archive *a = archive_read_new();
@@ -275,54 +268,8 @@ QString Files::importDocx(const QString &path) const
 
 bool Files::exportDocx(const QString &path, const QString &text) const
 {
-    QString body;
-    const QStringList lines = text.split('\n');
-    for (qsizetype i = 0; i < lines.size(); ++i) {
-        const QString line = lines[i];
-        if (line.trimmed() == "<!-- WRITE_PAGE_BREAK -->") {
-            body += "<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>";
-            continue;
-        }
-        if (line.trimmed().startsWith('|') && line.trimmed().endsWith('|')) {
-            QStringList tableRows;
-            while (i < lines.size() && lines[i].trimmed().startsWith('|') && lines[i].trimmed().endsWith('|')) {
-                QStringList cells = lines[i].trimmed().mid(1, lines[i].trimmed().size() - 2).split('|');
-                for (QString &cell : cells) cell = cell.trimmed();
-                const bool separator = std::all_of(cells.cbegin(), cells.cend(), [](const QString &v) {
-                    QString normalized = v;
-                    normalized.remove('-');
-                    normalized.remove(':');
-                    return !v.isEmpty() && normalized.trimmed().isEmpty();
-                });
-                if (!separator) {
-                    QString row = "<w:tr>";
-                    for (const QString &cell : cells)
-                        row += "<w:tc><w:tcPr><w:tcW w:w=\"2400\" w:type=\"dxa\"/></w:tcPr><w:p><w:r><w:t xml:space=\"preserve\">"
-                            + escapeXml(cell) + "</w:t></w:r></w:p></w:tc>";
-                    row += "</w:tr>";
-                    tableRows << row;
-                }
-                ++i;
-            }
-            --i;
-            if (!tableRows.isEmpty())
-                body += "<w:tbl><w:tblPr><w:tblBorders>"
-                    "<w:top w:val=\"single\" w:sz=\"4\"/><w:left w:val=\"single\" w:sz=\"4\"/>"
-                    "<w:bottom w:val=\"single\" w:sz=\"4\"/><w:right w:val=\"single\" w:sz=\"4\"/>"
-                    "<w:insideH w:val=\"single\" w:sz=\"4\"/><w:insideV w:val=\"single\" w:sz=\"4\"/>"
-                    "</w:tblBorders></w:tblPr>" + tableRows.join(QString()) + "</w:tbl>";
-            continue;
-        }
-        QString value = line;
-        int level = 0;
-        while (level < value.size() && level < 6 && value[level] == '#') ++level;
-        if (level && level < value.size() && value[level] == ' ')
-            value = value.mid(level + 1);
-        else level = 0;
-        const QString style = level ? QString("<w:pPr><w:pStyle w:val=\"Heading%1\"/></w:pPr>").arg(level) : QString();
-        body += QString("<w:p>%1<w:r><w:t xml:space=\"preserve\">%2</w:t></w:r></w:p>")
-                    .arg(style, escapeXml(value));
-    }
+    // MDXL as Word paragraphs, runs and tables (src/mdxlword.cpp).
+    const QString body = MdxlWord::body(text);
     const QByteArray doc = QString(
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
         "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"

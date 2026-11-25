@@ -44,6 +44,7 @@ qt_add_qml_module(write
     SOURCES
         src/theme.h src/theme.cpp
         src/files.h src/files.cpp
+        src/mdxlword.h src/mdxlword.cpp
         src/rustbackend.h src/rustbackend.cpp
         src/highlighter.h src/highlighter.cpp
         src/spelling.h src/spelling.cpp
