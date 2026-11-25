@@ -8,8 +8,8 @@
 # Generated from packages/pkgbuild/mdxl/PKGBUILD.in.
 
 pkgname=mdxl
-_commit=2c3f7154a1c7e20883d323999e01e933f218c660
-pkgver=r1.2c3f715
+_commit=b17b17c84d40ac1fa7fa714d36c9b59d1561cecf
+pkgver=r2.b17b17c
 pkgrel=1
 pkgdesc="Markdown Extended Logic: a terminal renderer, a browser preview and Kate syntax for .mdxl files"
 arch=(any)
