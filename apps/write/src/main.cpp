@@ -16,6 +16,11 @@ int main(int argc, char *argv[])
 {
     // Request an alpha-capable backing surface for translucent QML panels.
     QQuickWindow::setDefaultAlphaBuffer(true);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    // All of Write's own text (the editor, the library, the reader, the chrome) is drawn as vector outlines on the GPU,
+    // sharp at any size and scale, rather than from cached bitmaps of each glyph.
+    QQuickWindow::setTextRenderType(QQuickWindow::CurveTextRendering);
+#endif
     QtWebEngineQuick::initialize();
     // EPUB-MXL from the command line, without a window:
     //   --export-epub-mxl BOOK_FOLDER OUT.epub-mxl [AUTHOR]   a book folder to an EPUB-MXL book

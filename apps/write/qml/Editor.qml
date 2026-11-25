@@ -50,10 +50,70 @@ Item {
                     : qsTr("Could not export this document.")
     }
 
+    // A PDF is always made from the paged layout (Document view), one sheet per PDF page. Text stays text: the
+    // print styles drop the shadows and filters that would make Chromium flatten a page into a picture.
+    property string pendingPdf: ""
     function exportPdf(p) {
-        preview.printToPdf(p)
         exportError.text = qsTr("PDF export started.")
+        pendingPdf = p
+        if (!documentMode)
+            viewMode = 3      // re-renders; the paginated page prints when it has loaded
+        else
+            preview.paginate()
     }
+
+    // Lays the rendered document onto A4 sheets: a page-break marker starts a new sheet, and what does not fit moves
+    // to the next one. The header and footer repeat on every sheet, with its number.
+    readonly property string paginator: "(function(){
+        if (document.body.classList.contains('write-paged')) return document.querySelectorAll('.write-sheet').length;
+        const body = document.body;
+        const header = body.querySelector('.write-header'), footer = body.querySelector('.write-footer');
+        const skip = n => n === header || n === footer || (n.nodeType === 1 && ['STYLE','SCRIPT'].includes(n.tagName))
+                          || (n.nodeType === 3 && !n.textContent.trim()) || n.nodeType === 8;
+        let root = body;
+        const blocks = [...body.childNodes].filter(n => !skip(n));
+        if (blocks.length === 1 && blocks[0].nodeType === 1 && ['ARTICLE','MAIN','SECTION','DIV'].includes(blocks[0].tagName)
+            && !blocks[0].classList.contains('write-page-break'))
+            root = blocks[0];
+        const nodes = [...root.childNodes].filter(n => !skip(n));
+        const isBreak = n => n.nodeType === 1 && (n.classList.contains('write-page-break')
+                             || (n.querySelector('.write-page-break') && !n.textContent.trim()));
+        body.classList.add('write-paged');
+        const sheets = [];
+        let content = null;
+        const sheet = () => {
+            const page = document.createElement('section');
+            page.className = 'write-sheet';
+            if (header) page.appendChild(header.cloneNode(true));
+            content = document.createElement('div');
+            content.className = 'write-sheet-body';
+            page.appendChild(content);
+            if (footer) page.appendChild(footer.cloneNode(true));
+            body.appendChild(page);
+            sheets.push(page);
+        };
+        sheet();
+        for (const node of nodes) {
+            if (isBreak(node)) { sheet(); continue; }
+            content.appendChild(node);
+            // Too tall for what is left of this sheet: onto a new one (a block taller than a whole sheet stays).
+            if (content.scrollHeight > content.clientHeight + 1 && content.childNodes.length > 1) {
+                content.removeChild(node);
+                sheet();
+                content.appendChild(node);
+            }
+        }
+        if (root !== body) root.remove();
+        if (header) header.remove();
+        if (footer) footer.remove();
+        sheets.forEach((page, i) => {
+            const number = document.createElement('div');
+            number.className = 'write-page-number';
+            number.textContent = (i + 1) + ' / ' + sheets.length;
+            page.appendChild(number);
+        });
+        return sheets.length;
+    })()"
 
     function sendEmail() {
         const url = "mailto:" + emailTo.text.trim()
@@ -253,9 +313,21 @@ Item {
 
     MdxlRenderer {
         id: renderer
+        // Document view: A4 sheets (794 × 1123 CSS px), made by root.paginator once the page has loaded. Until then the
+        // body is one sheet, so nothing jumps. Preview shows a page break as a labelled rule.
         css: root.documentMode
-             ? Theme.css(1.0) + "@page{size:A4;margin:0}body{box-sizing:border-box!important;width:794px!important;min-height:1123px!important;margin:28px auto!important;padding:76px 82px!important;background:#fff!important;color:#202124!important;box-shadow:0 8px 36px #0003!important;line-height:1.75!important}.write-page-break{break-before:page;page-break-before:always;height:1px}body a{color:#315fba!important}@media(max-width:900px){body{padding:32px 24px!important;margin:8px!important}}"
-             : Theme.css(1.0)
+             ? Theme.css(1.0) + "@page{size:A4;margin:0}"
+               + "body:not(.write-paged){box-sizing:border-box!important;width:794px!important;min-height:1123px!important;margin:28px auto!important;padding:76px 82px!important;background:#fff!important;color:#202124!important;box-shadow:0 8px 36px #0003!important}"
+               + "body{line-height:1.75!important}body.write-paged{margin:0!important;padding:28px 0!important;width:auto!important;background:transparent!important}"
+               + ".write-sheet{box-sizing:border-box;position:relative;width:794px;height:1123px;margin:0 auto 28px;padding:76px 82px 64px;background:#fff;color:#202124;box-shadow:0 8px 36px #0003;display:flex;flex-direction:column;overflow:hidden}"
+               + ".write-sheet-body{flex:1 1 auto;min-height:0;overflow:hidden}.write-sheet-body>:first-child{margin-top:0}"
+               + ".write-page-number{position:absolute;left:0;right:0;bottom:30px;text-align:center;font-size:11px;color:#80868b}"
+               + ".write-page-break{height:0;margin:0;border:0}body a{color:#315fba!important}"
+               + "@media print{html,body.write-paged{padding:0!important;margin:0!important;background:#fff!important}"
+               + ".write-sheet{margin:0;height:1122px;box-shadow:none;break-after:page;page-break-after:always}.write-sheet:last-child{break-after:auto;page-break-after:auto}"
+               + "*{box-shadow:none!important;text-shadow:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}"
+             : Theme.css(1.0) + ".write-page-break{position:relative;height:0;margin:2.2em 0;border-top:1px dashed #8889}"
+               + ".write-page-break::after{content:'Page break';position:absolute;left:50%;top:-.75em;transform:translateX(-50%);padding:0 .6em;font-size:.72em;color:#888;background:inherit}"
         onHtmlChanged: if (html) preview.loadHtml(html, Files.toUrl(Files.dirOf(root.path) + "/"))
     }
 
@@ -429,6 +501,22 @@ Item {
                     anchors.fill: parent
                     anchors.margins: 4
                     backgroundColor: Theme.c.surface
+                    function paginate() {
+                        runJavaScript(root.paginator, function(sheets) {
+                            if (root.pendingPdf === "")
+                                return
+                            const out = root.pendingPdf
+                            root.pendingPdf = ""
+                            printToPdf(out, WebEngineView.A4, WebEngineView.Portrait)
+                        })
+                    }
+                    onLoadingChanged: function(request) {
+                        if (request.status === WebEngineLoadingInfo.LoadSucceededStatus && root.documentMode)
+                            paginate()
+                    }
+                    onPdfPrintingFinished: function(filePath, success) {
+                        exportError.text = success ? qsTr("Exported PDF.") : qsTr("Could not export the PDF.")
+                    }
                     onNavigationRequested: function(request) {
                         if (request.navigationType === WebEngineNavigationRequest.LinkClickedNavigation) {
                             Qt.openUrlExternally(request.url)

@@ -50,3 +50,23 @@ def test_epub_mxl_chapters_are_well_formed_xhtml(tmp_path):
     assert 'disabled="disabled"' in body and "<script" not in body and "alert" not in body
     assert "onclick" not in body and "headerlink" not in body and "T &amp; U" in body
     assert ".x{color:red}" in reply["css"] and ":root{--bg" not in reply["css"]
+
+
+def test_document_view_lays_pages_out_and_prints_them_as_text():
+    root = Path(__file__).resolve().parents[2] / "apps/write"
+    editor = (root / "qml/Editor.qml").read_text()
+    # Page-break markers start a sheet, overflow moves on, and each sheet is a printed page.
+    assert "readonly property string paginator:" in editor
+    assert "classList.contains('write-page-break')" in editor and "content.scrollHeight > content.clientHeight" in editor
+    assert ".write-sheet{box-sizing:border-box;position:relative;width:794px;height:1123px" in editor
+    assert "break-after:page;page-break-after:always" in editor
+    # PDFs always come from the paged layout, and print without effects that would flatten text into pictures.
+    assert "printToPdf(out, WebEngineView.A4, WebEngineView.Portrait)" in editor
+    assert "backdrop-filter:none!important" in editor and "text-shadow:none!important" in editor
+    # Preview shows where a page breaks.
+    assert "content:'Page break'" in editor
+
+
+def test_text_is_drawn_as_vector_outlines():
+    main = (Path(__file__).resolve().parents[2] / "apps/write/src/main.cpp").read_text()
+    assert "QQuickWindow::setTextRenderType(QQuickWindow::CurveTextRendering);" in main
