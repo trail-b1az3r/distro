@@ -11,9 +11,9 @@
 # Generated from packages/pkgbuild/hyprland-plus/PKGBUILD.in.
 
 pkgname=hyprland-plus
-_commit=832cb04a2798d3488f06332126bb112ae09f9e34
+_commit=ee4aa4d2096593c6267d9ff04b61263cffbbb5c0
 _udis86=5336633af70f3917760a6d441ff02d93477b0c86
-pkgver=0.57.2.p3
+pkgver=0.57.2.p4
 pkgrel=1
 pkgdesc="Hyprland with Halcyon windows, renderer effects, app-scoped pen pressure curves and touchD support"
 arch=(x86_64)
@@ -70,6 +70,7 @@ package() {
   find "$pkgdir" -name '*hyprpm*' -delete
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 CREDITS.md "$pkgdir/usr/share/licenses/$pkgname/CREDITS.md"
+  install -Dm644 LICENSE-MyGlass "$pkgdir/usr/share/licenses/$pkgname/LICENSE-MyGlass"
   install -Dm644 subprojects/udis86/LICENSE "$pkgdir/usr/share/licenses/$pkgname/udis86/LICENSE"
 
   # Each Hyprland library at least as new as the one this was built against. Unversioned, pacman left an older one
