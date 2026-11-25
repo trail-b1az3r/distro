@@ -36,6 +36,8 @@ curl
 wget
 jq
 unzip
+# PDF text for the document index (frontline docs)
+poppler
 zip
 7zip
 rsync

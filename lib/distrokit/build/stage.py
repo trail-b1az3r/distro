@@ -260,6 +260,29 @@ class Stage:
 
         self.text(f"/usr/share/polkit-1/actions/org.{b.id}.privileged.policy", polkit_policy(b, lib))
         self.text(f"/usr/lib/systemd/user/{runtime.service_name(b)}", runtime.unit_text(b))
+        # Local document indexing (docindex.py): every half hour, at low priority, on for everyone (`docs off`).
+        self.text(f"/usr/lib/systemd/user/{b.id}-docs-index.service", (
+            "[Unit]\n"
+            f"Description=Index your documents for {b.cli} docs (local only)\n"
+            "ConditionACPower=true\n\n"
+            "[Service]\n"
+            "Type=oneshot\n"
+            f"ExecStart=/usr/bin/{b.cli} docs index --quiet\n"
+            "Nice=19\n"
+            "IOSchedulingClass=idle\n"
+            "CPUWeight=20\n"
+        ))
+        self.text(f"/usr/lib/systemd/user/{b.id}-docs-index.timer", (
+            "[Unit]\n"
+            f"Description=Index your documents for {b.cli} docs every half hour\n\n"
+            "[Timer]\n"
+            "OnStartupSec=4min\n"
+            "OnUnitActiveSec=30min\n"
+            "RandomizedDelaySec=2min\n\n"
+            "[Install]\n"
+            "WantedBy=timers.target\n"
+        ))
+        self.link(f"/usr/lib/systemd/user/timers.target.wants/{b.id}-docs-index.timer", f"../{b.id}-docs-index.timer")
         # Automatic updates (system/autoupdate.py): enabled by the installer and the package's install script.
         from ..system import autoupdate
         for unit, text in autoupdate.system_units(b).items():

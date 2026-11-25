@@ -23,6 +23,7 @@ themselves through `sudo`.
 | `frontline install NAME…` | Features (`office`, `docker`, `podman`, `plasma`, `editor`, `dev`, `compilers`, `snapshots`, `firewall`), AI tools (`claude-code`, `hermis`, `openclaw`, `hypernix`) or any package |
 | `frontline ai status\|install\|remove\|launch\|backend\|runtime\|update [TOOL]` | AI assistants, HyperNix, Claude Code, the local model server |
 | `frontline model list\|recommend\|installed\|info\|install\|add\|remove\|default\|serve` | Local models (see [docs/models.md](../docs/models.md)) |
+| `frontline docs [status\|index\|search\|pick\|context\|ask\|add\|remove\|on\|off]` | Your documents, indexed on this computer (SQLite full-text search over Markdown, text, HTML, PDF, Word, OpenDocument, EPUB, PowerPoint and Excel in ~/Documents, ~/Desktop, ~/Downloads and ~/Notes): `search WORDS` ranks them with snippets (`"a phrase"`, `NOT word`, `--kind pdf`, `--in FOLDER`), `pick` opens one from a Rofi/fuzzel menu, `context` prints the best passages, `ask QUESTION` answers from them with the local model (`frontline model serve`), citing them. Kept up to date every half hour (`off` stops it); nothing leaves the computer |
 | `frontline doctor` | Diagnose problems; each finding comes with a fix |
 | `frontline repair [auto\|packages\|boot\|all]` | Repair what the doctor found |
 | `frontline repo [status\|on\|off\|auto]` | The `[frontline]` package repository in `/etc/pacman.conf`: `off` while it is not published (pacman cannot sync with it on), `auto` to match whether it is |

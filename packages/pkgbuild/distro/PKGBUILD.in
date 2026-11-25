@@ -66,6 +66,8 @@ package_@DISTRO_ID@-core() {
   provides=(nano)
   conflicts=(nano)
   optdepends=(
+    'poppler: PDFs in the document index (docs)'
+    'rofi: the document picker (docs pick)'
     'vulkan-tools: Vulkan checks in the doctor'
     'mesa-utils: OpenGL renderer checks in the doctor'
     'sbctl: Secure Boot key management'

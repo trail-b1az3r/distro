@@ -13,8 +13,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from . import __version__, pacmanconf, paths, util
@@ -607,6 +609,159 @@ def cmd_autocorrect(a) -> int:
 
 
 # ---------------------------------------------------------------------------
+# docs: local document indexing and retrieval
+# ---------------------------------------------------------------------------
+
+def _docs_timer() -> str:
+    return f"{B.id}-docs-index.timer"
+
+
+def cmd_docs(a) -> int:
+    """Index your documents locally and find things in them (docindex.py)."""
+    from . import docindex
+
+    app = B.id
+    try:
+        if a.action == "index":
+            def progress(path):
+                if not a.quiet:
+                    print(S.dim(f"  {path}"), file=sys.stderr)
+            stats = docindex.index(app, full=a.full, progress=progress)
+            if not a.quiet:
+                print(S.ok(f"{stats.added} added, {stats.updated} updated, {stats.removed} removed, "
+                           f"{stats.unchanged} unchanged ({stats.seconds:.1f} s)"))
+                if stats.unreadable:
+                    print(S.info(f"{stats.unreadable} had no readable text (scans, or PDFs without pdftotext)"))
+            return 0
+        if a.action in ("search", "pick", "context", "ask"):
+            query = " ".join(a.query).strip()
+            if not query and a.action != "pick":
+                raise docindex.DocIndexError(f"usage: {B.cli} docs {a.action} WORDS...")
+            if a.action == "pick":
+                return _docs_pick(docindex, app, query, a)
+            if a.action == "search":
+                hits = docindex.search(app, query, limit=a.limit, kind=a.kind, under=a.under,
+                                       mark=(S.BOLD, S.RESET) if S.enabled and not a.json else ("", ""))
+                if a.json:
+                    print(json.dumps([h.__dict__ for h in hits], indent=2))
+                    return 0
+                if not hits:
+                    print(S.warn(f"Nothing found for {query!r}."))
+                    return 1
+                for n, h in enumerate(hits, 1):
+                    print(f"{S(str(n).rjust(2), S.CYAN)}  {S.header(h.title)}  {S.dim(h.path)}")
+                    print("    " + " ".join(h.snippet.split()))
+                return 0
+            hits = docindex.search(app, query, limit=a.limit if a.limit != 20 else 6, kind=a.kind, under=a.under,
+                                   passages=True, mark=("", ""))
+            if not hits:
+                print(S.warn(f"Nothing in your documents matches {query!r}."), file=sys.stderr)
+                return 1
+            if a.action == "context":
+                if a.json:
+                    print(json.dumps([{"path": h.path, "title": h.title, "passage": h.passage} for h in hits], indent=2))
+                else:
+                    for n, h in enumerate(hits, 1):
+                        print(f"[{n}] {h.path}\n{h.passage}\n")
+                return 0
+            return _docs_ask(docindex, query, hits)
+        if a.action == "status":
+            info = docindex.status(app)
+            if a.json:
+                print(json.dumps(info, indent=2))
+                return 0
+            when = time.strftime("%Y-%m-%d %H:%M", time.localtime(info["last_index"])) if info["last_index"] else "never"
+            print(f"{S.header('Indexed')}   {info['files']} documents, {info['passages']} passages "
+                  f"({info['bytes'] // 1024} KiB), last {when}")
+            print(f"{S.header('Folders')}   " + ", ".join(info["roots"] or ["none"]))
+            if info["kinds"]:
+                print(f"{S.header('Kinds')}     " + ", ".join(f"{k} {v}" for k, v in info["kinds"].items()))
+            timer = subprocess.run(["systemctl", "--user", "is-enabled", _docs_timer()], capture_output=True, text=True,
+                                   check=False).stdout.strip() if shutil.which("systemctl") else "unknown"
+            print(f"{S.header('Updating')}  {'every 30 minutes' if timer in ('enabled', 'static') else 'off (docs on)'}")
+            return 0
+        if a.action in ("add", "remove"):
+            if not a.query:
+                raise docindex.DocIndexError(f"usage: {B.cli} docs {a.action} FOLDER...")
+            config = docindex.load_config(app)
+            for folder in a.query:
+                folder = str(Path(os.path.expanduser(folder)).resolve())
+                if a.action == "add" and folder not in config.roots:
+                    if not Path(folder).is_dir():
+                        raise docindex.DocIndexError(f"{folder} is not a folder")
+                    config.roots.append(folder)
+                elif a.action == "remove":
+                    config.roots = [r for r in config.roots if str(Path(os.path.expanduser(r)).resolve()) != folder]
+            docindex.save_config(app, config)
+            print(S.ok("Indexed folders: " + (", ".join(config.roots) or "none")))
+            print(S.info(f"{B.cli} docs index picks the change up now; the timer does within half an hour."))
+            return 0
+        if a.action in ("on", "off"):
+            verb = ["unmask", "--now"] if a.action == "on" else ["mask", "--now"]
+            subprocess.run(["systemctl", "--user", *verb, _docs_timer()], check=False)
+            if a.action == "on":
+                subprocess.run(["systemctl", "--user", "enable", "--now", _docs_timer()], check=False)
+            print(S.ok(f"Document indexing {'on: every 30 minutes' if a.action == 'on' else 'off'}"))
+            return 0
+    except docindex.DocIndexError as exc:
+        print(S.fail(str(exc)), file=sys.stderr)
+        return 1
+    return 2
+
+
+def _docs_pick(docindex, app: str, query: str, a) -> int:
+    """A menu of matching documents (Rofi or fuzzel); the chosen one opens in its app."""
+    rofi = shutil.which("rofi")
+    if not rofi and not shutil.which("fuzzel"):
+        raise docindex.DocIndexError("rofi or fuzzel is needed for the picker; docs search works without")
+    menu = ([rofi, "-dmenu", "-i", "-p", "Documents", "-format", "i"] if rofi
+            else ["fuzzel", "--dmenu", "--index", "--prompt", "Documents  "])
+    if not query:
+        # Asked for first: what to look for (an empty list, so what is typed comes back).
+        ask = [rofi, "-dmenu", "-p", "Search documents"] if rofi else ["fuzzel", "--dmenu", "--prompt", "Search documents  "]
+        query = subprocess.run(ask, input="", capture_output=True, text=True, check=False).stdout.strip()
+        if not query:
+            return 0
+    hits = docindex.search(app, query, limit=40, kind=a.kind, under=a.under, mark=("", ""))
+    if not hits:
+        subprocess.run(["notify-send", "Documents", f"Nothing found for {query}"], check=False)
+        return 1
+    lines = [f"{h.title} — {Path(h.path).parent.name}/{Path(h.path).name}   {h.snippet[:120]}".replace("\n", " ")
+             for h in hits]
+    chosen = subprocess.run(menu, input="\n".join(lines), capture_output=True, text=True, check=False).stdout.strip()
+    if not chosen.isdigit() or int(chosen) >= len(hits):
+        return 0
+    subprocess.Popen(["xdg-open", hits[int(chosen)].path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=True)
+    return 0
+
+
+def _docs_ask(docindex, question: str, hits) -> int:
+    """Answer from your documents with the local model; the passages it was given are listed as sources."""
+    import urllib.error
+    import urllib.request
+
+    from .ai import runtime
+
+    if not runtime.is_running():
+        raise docindex.DocIndexError(f"the local model is not running: {B.cli} model serve "
+                                     f"(or {B.cli} docs context to see the passages)")
+    body = json.dumps({"messages": docindex.ask_messages(question, hits), "temperature": 0.2, "stream": False}).encode()
+    request = urllib.request.Request(runtime.endpoint() + "/chat/completions", data=body,
+                                     headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=180) as response:
+            answer = json.load(response)["choices"][0]["message"]["content"].strip()
+    except (urllib.error.URLError, KeyError, IndexError, ValueError, TimeoutError) as exc:
+        raise docindex.DocIndexError(f"the local model did not answer: {exc}") from exc
+    print(answer)
+    print()
+    for n, h in enumerate(hits, 1):
+        print(S.dim(f"[{n}] {h.path}"))
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # model
 # ---------------------------------------------------------------------------
 
@@ -1150,6 +1305,18 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--selection", action="store_true",
                    help="replace selected text in a safe graphical app (never injects into terminals)")
     s.set_defaults(func=cmd_autocorrect)
+
+    s = sub.add_parser("docs", help="your documents, indexed here: search, pick, ask the local model about them")
+    s.add_argument("action", nargs="?", default="status",
+                   choices=["status", "index", "search", "pick", "context", "ask", "add", "remove", "on", "off"])
+    s.add_argument("query", nargs="*", help="words to look for (\"a phrase\", NOT word to leave one out), a question, or folders")
+    s.add_argument("-n", "--limit", type=int, default=20, help="how many results (default 20; context and ask: 6)")
+    s.add_argument("--kind", help="only this kind of file: pdf, docx, md...")
+    s.add_argument("--in", dest="under", metavar="FOLDER", help="only documents under this folder")
+    s.add_argument("--full", action="store_true", help="index: read every document again")
+    s.add_argument("--quiet", action="store_true", help="index: print nothing (the timer)")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_docs)
 
     s = sub.add_parser("logs", help="diagnostic logs: status, save (local), on/off sharing, send")
     s.add_argument("action", nargs="?", default="status", choices=["status", "save", "on", "off", "send"])
