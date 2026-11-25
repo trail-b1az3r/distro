@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=@APP_NAME@
+GenericName=Painting
+Comment=Paint and draw with layers and pen pressure
+Exec=@APP_ID@ %F
+Icon=@APP_ID@
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;
+Keywords=paint;draw;art;sketch;brush;tablet;layers;openraster;
+MimeType=image/openraster;image/png;image/jpeg;image/webp;
+StartupWMClass=@APP_ID@

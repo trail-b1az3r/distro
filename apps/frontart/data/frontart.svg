@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- FrontArt: a rounded square of paper with a brush stroke over a mountain line. -->
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="#f5f1ea"/>
+  <path d="M20 92 L48 56 L62 72 L78 48 L108 92 Z" fill="#5b7a8c" opacity=".9"/>
+  <path d="M71 57 L78 48 L86 60 L80 57 L76 62 Z" fill="#ffffff"/>
+  <path d="M26 100 C46 82 70 108 102 86" fill="none" stroke="#e0613a" stroke-width="9" stroke-linecap="round"/>
+  <path d="M96 22 L112 38 L74 76 L62 80 L66 68 Z" fill="#3a3530"/>
+  <path d="M96 22 L112 38 L106 44 L90 28 Z" fill="#c9a26b"/>
+</svg>
